@@ -10,6 +10,7 @@ import {
   Search, 
   ArrowUpRight, 
   ArrowDownLeft, 
+  ArrowLeft,
   User, 
   Calendar, 
   Trash2,
@@ -18,7 +19,8 @@ import {
   AlertCircle,
   MoreVertical,
   ChevronRight,
-  HandCoins
+  HandCoins,
+  Phone
 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import PageWrapper from '@/components/PageWrapper';
@@ -37,8 +39,11 @@ export default function HisabPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
 
+  const [selectedPerson, setSelectedPerson] = useState(null); // { name, mobile }
+  const [showLedgerModal, setShowLedgerModal] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
+    mobile: '',
     type: 'debit',
     amount: '',
     description: '',
@@ -66,9 +71,14 @@ export default function HisabPage() {
         method: 'POST',
         body: JSON.stringify({ ...formData, amount: parseFloat(formData.amount) }),
       });
-      toast.success('Transaction recorded');
-      setShowAddDialog(false);
-      setFormData({ name: '', type: 'debit', amount: '', description: '', date: new Date().toISOString().split('T')[0] });
+      setFormData({ 
+        name: '', 
+        mobile: '', 
+        type: 'debit', 
+        amount: '', 
+        description: '', 
+        date: new Date().toISOString().split('T')[0] 
+      });
       fetchRecords();
     } catch (err) {} 
     finally { setIsSubmitting(false); }
@@ -84,23 +94,41 @@ export default function HisabPage() {
     finally { setDeleteConfirm(null); }
   };
 
-  const filteredRecords = records.filter(r => 
-    r.name.toLowerCase().includes(search.toLowerCase())
-  );
+  const filteredRecords = records.filter(r => {
+    const matchesSearch = r.name.toLowerCase().includes(search.toLowerCase()) || 
+                          (r.mobile && r.mobile.includes(search));
+    const matchesPerson = selectedPerson ? (r.name === selectedPerson.name && r.mobile === selectedPerson.mobile) : true;
+    return matchesSearch && matchesPerson;
+  });
+
+  // Group filtered records by date
+  const recordsByDate = filteredRecords.reduce((acc, r) => {
+    const date = new Date(r.date).toLocaleDateString();
+    if (!acc[date]) acc[date] = [];
+    acc[date].push(r);
+    return acc;
+  }, {});
 
   const totalDebit = filteredRecords.filter(r => r.type === 'debit').reduce((sum, r) => sum + r.amount, 0);
   const totalCredit = filteredRecords.filter(r => r.type === 'credit').reduce((sum, r) => sum + r.amount, 0);
   const netBalance = totalCredit - totalDebit;
 
-  const peopleGroups = filteredRecords.reduce((acc, r) => {
-    if (!acc[r.name]) acc[r.name] = { debit: 0, credit: 0, latest: r.date };
-    acc[r.name][r.type] += r.amount;
-    return acc;
-  }, {});
+  const peopleGroups = records
+    .reduce((acc, r) => {
+      const key = `${r.name}_${r.mobile || ''}`;
+      if (!acc[key]) acc[key] = { name: r.name, mobile: r.mobile, debit: 0, credit: 0, latest: r.date };
+      acc[key][r.type] += r.amount;
+      return acc;
+    }, {});
+
+  const displayedPeople = Object.values(peopleGroups).filter(p => 
+    p.name.toLowerCase().includes(search.toLowerCase()) || 
+    (p.mobile && p.mobile.includes(search))
+  );
 
   return (
     <PageWrapper>
-      <div className="p-4 space-y-8 max-w-5xl mx-auto pb-32">
+      <div className="p-4 sm:p-6 lg:p-8 space-y-8 max-w-5xl mx-auto pb-32">
         {/* Header */}
         <div className="space-y-6">
            <div className="flex justify-between items-end">
@@ -108,113 +136,194 @@ export default function HisabPage() {
                 <h1 className="text-4xl font-black text-slate-900 tracking-tight">Hisab</h1>
                 <p className="text-slate-500 font-medium">Manage your personal debit-credit.</p>
              </div>
-             <Button onClick={() => setShowAddDialog(true)} className="rounded-2xl h-12 px-6 shadow-xl shadow-indigo-200 bg-indigo-600 hover:bg-indigo-700 font-bold">
-                <Plus className="mr-2 h-5 w-5" /> Log Transaction
-             </Button>
+              <Button 
+                onClick={() => {
+                   setFormData(prev => ({ 
+                     ...prev, 
+                     name: selectedPerson?.name || '', 
+                     mobile: selectedPerson?.mobile || '' 
+                   }));
+                   setShowAddDialog(true);
+                }} 
+                className="rounded-2xl h-12 px-6 shadow-xl shadow-indigo-200 bg-indigo-600 hover:bg-indigo-700 font-bold"
+              >
+                 <Plus className="mr-2 h-5 w-5" /> Log Transaction
+              </Button>
            </div>
 
            {/* Summary Cards */}
-           <div className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
-              <SummaryCard label="I Gave" value={totalDebit} color="red" icon={ArrowUpRight} />
-              <SummaryCard label="I Took" value={totalCredit} color="green" icon={ArrowDownLeft} />
+           <div className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-6">
+              <SummaryCard label="I Gave" value={Object.values(peopleGroups).reduce((s, p) => s + p.debit, 0)} color="red" icon={ArrowUpRight} />
+              <SummaryCard label="I Took" value={Object.values(peopleGroups).reduce((s, p) => s + p.credit, 0)} color="green" icon={ArrowDownLeft} />
               <div className="col-span-2 md:col-span-1">
-                 <SummaryCard label="Net Balance" value={netBalance} color={netBalance >= 0 ? 'green' : 'red'} icon={Wallet} isFullWidth />
+                 <SummaryCard 
+                    label="Wallet Balance" 
+                    value={Object.values(peopleGroups).reduce((s, p) => s + (p.credit - p.debit), 0)} 
+                    color={Object.values(peopleGroups).reduce((s, p) => s + (p.credit - p.debit), 0) >= 0 ? 'green' : 'red'} 
+                    icon={Wallet} 
+                 />
               </div>
            </div>
         </div>
 
         {/* Search & Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-           <div className="lg:col-span-1 space-y-6">
-              <div className="relative group">
-                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 group-focus-within:text-indigo-600 transition-colors" />
-                 <Input 
-                  placeholder="Filter by person..." 
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="pl-12 h-14 rounded-2xl border-none bg-white shadow-lg focus-visible:ring-indigo-600"
-                 />
-              </div>
+        <div className="space-y-6 flex-1 h-full overflow-hidden flex flex-col min-h-0">
+               <div className="relative group shrink-0">
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 group-focus-within:text-indigo-600 transition-colors" />
+                  <Input
+                   placeholder="Search by name or mobile..."
+                   value={search}
+                   onChange={(e) => setSearch(e.target.value)}
+                   className="pl-12 h-14 rounded-2xl border-2 border-slate-100 bg-white shadow-sm focus-visible:ring-4 focus-visible:ring-indigo-50 focus-visible:border-indigo-600 transition-all font-medium"
+                  />
+               </div>
 
-              <div className="grid grid-cols-2 lg:grid-cols-1 gap-3">
-                 <h3 className="col-span-2 lg:col-span-1 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 px-4">People Involved</h3>
-                 {Object.keys(peopleGroups).length === 0 ? (
-                    <p className="col-span-2 lg:col-span-1 text-center py-8 text-slate-400 text-sm font-medium italic">No groups to show</p>
-                 ) : (
-                    Object.entries(peopleGroups).map(([name, stats], idx) => (
-                       <Card key={idx} className="border-none shadow-md rounded-2xl overflow-hidden hover:scale-[1.02] transition-transform bg-white">
-                          <CardContent className="p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                             <div className="flex items-center gap-2 sm:gap-3">
-                                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600 flex-shrink-0">
-                                   <User className="h-4 w-4 sm:h-5 sm:w-5" />
+               <div className="space-y-4 flex-1 overflow-hidden flex flex-col">
+                  <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 px-4 shrink-0">People Involved</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 overflow-y-auto pb-8 px-1 scrollbar-hide">
+                  {displayedPeople.length === 0 ? (
+                     <div className="col-span-full text-center py-20 bg-white/50 rounded-[3rem] border border-dashed border-slate-200">
+                        <Users className="h-12 w-12 text-slate-300 mx-auto mb-4" />
+                        <p className="text-slate-400 font-medium italic">No people found</p>
+                     </div>
+                  ) : (
+                     displayedPeople.map((p, idx) => (
+                        <Card
+                        key={idx}
+                        onClick={() => {
+                           setSelectedPerson({ name: p.name, mobile: p.mobile });
+                           setShowLedgerModal(true);
+                        }}
+                        className="border-none shadow-sm hover:shadow-xl rounded-[2rem] overflow-hidden transition-all cursor-pointer bg-white group border-2 border-transparent hover:border-indigo-100"
+                       >
+                          <CardContent className="p-5 flex items-center justify-between">
+                             <div className="flex items-center gap-4">
+                                <div className="w-14 h-14 rounded-2xl bg-indigo-600 text-white flex items-center justify-center shadow-lg shadow-indigo-100 group-hover:scale-110 transition-transform">
+                                   <User className="h-7 w-7" />
                                 </div>
                                 <div className="min-w-0">
-                                   <p className="font-bold text-slate-900 leading-tight text-xs sm:text-sm truncate">{name}</p>
-                                   <p className="text-[8px] sm:text-[10px] text-slate-400 font-medium">Last: {new Date(stats.latest).toLocaleDateString()}</p>
+                                   <p className="font-black text-slate-900 text-lg leading-tight mb-0.5">{p.name}</p>
+                                   <p className="text-[11px] text-slate-400 font-bold flex items-center gap-1.5 uppercase tracking-tight">
+                                      {p.mobile ? <Phone className="h-3 w-3 text-slate-300" /> : null}
+                                      {p.mobile || 'No mobile linked'}
+                                   </p>
                                 </div>
                              </div>
-                             <div className="text-left sm:text-right">
-                                <p className={`font-black text-xs sm:text-sm ${stats.credit - stats.debit >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                                   ₹{Math.abs(stats.credit - stats.debit).toLocaleString()}
+                             <div className="text-right">
+                                <p className={`font-black text-base sm:text-xl leading-none mb-1 ${p.credit - p.debit >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                                   ₹{Math.abs(p.credit - p.debit).toLocaleString()}
                                 </p>
-                                <p className="text-[7px] sm:text-[8px] font-bold uppercase text-slate-300">{stats.credit - stats.debit >= 0 ? 'To Return' : 'Give Him'}</p>
+                                <p className="text-[9px] font-black uppercase tracking-widest text-slate-300 whitespace-nowrap">
+                                   {p.credit - p.debit >= 0 ? 'To Return' : 'Give Him'}
+                                </p>
                              </div>
                           </CardContent>
                        </Card>
                     ))
-                 )}
-              </div>
-
-           </div>
-
-           <div className="lg:col-span-2 space-y-4">
-              <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 px-4">Detailed Transaction Log</h3>
-              {loading ? (
-                 [1,2,3].map(i => <Skeleton key={i} className="h-24 rounded-3xl" />)
-              ) : (
-                 <AnimatePresence mode="popLayout">
-                    {filteredRecords.map((r, idx) => (
-                       <motion.div
-                        key={r.hisab_id}
-                        initial={{ opacity: 0, x: 20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        exit={{ opacity: 0, scale: 0.95 }}
-                        transition={{ delay: idx * 0.05 }}
-                       >
-                          <Card className="border-none shadow-lg hover:shadow-xl rounded-2xl sm:rounded-3xl bg-white overflow-hidden p-3 sm:p-6 group transition-all hover:-translate-y-0.5">
-                             <div className="flex items-center justify-between gap-2">
-                                <div className="flex items-center gap-3 sm:gap-5 flex-1 min-w-0">
-                                   <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl flex items-center justify-center flex-shrink-0 ${r.type === 'debit' ? 'bg-red-50 text-red-500' : 'bg-green-50 text-green-500'}`}>
-                                      {r.type === 'debit' ? <ArrowUpRight className="h-5 w-5 sm:h-6 sm:w-6" /> : <ArrowDownLeft className="h-5 w-5 sm:h-6 sm:w-6" />}
-                                   </div>
-                                   <div className="min-w-0">
-                                      <h3 className="font-bold text-slate-900 leading-tight text-sm sm:text-base truncate">{r.name}</h3>
-                                      <p className="text-[10px] sm:text-xs text-slate-500 truncate">{r.description || 'No description'}</p>
-                                      <span className="text-[8px] sm:text-[9px] text-slate-300 font-bold mt-0.5 sm:mt-1 block uppercase">{new Date(r.date).toLocaleDateString()}</span>
-                                   </div>
-                                </div>
-                                <div className="flex items-center gap-3 sm:gap-4">
-                                   <div className="text-right flex-shrink-0">
-                                      <p className={`text-lg sm:text-xl font-black ${r.type === 'debit' ? 'text-red-500' : 'text-green-500'}`}>
-                                         ₹{r.amount.toLocaleString()}
-                                      </p>
-                                      <span className="text-[8px] sm:text-[9px] font-black uppercase tracking-widest text-slate-400">{r.type}</span>
-                                   </div>
-                                   <button 
-                                    onClick={() => setDeleteConfirm(r.hisab_id)}
-                                    className="xs:opacity-0 group-hover:opacity-100 p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-slate-50 text-slate-400 hover:text-red-500 transition-all flex-shrink-0"
-                                   >
-                                      <Trash2 className="h-4 w-4 sm:h-5 sm:w-5" />
-                                   </button>
-                                </div>
-                             </div>
-                          </Card>
-                       </motion.div>
-                    ))}
-                 </AnimatePresence>
-              )}
-           </div>
+                  )}
+                  </div>
+               </div>
         </div>
+
+        {/* Ledger Modal */}
+        <Dialog open={showLedgerModal} onOpenChange={setShowLedgerModal}>
+            <DialogContent className="max-w-2xl h-[85vh] flex flex-col p-0 overflow-hidden bg-slate-50 border-none shadow-2xl rounded-[2.5rem]">
+               <div className="bg-indigo-600 p-8 text-white flex justify-between items-center shrink-0 relative overflow-hidden">
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -mr-10 -mt-10" />
+                  <div className="flex items-center gap-4 relative z-10">
+                     <div className="w-14 h-14 rounded-2xl bg-white/20 flex items-center justify-center backdrop-blur-sm shadow-xl">
+                        <User className="h-7 w-7" />
+                     </div>
+                     <div>
+                        <h2 className="text-2xl font-black leading-none mb-1">{selectedPerson?.name}</h2>
+                        <p className="text-indigo-100 text-[10px] font-black uppercase tracking-widest flex items-center gap-1 opacity-80">
+                           <Phone className="h-3 w-3" /> {selectedPerson?.mobile || 'No mobile linked'}
+                        </p>
+                     </div>
+                  </div>
+                  <div className="text-right relative z-10">
+                     <p className="text-[10px] font-black uppercase tracking-widest text-indigo-200 leading-none mb-2">Settlement Balance</p>
+                     <p className="text-3xl font-black">₹{Math.abs(netBalance).toLocaleString()}</p>
+                     <p className="text-[9px] font-bold opacity-75 uppercase tracking-tighter mt-1">
+                        {netBalance >= 0 ? 'You owe this person' : 'This person owes you'}
+                     </p>
+                  </div>
+               </div>
+
+               <div className="flex-1 overflow-y-auto p-8 space-y-8 scrollbar-hide bg-slate-50/50">
+                  {Object.entries(recordsByDate).length === 0 ? (
+                    <div className="text-center py-20">
+                       <AlertCircle className="h-12 w-12 text-slate-200 mx-auto mb-4" />
+                       <p className="text-slate-400 font-medium italic">No transactions found.</p>
+                    </div>
+                  ) : (
+                    Object.entries(recordsByDate).map(([date, dateRecords], dIdx) => (
+                      <div key={date} className="space-y-4">
+                          <div className="flex items-center gap-4">
+                            <div className="h-px flex-1 bg-slate-200" />
+                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest bg-white px-3 py-1 rounded-full border border-slate-100 shadow-sm">{date}</span>
+                            <div className="h-px flex-1 bg-slate-200" />
+                          </div>
+                          <div className="space-y-3">
+                            {dateRecords.map((r) => (
+                                <Card key={r.hisab_id} className="border-none shadow-sm rounded-3xl bg-white p-4 group hover:shadow-md transition-all">
+                                  <div className="flex items-center justify-between gap-4">
+                                      <div className="flex items-center gap-4 min-w-0">
+                                        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${r.type === 'debit' ? 'bg-red-50 text-red-500' : 'bg-green-50 text-green-500'}`}>
+                                            {r.type === 'debit' ? <ArrowUpRight className="h-6 w-6" /> : <ArrowDownLeft className="h-6 w-6" />}
+                                        </div>
+                                        <div className="min-w-0">
+                                            <p className="font-bold text-slate-900 text-sm leading-tight mb-0.5">{r.description || (r.type === 'debit' ? 'Money Given' : 'Money Taken')}</p>
+                                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter">{new Date(r.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                                        </div>
+                                      </div>
+                                      <div className="flex items-center gap-4">
+                                        <div className="text-right">
+                                            <p className={`font-black text-lg ${r.type === 'debit' ? 'text-red-500' : 'text-green-500'}`}>
+                                              ₹{r.amount.toLocaleString()}
+                                            </p>
+                                            <p className="text-[8px] font-black uppercase text-slate-300 leading-none">{r.type}</p>
+                                        </div>
+                                        <button
+                                            onClick={() => setDeleteConfirm(r.hisab_id)}
+                                            className="p-2 rounded-xl bg-slate-50 text-slate-300 hover:text-red-500 hover:bg-red-50 transition-all opacity-0 group-hover:opacity-100"
+                                        >
+                                            <Trash2 className="h-4 w-4" />
+                                        </button>
+                                      </div>
+                                  </div>
+                                </Card>
+                            ))}
+                          </div>
+                      </div>
+                    ))
+                  )}
+               </div>
+
+               <div className="p-6 bg-white border-t shrink-0 flex gap-4 shadow-[0_-10px_40px_rgba(0,0,0,0.02)] relative z-20">
+                  <Button
+                     onClick={() => {
+                        setShowLedgerModal(false);
+                        setFormData(prev => ({ ...prev, name: selectedPerson?.name, mobile: selectedPerson?.mobile, type: 'credit' }));
+                        setShowAddDialog(true);
+                     }}
+                     className="flex-1 h-14 rounded-2xl bg-green-600 hover:bg-green-700 font-black text-sm uppercase shadow-xl shadow-green-100 transition-all active:scale-95"
+                  >
+                     I Took (Credit)
+                  </Button>
+                  <Button
+                     onClick={() => {
+                        setShowLedgerModal(false);
+                        setFormData(prev => ({ ...prev, name: selectedPerson?.name, mobile: selectedPerson?.mobile, type: 'debit' }));
+                        setShowAddDialog(true);
+                     }}
+                     className="flex-1 h-14 rounded-2xl bg-red-600 hover:bg-red-700 font-black text-sm uppercase shadow-xl shadow-red-100 transition-all active:scale-95"
+                  >
+                     I Gave (Debit)
+                  </Button>
+               </div>
+            </DialogContent>
+        </Dialog>
 
         {/* Add Dialog */}
         <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
@@ -228,16 +337,27 @@ export default function HisabPage() {
               </div>
               <form onSubmit={handleAddRecord} className="p-8 space-y-6">
                  <div className="space-y-4">
-                    <div className="space-y-2">
-                       <Label className="text-[10px] font-black tracking-widest uppercase text-slate-400 ml-1">Person Name</Label>
-                       <Input 
-                        placeholder="e.g. Rahul Sharma"
-                        value={formData.name}
-                        onChange={(e) => setFormData({...formData, name: e.target.value})}
-                        className="h-12 rounded-xl bg-slate-50 border-none px-4"
-                        required
-                       />
-                    </div>
+                     <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                           <Label className="text-[10px] font-black tracking-widest uppercase text-slate-400 ml-1">Person Name</Label>
+                           <Input 
+                            placeholder="e.g. Rahul Sharma"
+                            value={formData.name}
+                            onChange={(e) => setFormData({...formData, name: e.target.value})}
+                            className="h-12 rounded-xl bg-slate-50 border-2 border-transparent focus-visible:border-indigo-600 focus-visible:ring-4 focus-visible:ring-indigo-50 transition-all font-medium px-4"
+                            required
+                           />
+                        </div>
+                        <div className="space-y-2">
+                           <Label className="text-[10px] font-black tracking-widest uppercase text-slate-400 ml-1">Mobile No.</Label>
+                           <Input 
+                            placeholder="Optional"
+                            value={formData.mobile}
+                            onChange={(e) => setFormData({...formData, mobile: e.target.value})}
+                            className="h-12 rounded-xl bg-slate-50 border-2 border-transparent focus-visible:border-indigo-600 focus-visible:ring-4 focus-visible:ring-indigo-50 transition-all font-medium px-4"
+                           />
+                        </div>
+                     </div>
                     <div className="grid grid-cols-2 gap-4">
                        <div className="space-y-2">
                           <Label className="text-[10px] font-black tracking-widest uppercase text-slate-400 ml-1">Type</Label>
@@ -269,20 +389,20 @@ export default function HisabPage() {
                             placeholder="0.00"
                             value={formData.amount}
                             onChange={(e) => setFormData({...formData, amount: e.target.value})}
-                            className="h-12 rounded-xl bg-slate-50 border-none px-4 font-black text-lg"
+                            className="h-12 rounded-xl bg-slate-50 border-2 border-transparent focus-visible:border-indigo-600 focus-visible:ring-4 focus-visible:ring-indigo-50 transition-all font-black text-lg px-4"
                             required
                           />
                        </div>
                     </div>
-                    <div className="space-y-2">
-                       <Label className="text-[10px] font-black tracking-widest uppercase text-slate-400 ml-1">Description (Optional)</Label>
-                       <Input 
-                        placeholder="Purpose of transaction..."
-                        value={formData.description}
-                        onChange={(e) => setFormData({...formData, description: e.target.value})}
-                        className="h-12 rounded-xl bg-slate-50 border-none px-4"
-                       />
-                    </div>
+                        <div className="space-y-2">
+                           <Label className="text-[10px] font-black tracking-widest uppercase text-slate-400 ml-1">Description (Optional)</Label>
+                           <Input 
+                            placeholder="Purpose of transaction..."
+                            value={formData.description}
+                            onChange={(e) => setFormData({...formData, description: e.target.value})}
+                            className="h-12 rounded-xl bg-slate-50 border-2 border-transparent focus-visible:border-indigo-600 focus-visible:ring-4 focus-visible:ring-indigo-50 transition-all font-medium px-4"
+                           />
+                        </div>
                  </div>
                  <Button disabled={isSubmitting} className="w-full h-14 rounded-2xl bg-indigo-600 font-black text-lg shadow-xl shadow-indigo-100">
                     {isSubmitting ? 'Recording...' : 'Record Transaction'}
@@ -313,16 +433,17 @@ function SummaryCard({ label, value, color, icon: Icon }) {
    };
    
    return (
-      <Card className="border-none shadow-md rounded-2xl sm:rounded-[2rem] bg-white p-3 sm:p-6 relative overflow-hidden group h-full">
-         <div className="flex items-center gap-3 sm:gap-5">
-            <div className={`w-10 h-10 sm:w-16 sm:h-16 rounded-xl sm:rounded-3xl ${colors[color]} flex items-center justify-center flex-shrink-0 transition-transform group-hover:scale-110`}>
-               <Icon className="h-5 w-5 sm:h-8 sm:w-8" />
+      <Card className="border-none shadow-sm hover:shadow-lg rounded-[2rem] bg-white p-4 sm:p-6 relative overflow-hidden group h-full border-2 border-slate-50 transition-all">
+         <div className="flex items-center gap-4 sm:gap-6">
+            <div className={`w-12 h-12 sm:w-16 sm:h-16 rounded-[1.25rem] sm:rounded-[1.5rem] ${colors[color]} flex items-center justify-center flex-shrink-0 transition-all group-hover:scale-110 shadow-sm`}>
+               <Icon className="h-6 w-6 sm:h-8 sm:w-8" />
             </div>
             <div className="min-w-0">
-               <p className="text-[8px] sm:text-[10px] font-black uppercase tracking-widest text-slate-400 leading-none mb-1">{label}</p>
-               <h3 className={`text-sm sm:text-3xl font-black ${colors[color]?.split(' ')[0]} truncate`}>₹{Math.abs(value).toLocaleString()}</h3>
+               <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400 leading-none mb-2">{label}</p>
+               <h3 className={`text-lg sm:text-2xl lg:text-3xl font-black ${colors[color]?.split(' ')[0]} truncate tracking-tight`}>₹{Math.abs(value).toLocaleString()}</h3>
             </div>
          </div>
+         <div className={`absolute -right-4 -bottom-4 w-24 h-24 rounded-full ${colors[color]?.split(' ')[1]} opacity-20 blur-2xl group-hover:opacity-40 transition-opacity`} />
       </Card>
    );
 }

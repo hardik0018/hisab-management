@@ -35,7 +35,7 @@ export async function POST(request) {
     }
 
     const body = await request.json();
-    const { name, type, amount, description, date } = body;
+    const { name, mobile, type, amount, description, date } = body;
 
     if (!name || !type || !amount) {
       return Response.json({ error: 'Missing required fields' }, { status: 400 });
@@ -50,6 +50,7 @@ export async function POST(request) {
       user_id: user.user_id,
       space_id: spaceId,
       name,
+      mobile: mobile || '',
       type,
       amount: parseFloat(amount),
       description: description || '',

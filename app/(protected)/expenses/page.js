@@ -122,7 +122,7 @@ export default function ExpensesPage() {
 
   return (
     <PageWrapper>
-      <div className="p-4 space-y-8 max-w-5xl mx-auto pb-32">
+      <div className="p-4 space-y-8 max-w-7xl mx-auto pb-32">
         {/* Header Section */}
         <div className="space-y-6">
            <div className="flex justify-between items-end">

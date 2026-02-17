@@ -124,7 +124,7 @@ export default function MarriagePage() {
 
   return (
     <PageWrapper>
-      <div className="p-4 space-y-8 max-w-5xl mx-auto pb-32">
+      <div className="p-4 space-y-8 max-w-7xl mx-auto pb-32">
         {/* Header */}
         <div className="space-y-6">
            <div className="flex justify-between items-end">
@@ -163,9 +163,9 @@ export default function MarriagePage() {
         </div>
 
         {/* Search & Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-           <div className="lg:col-span-1 space-y-6">
-              <div className="relative group">
+        <div className="">
+           <div className="lg:col-span-2 space-y-4">
+             <div className="relative group">
                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 group-focus-within:text-rose-600 transition-colors" />
                  <Input 
                   placeholder="Filter families..." 
@@ -174,43 +174,7 @@ export default function MarriagePage() {
                   className="pl-12 h-14 rounded-2xl border-none bg-white shadow-lg focus-visible:ring-rose-200"
                  />
               </div>
-
-              <div className="space-y-4">
-                 <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 px-4">Family Aggregates</h3>
-                 <div className="space-y-3">
-                    {Object.entries(groupedByPerson).length === 0 ? (
-                       <p className="text-center py-8 text-slate-400 text-sm italic font-medium">No family records</p>
-                    ) : (
-                       Object.entries(groupedByPerson).map(([name, data]) => (
-                          <motion.div key={name} layout>
-                             <Card className="border-none shadow-md rounded-2xl overflow-hidden hover:scale-[1.02] transition-transform bg-white">
-                                <CardContent className="p-4 flex items-center justify-between">
-                                   <div className="flex items-center gap-3">
-                                      <div className="w-10 h-10 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center font-black">
-                                         {name.charAt(0).toUpperCase()}
-                                      </div>
-                                      <div>
-                                         <p className="font-bold text-slate-900 leading-tight">{name}</p>
-                                         <p className="text-[10px] text-slate-400 font-medium flex items-center">
-                                            <MapPin className="h-2.5 w-2.5 mr-1" /> {data.city || 'N/A'}
-                                         </p>
-                                      </div>
-                                   </div>
-                                   <div className="text-right">
-                                      <p className="text-sm font-black text-rose-600">₹{data.total.toLocaleString()}</p>
-                                      <p className="text-[9px] font-black text-slate-300 uppercase leading-none">{data.count} Events</p>
-                                   </div>
-                                </CardContent>
-                             </Card>
-                          </motion.div>
-                       ))
-                    )}
-                 </div>
-              </div>
-           </div>
-
-           <div className="lg:col-span-2 space-y-4">
-              <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 px-4">Event Timeline</h3>
+              <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 px-4">Family Aggregates</h3>
               {loading ? (
                  [1,2,3].map(i => <Skeleton key={i} className="h-24 rounded-3xl" />)
               ) : (
@@ -227,14 +191,17 @@ export default function MarriagePage() {
                            <Card className="group border-none shadow-lg hover:shadow-xl rounded-2xl sm:rounded-3xl bg-white overflow-hidden p-3 sm:p-5 hover:-translate-y-0.5 transition-all">
                               <div className="flex items-center justify-between gap-2">
                                  <div className="flex items-center gap-3 sm:gap-5 flex-1 min-w-0">
-                                    <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-slate-50 flex items-center justify-center text-slate-300 group-hover:bg-rose-50 group-hover:text-rose-400 transition-colors flex-shrink-0">
-                                       <Users className="h-5 w-5 sm:h-6 sm:w-6" />
-                                    </div>
+                                   
+                                       <div className="w-10 h-10 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center font-black">
+                                         {record.name.charAt(0).toUpperCase()}
+                                      </div>
+                                   
                                     <div className="min-w-0">
                                        <h3 className="font-bold text-slate-900 leading-tight text-sm sm:text-lg truncate">{record.name}</h3>
                                        <div className="flex items-center gap-2 mt-0.5 sm:mt-1">
-                                          <span className="text-[8px] sm:text-[10px] bg-indigo-50 text-indigo-500 px-1.5 py-0.5 rounded-full font-black uppercase tracking-tighter">Event</span>
-                                          <span className="flex items-center gap-1 text-[8px] sm:text-[10px] text-slate-400 font-bold uppercase truncate">
+                                          <span className="flex items-center gap-1 text-[8px] sm:text-[10px] text-slate-600 font-bold uppercase truncate">
+                                             <MapPin className="h-2 w-2 sm:h-2.5 sm:w-2.5" /><p className="text-[8px] sm:text-[9px] font-black uppercase tracking-widest truncate max-w-[60px] sm:max-w-none">{record.city || 'No City'}</p>
+                                             {"-"}
                                              <Calendar className="h-2 w-2 sm:h-2.5 sm:w-2.5" /> {new Date(record.date).toLocaleDateString()}
                                           </span>
                                        </div>
@@ -243,9 +210,9 @@ export default function MarriagePage() {
                                  <div className="flex items-center gap-3 sm:gap-4">
                                     <div className="text-right flex-shrink-0">
                                        <p className="text-lg sm:text-2xl font-black text-rose-600">₹{record.amount.toLocaleString()}</p>
-                                       <p className="text-[8px] sm:text-[9px] font-black uppercase tracking-widest text-slate-300 truncate max-w-[60px] sm:max-w-none">{record.city || 'No City'}</p>
+                                       
                                     </div>
-                                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-all scale-90 sm:scale-95 group-hover:scale-100 flex-shrink-0">
+                                    <div className="flex gap-1  transition-all scale-90 sm:scale-95 group-hover:scale-100 flex-shrink-0">
                                        <button onClick={() => handleEdit(record)} className="p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-slate-50 text-slate-400 hover:bg-rose-50 hover:text-rose-600 transition-colors">
                                           <Edit className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                                        </button>
