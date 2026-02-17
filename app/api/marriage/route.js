@@ -4,49 +4,31 @@ import { v4 as uuidv4 } from 'uuid';
 
 export async function GET(request) {
   try {
-    const user = await getAuthenticatedUser(request);
+    const user = await getAuthenticatedUser();
     if (!user) {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const db = await getDb();
-    const url = new URL(request.url);
-    const name = url.searchParams.get('name');
-    const city = url.searchParams.get('city');
-    const page = parseInt(url.searchParams.get('page') || '1');
-    const limit = parseInt(url.searchParams.get('limit') || '50');
+    const spaceId = user.space_id || user.user_id;
 
-    const query = { user_id: user.user_id };
-    if (name) {
-      query.name = { $regex: name, $options: 'i' };
-    }
-    if (city) {
-      query.city = { $regex: city, $options: 'i' };
-    }
-
+    const query = { space_id: spaceId };
+    
     const records = await db
       .collection('marriage_hisab')
       .find(query, { projection: { _id: 0 } })
       .sort({ date: -1 })
-      .skip((page - 1) * limit)
-      .limit(limit)
       .toArray();
 
-    const total = await db.collection('marriage_hisab').countDocuments(query);
-
-    return Response.json({ records, total, page, limit });
+    return Response.json({ records });
   } catch (error) {
-    console.error('API Error:', error);
-    return Response.json(
-      { error: 'Internal server error', details: error.message },
-      { status: 500 }
-    );
+    return Response.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
 
 export async function POST(request) {
   try {
-    const user = await getAuthenticatedUser(request);
+    const user = await getAuthenticatedUser();
     if (!user) {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -55,34 +37,27 @@ export async function POST(request) {
     const { name, city, amount, date } = body;
 
     if (!name || !amount) {
-      return Response.json(
-        { error: 'name and amount are required' },
-        { status: 400 }
-      );
+      return Response.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
     const db = await getDb();
-    const marriageId = `marriage_${uuidv4().split('-')[0]}`;
+    const marriageId = `mar_${uuidv4().split('-')[0]}`;
+    const spaceId = user.space_id || user.user_id;
 
     const record = {
       marriage_id: marriageId,
       user_id: user.user_id,
+      space_id: spaceId,
       name,
       city: city || '',
       amount: parseFloat(amount),
-      eventType: 'marriage',
       date: date ? new Date(date) : new Date(),
       created_at: new Date(),
     };
 
     await db.collection('marriage_hisab').insertOne(record);
-
     return Response.json({ record }, { status: 201 });
   } catch (error) {
-    console.error('API Error:', error);
-    return Response.json(
-      { error: 'Internal server error', details: error.message },
-      { status: 500 }
-    );
+    return Response.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

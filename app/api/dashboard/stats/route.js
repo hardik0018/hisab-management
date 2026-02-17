@@ -3,85 +3,41 @@ import { getAuthenticatedUser } from '@/lib/auth';
 
 export async function GET(request) {
   try {
-    const user = await getAuthenticatedUser(request);
+    const user = await getAuthenticatedUser();
     if (!user) {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const db = await getDb();
+    const spaceId = user.space_id || user.user_id;
 
-    // Get total expenses
-    const expensesAgg = await db
-      .collection('expenses')
-      .aggregate([
-        { $match: { user_id: user.user_id } },
-        { $group: { _id: null, total: { $sum: '$amount' } } },
-      ])
-      .toArray();
-    const totalExpense = expensesAgg[0]?.total || 0;
+    // Get stats for current space
+    const expenseQuery = { space_id: spaceId };
+    const hisabQuery = { space_id: spaceId };
+    const marriageQuery = { space_id: spaceId };
 
-    // Get debit/credit totals
-    const hisabAgg = await db
-      .collection('hisab')
-      .aggregate([
-        { $match: { user_id: user.user_id } },
-        {
-          $group: {
-            _id: '$type',
-            total: { $sum: '$amount' },
-          },
-        },
-      ])
-      .toArray();
+    const expenses = await db.collection('expenses').find(expenseQuery).toArray();
+    const hisab = await db.collection('hisab').find(hisabQuery).toArray();
+    const marriage = await db.collection('marriage_hisab').find(marriageQuery).toArray();
 
-    let totalDebit = 0;
-    let totalCredit = 0;
-    hisabAgg.forEach((item) => {
-      if (item._id === 'debit') totalDebit = item.total;
-      if (item._id === 'credit') totalCredit = item.total;
-    });
+    const totalExpense = expenses.reduce((sum, e) => sum + (e.amount || 0), 0);
+    const totalDebit = hisab.filter(h => h.type === 'debit').reduce((sum, h) => sum + (h.amount || 0), 0);
+    const totalCredit = hisab.filter(h => h.type === 'credit').reduce((sum, h) => sum + (h.amount || 0), 0);
+    const totalMarriage = marriage.reduce((sum, m) => sum + (m.amount || 0), 0);
 
-    const balance = totalCredit - totalDebit;
-
-    // Get marriage total
-    const marriageAgg = await db
-      .collection('marriage_hisab')
-      .aggregate([
-        { $match: { user_id: user.user_id } },
-        { $group: { _id: null, total: { $sum: '$amount' } } },
-      ])
-      .toArray();
-    const totalMarriage = marriageAgg[0]?.total || 0;
-
-    // Recent activity
-    const recentExpenses = await db
-      .collection('expenses')
-      .find({ user_id: user.user_id }, { projection: { _id: 0 } })
-      .sort({ created_at: -1 })
-      .limit(5)
-      .toArray();
-
-    const recentHisab = await db
-      .collection('hisab')
-      .find({ user_id: user.user_id }, { projection: { _id: 0 } })
-      .sort({ created_at: -1 })
-      .limit(5)
-      .toArray();
-
-    return Response.json({
+    const stats = {
       totalExpense,
       totalDebit,
       totalCredit,
-      balance,
       totalMarriage,
-      recentExpenses,
-      recentHisab,
-    });
+      balance: totalCredit - totalDebit,
+      recentExpenses: expenses.sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 5),
+      recentHisab: hisab.sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 5),
+    };
+
+    return Response.json(stats);
   } catch (error) {
-    console.error('API Error:', error);
-    return Response.json(
-      { error: 'Internal server error', details: error.message },
-      { status: 500 }
-    );
+    console.error('Stats API Error:', error);
+    return Response.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

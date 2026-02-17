@@ -1,25 +1,42 @@
 'use client'
 
-import { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Plus, Edit, Trash2, Search, TrendingUp, TrendingDown } from 'lucide-react';
-import { toast } from 'sonner';
+import { 
+  Plus, 
+  Search, 
+  ArrowUpRight, 
+  ArrowDownLeft, 
+  User, 
+  Calendar, 
+  Trash2,
+  Filter,
+  Users,
+  AlertCircle,
+  MoreVertical,
+  ChevronRight,
+  HandCoins
+} from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
+import PageWrapper from '@/components/PageWrapper';
+import { motion, AnimatePresence } from 'framer-motion';
+import { secureFetch } from '@/lib/api-utils';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { toast } from 'sonner';
 
 export default function HisabPage() {
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [showDialog, setShowDialog] = useState(false);
-  const [editingRecord, setEditingRecord] = useState(null);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [recordToDelete, setRecordToDelete] = useState(null);
-  
+  const [search, setSearch] = useState('');
+  const [showAddDialog, setShowAddDialog] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState(null);
+
   const [formData, setFormData] = useState({
     name: '',
     type: 'debit',
@@ -33,383 +50,279 @@ export default function HisabPage() {
   }, []);
 
   const fetchRecords = async () => {
+    setLoading(true);
     try {
-      const response = await fetch('/api/hisab', {
-        credentials: 'include',
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        setRecords(data.records || []);
-      }
-    } catch (error) {
-      console.error('Failed to fetch records:', error);
-      toast.error('Failed to load records');
-    } finally {
-      setLoading(false);
-    }
+      const data = await secureFetch('/api/hisab');
+      setRecords(data.records || []);
+    } catch (err) {} 
+    finally { setLoading(false); }
   };
 
-  const handleSubmit = async (e) => {
+  const handleAddRecord = async (e) => {
     e.preventDefault();
-    
+    setIsSubmitting(true);
     try {
-      const url = editingRecord 
-        ? `/api/hisab/${editingRecord.hisab_id}`
-        : '/api/hisab';
-      
-      const method = editingRecord ? 'PUT' : 'POST';
-      
-      const response = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify(formData),
+      await secureFetch('/api/hisab', {
+        method: 'POST',
+        body: JSON.stringify({ ...formData, amount: parseFloat(formData.amount) }),
       });
-      
-      if (response.ok) {
-        toast.success(editingRecord ? 'Record updated!' : 'Record added!');
-        setShowDialog(false);
-        resetForm();
-        fetchRecords();
-      } else {
-        toast.error('Failed to save record');
-      }
-    } catch (error) {
-      console.error('Failed to save record:', error);
-      toast.error('Failed to save record');
-    }
+      toast.success('Transaction recorded');
+      setShowAddDialog(false);
+      setFormData({ name: '', type: 'debit', amount: '', description: '', date: new Date().toISOString().split('T')[0] });
+      fetchRecords();
+    } catch (err) {} 
+    finally { setIsSubmitting(false); }
   };
 
   const handleDelete = async () => {
-    if (!recordToDelete) return;
-    
+    if (!deleteConfirm) return;
     try {
-      const response = await fetch(`/api/hisab/${recordToDelete}`, {
-        method: 'DELETE',
-        credentials: 'include',
-      });
-      
-      if (response.ok) {
-        toast.success('Record deleted!');
-        fetchRecords();
-      } else {
-        toast.error('Failed to delete record');
-      }
-    } catch (error) {
-      console.error('Failed to delete record:', error);
-      toast.error('Failed to delete record');
-    } finally {
-      setRecordToDelete(null);
-    }
+      await secureFetch(`/api/hisab/${deleteConfirm}`, { method: 'DELETE' });
+      toast.success('Deleted successfully');
+      fetchRecords();
+    } catch (err) {} 
+    finally { setDeleteConfirm(null); }
   };
 
-  const confirmDelete = (recordId) => {
-    setRecordToDelete(recordId);
-    setShowDeleteConfirm(true);
-  };
-
-  const handleEdit = (record) => {
-    setEditingRecord(record);
-    setFormData({
-      name: record.name,
-      type: record.type,
-      amount: record.amount.toString(),
-      description: record.description || '',
-      date: new Date(record.date).toISOString().split('T')[0],
-    });
-    setShowDialog(true);
-  };
-
-  const resetForm = () => {
-    setEditingRecord(null);
-    setFormData({
-      name: '',
-      type: 'debit',
-      amount: '',
-      description: '',
-      date: new Date().toISOString().split('T')[0],
-    });
-  };
-
-  const filteredRecords = records.filter(record => 
-    record.name.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredRecords = records.filter(r => 
+    r.name.toLowerCase().includes(search.toLowerCase())
   );
 
   const totalDebit = filteredRecords.filter(r => r.type === 'debit').reduce((sum, r) => sum + r.amount, 0);
   const totalCredit = filteredRecords.filter(r => r.type === 'credit').reduce((sum, r) => sum + r.amount, 0);
-  const balance = totalCredit - totalDebit;
+  const netBalance = totalCredit - totalDebit;
 
-  // Group by person
-  const groupedByPerson = filteredRecords.reduce((acc, record) => {
-    if (!acc[record.name]) {
-      acc[record.name] = { debit: 0, credit: 0, records: [] };
-    }
-    if (record.type === 'debit') {
-      acc[record.name].debit += record.amount;
-    } else {
-      acc[record.name].credit += record.amount;
-    }
-    acc[record.name].records.push(record);
+  const peopleGroups = filteredRecords.reduce((acc, r) => {
+    if (!acc[r.name]) acc[r.name] = { debit: 0, credit: 0, latest: r.date };
+    acc[r.name][r.type] += r.amount;
     return acc;
   }, {});
 
   return (
-    <div className="p-4 space-y-4 max-w-7xl mx-auto">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Debit-Credit Hisab</h1>
-          <p className="text-gray-600">Manage your debit and credit records</p>
+    <PageWrapper>
+      <div className="p-4 space-y-8 max-w-5xl mx-auto pb-32">
+        {/* Header */}
+        <div className="space-y-6">
+           <div className="flex justify-between items-end">
+             <div className="space-y-1">
+                <h1 className="text-4xl font-black text-slate-900 tracking-tight">Hisab</h1>
+                <p className="text-slate-500 font-medium">Manage your personal debit-credit.</p>
+             </div>
+             <Button onClick={() => setShowAddDialog(true)} className="rounded-2xl h-12 px-6 shadow-xl shadow-indigo-200 bg-indigo-600 hover:bg-indigo-700 font-bold">
+                <Plus className="mr-2 h-5 w-5" /> Log Transaction
+             </Button>
+           </div>
+
+           {/* Summary Cards */}
+           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <SummaryCard label="I Gave (Debit)" value={totalDebit} color="red" icon={ArrowUpRight} />
+              <SummaryCard label="I Took (Credit)" value={totalCredit} color="green" icon={ArrowDownLeft} />
+              <SummaryCard label="Net Balance" value={netBalance} color={netBalance >= 0 ? 'green' : 'red'} icon={Wallet} />
+           </div>
         </div>
-      </div>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="bg-gradient-to-r from-orange-500 to-orange-600 text-white">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm opacity-90">Total Debit</p>
-                <p className="text-3xl font-bold mt-1">₹{totalDebit.toFixed(2)}</p>
+        {/* Search & Layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+           <div className="lg:col-span-1 space-y-6">
+              <div className="relative group">
+                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 group-focus-within:text-indigo-600 transition-colors" />
+                 <Input 
+                  placeholder="Filter by person..." 
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="pl-12 h-14 rounded-2xl border-none bg-white shadow-lg focus-visible:ring-indigo-600"
+                 />
               </div>
-              <TrendingDown className="h-10 w-10 opacity-80" />
-            </div>
-          </CardContent>
-        </Card>
 
-        <Card className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm opacity-90">Total Credit</p>
-                <p className="text-3xl font-bold mt-1">₹{totalCredit.toFixed(2)}</p>
+              <div className="space-y-4">
+                 <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 px-4">People Involved</h3>
+                 {Object.keys(peopleGroups).length === 0 ? (
+                    <p className="text-center py-8 text-slate-400 text-sm font-medium italic">No groups to show</p>
+                 ) : (
+                    Object.entries(peopleGroups).map(([name, stats], idx) => (
+                       <Card key={idx} className="border-none shadow-md rounded-2xl overflow-hidden hover:scale-[1.02] transition-transform">
+                          <CardContent className="p-4 flex items-center justify-between">
+                             <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600">
+                                   <User className="h-5 w-5" />
+                                </div>
+                                <div>
+                                   <p className="font-bold text-slate-900 leading-tight">{name}</p>
+                                   <p className="text-[10px] text-slate-400 font-medium">Last: {new Date(stats.latest).toLocaleDateString()}</p>
+                                </div>
+                             </div>
+                             <div className="text-right">
+                                <p className={`font-black text-sm ${stats.credit - stats.debit >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                                   ₹{Math.abs(stats.credit - stats.debit).toLocaleString()}
+                                </p>
+                                <p className="text-[8px] font-bold uppercase text-slate-300">{stats.credit - stats.debit >= 0 ? 'To Return' : 'Give Him'}</p>
+                             </div>
+                          </CardContent>
+                       </Card>
+                    ))
+                 )}
               </div>
-              <TrendingUp className="h-10 w-10 opacity-80" />
-            </div>
-          </CardContent>
-        </Card>
+           </div>
 
-        <Card className={`bg-gradient-to-r ${balance >= 0 ? 'from-green-500 to-green-600' : 'from-red-500 to-red-600'} text-white`}>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm opacity-90">Balance</p>
-                <p className="text-3xl font-bold mt-1">₹{balance.toFixed(2)}</p>
+           <div className="lg:col-span-2 space-y-4">
+              <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 px-4">Detailed Transaction Log</h3>
+              {loading ? (
+                 [1,2,3].map(i => <Skeleton key={i} className="h-24 rounded-3xl" />)
+              ) : (
+                 <AnimatePresence mode="popLayout">
+                    {filteredRecords.map((r, idx) => (
+                       <motion.div
+                        key={r.hisab_id}
+                        initial={{ opacity: 0, x: 20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, scale: 0.95 }}
+                        transition={{ delay: idx * 0.05 }}
+                       >
+                          <Card className="border-none shadow-xl rounded-3xl bg-white overflow-hidden p-6 group">
+                             <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-5">
+                                   <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${r.type === 'debit' ? 'bg-red-50 text-red-500' : 'bg-green-50 text-green-500'}`}>
+                                      {r.type === 'debit' ? <ArrowUpRight className="h-6 w-6" /> : <ArrowDownLeft className="h-6 w-6" />}
+                                   </div>
+                                   <div>
+                                      <h3 className="font-bold text-slate-900 leading-tight">{r.name}</h3>
+                                      <p className="text-xs text-slate-500 line-clamp-1">{r.description || 'No description'}</p>
+                                      <span className="text-[9px] text-slate-300 font-bold mt-1 block">{new Date(r.date).toLocaleDateString()}</span>
+                                   </div>
+                                </div>
+                                <div className="flex items-center gap-4">
+                                   <div className="text-right">
+                                      <p className={`text-xl font-black ${r.type === 'debit' ? 'text-red-500' : 'text-green-500'}`}>
+                                         ₹{r.amount.toLocaleString()}
+                                      </p>
+                                      <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">{r.type}</span>
+                                   </div>
+                                   <button 
+                                    onClick={() => setDeleteConfirm(r.hisab_id)}
+                                    className="opacity-0 group-hover:opacity-100 p-2 rounded-xl bg-slate-50 text-slate-400 hover:text-red-500 transition-all"
+                                   >
+                                      <Trash2 className="h-5 w-5" />
+                                   </button>
+                                </div>
+                             </div>
+                          </Card>
+                       </motion.div>
+                    ))}
+                 </AnimatePresence>
+              )}
+           </div>
+        </div>
+
+        {/* Add Dialog */}
+        <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
+           <DialogContent className="max-w-md rounded-[2.5rem] p-0 overflow-hidden bg-white border-none shadow-2xl">
+              <div className="bg-indigo-600 p-8 text-white relative">
+                 <div className="absolute top-4 right-4 opacity-10">
+                    <HandCoins className="h-20 w-20" />
+                 </div>
+                 <h2 className="text-3xl font-black mb-1">New Entry</h2>
+                 <p className="text-indigo-100 text-sm font-medium">Capture a new money exchange.</p>
               </div>
-              {balance >= 0 ? <TrendingUp className="h-10 w-10 opacity-80" /> : <TrendingDown className="h-10 w-10 opacity-80" />}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+              <form onSubmit={handleAddRecord} className="p-8 space-y-6">
+                 <div className="space-y-4">
+                    <div className="space-y-2">
+                       <Label className="text-[10px] font-black tracking-widest uppercase text-slate-400 ml-1">Person Name</Label>
+                       <Input 
+                        placeholder="e.g. Rahul Sharma"
+                        value={formData.name}
+                        onChange={(e) => setFormData({...formData, name: e.target.value})}
+                        className="h-12 rounded-xl bg-slate-50 border-none px-4"
+                        required
+                       />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                       <div className="space-y-2">
+                          <Label className="text-[10px] font-black tracking-widest uppercase text-slate-400 ml-1">Type</Label>
+                          <div className="flex gap-2">
+                             <button
+                               type="button"
+                               onClick={() => setFormData({...formData, type: 'debit'})}
+                               className={`flex-1 h-12 rounded-xl font-black text-[10px] uppercase transition-all ${
+                                 formData.type === 'debit' ? 'bg-red-500 text-white shadow-lg shadow-red-200' : 'bg-slate-50 text-slate-400'
+                               }`}
+                             >
+                                I Gave (Debit)
+                             </button>
+                             <button
+                               type="button"
+                               onClick={() => setFormData({...formData, type: 'credit'})}
+                               className={`flex-1 h-12 rounded-xl font-black text-[10px] uppercase transition-all ${
+                                 formData.type === 'credit' ? 'bg-green-500 text-white shadow-lg shadow-green-200' : 'bg-slate-50 text-slate-400'
+                               }`}
+                             >
+                                I Took (Credit)
+                             </button>
+                          </div>
+                       </div>
+                       <div className="space-y-2">
+                          <Label className="text-[10px] font-black tracking-widest uppercase text-slate-400 ml-1">Amount (₹)</Label>
+                          <Input 
+                            type="number"
+                            placeholder="0.00"
+                            value={formData.amount}
+                            onChange={(e) => setFormData({...formData, amount: e.target.value})}
+                            className="h-12 rounded-xl bg-slate-50 border-none px-4 font-black text-lg"
+                            required
+                          />
+                       </div>
+                    </div>
+                    <div className="space-y-2">
+                       <Label className="text-[10px] font-black tracking-widest uppercase text-slate-400 ml-1">Description (Optional)</Label>
+                       <Input 
+                        placeholder="Purpose of transaction..."
+                        value={formData.description}
+                        onChange={(e) => setFormData({...formData, description: e.target.value})}
+                        className="h-12 rounded-xl bg-slate-50 border-none px-4"
+                       />
+                    </div>
+                 </div>
+                 <Button disabled={isSubmitting} className="w-full h-14 rounded-2xl bg-indigo-600 font-black text-lg shadow-xl shadow-indigo-100">
+                    {isSubmitting ? 'Recording...' : 'Record Transaction'}
+                 </Button>
+              </form>
+           </DialogContent>
+        </Dialog>
 
-      {/* Search */}
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-        <Input
-          placeholder="Search by name..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="pl-10"
+        <ConfirmDialog
+          open={!!deleteConfirm}
+          onOpenChange={() => setDeleteConfirm(null)}
+          onConfirm={handleDelete}
+          title="Delete Record?"
+          description="Are you sure you want to delete this transaction record?"
+          confirmText="Delete Now"
+          variant="destructive"
         />
       </div>
-
-      {/* Person-wise Summary */}
-      {Object.keys(groupedByPerson).length > 0 && (
-        <div className="space-y-3">
-          <h2 className="text-xl font-semibold text-gray-900">Person-wise Hisab</h2>
-          {Object.entries(groupedByPerson).map(([name, data]) => {
-            const personBalance = data.credit - data.debit;
-            return (
-              <Card key={name} className="hover:shadow-md transition-shadow">
-                <CardContent className="p-4">
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <h3 className="font-semibold text-gray-900 text-lg">{name}</h3>
-                      <div className="flex gap-4 mt-1 text-sm">
-                        <span className="text-orange-600">Debit: ₹{data.debit.toFixed(2)}</span>
-                        <span className="text-blue-600">Credit: ₹{data.credit.toFixed(2)}</span>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-xs text-gray-500">Balance</p>
-                      <p className={`text-xl font-bold ${personBalance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                        ₹{personBalance.toFixed(2)}
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
-      )}
-
-      {/* All Records */}
-      <div className="space-y-3">
-        <h2 className="text-xl font-semibold text-gray-900">All Records</h2>
-        {loading ? (
-          <div className="space-y-3">
-            {[1, 2, 3].map(i => (
-              <div key={i} className="h-24 bg-gray-200 rounded-xl animate-pulse"></div>
-            ))}
-          </div>
-        ) : filteredRecords.length === 0 ? (
-          <Card>
-            <CardContent className="p-12 text-center">
-              <p className="text-gray-500">No records found</p>
-              <Button onClick={() => setShowDialog(true)} className="mt-4">
-                <Plus className="mr-2 h-4 w-4" />
-                Add First Record
-              </Button>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="space-y-3">
-            {filteredRecords.map((record) => (
-              <Card key={record.hisab_id} className="hover:shadow-md transition-shadow">
-                <CardContent className="p-4">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <h3 className="font-semibold text-gray-900">{record.name}</h3>
-                        <span className={`text-xs px-2 py-1 rounded capitalize font-medium ${record.type === 'credit' ? 'bg-blue-100 text-blue-700' : 'bg-orange-100 text-orange-700'}`}>
-                          {record.type}
-                        </span>
-                      </div>
-                      {record.description && (
-                        <p className="text-sm text-gray-600 mt-1">{record.description}</p>
-                      )}
-                      <p className="text-xs text-gray-500 mt-1">
-                        {new Date(record.date).toLocaleDateString('en-IN')}
-                      </p>
-                    </div>
-                    <div className="flex flex-col items-end gap-2 ml-4">
-                      <p className={`text-xl font-bold ${record.type === 'credit' ? 'text-blue-600' : 'text-orange-600'}`}>
-                        {record.type === 'credit' ? '+' : '-'}₹{record.amount.toFixed(2)}
-                      </p>
-                      <div className="flex gap-1">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => handleEdit(record)}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => confirmDelete(record.hisab_id)}
-                        >
-                          <Trash2 className="h-4 w-4 text-red-500" />
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Floating Add Button */}
-      <Button
-        onClick={() => {
-          resetForm();
-          setShowDialog(true);
-        }}
-        className="fixed bottom-24 right-6 h-14 w-14 rounded-full shadow-lg bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 z-40"
-      >
-        <Plus className="h-6 w-6" />
-      </Button>
-
-      {/* Add/Edit Dialog */}
-      <Dialog open={showDialog} onOpenChange={setShowDialog}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>{editingRecord ? 'Edit Record' : 'Add Hisab Record'}</DialogTitle>
-          </DialogHeader>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <Label htmlFor="name">Name *</Label>
-              <Input
-                id="name"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                required
-                placeholder="Person's name"
-              />
-            </div>
-            
-            <div>
-              <Label htmlFor="type">Type *</Label>
-              <Select value={formData.type} onValueChange={(value) => setFormData({ ...formData, type: value })}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="debit">Debit (Given)</SelectItem>
-                  <SelectItem value="credit">Credit (Received)</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div>
-              <Label htmlFor="amount">Amount (₹) *</Label>
-              <Input
-                id="amount"
-                type="number"
-                step="0.01"
-                value={formData.amount}
-                onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-                required
-                placeholder="0.00"
-              />
-            </div>
-            
-            <div>
-              <Label htmlFor="date">Date *</Label>
-              <Input
-                id="date"
-                type="date"
-                value={formData.date}
-                onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                required
-              />
-            </div>
-            
-            <div>
-              <Label htmlFor="description">Description (optional)</Label>
-              <Input
-                id="description"
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                placeholder="Add any notes..."
-              />
-            </div>
-            
-            <div className="flex gap-3 pt-4">
-              <Button type="button" variant="outline" onClick={() => setShowDialog(false)} className="flex-1">
-                Cancel
-              </Button>
-              <Button type="submit" className="flex-1">
-                {editingRecord ? 'Update' : 'Add'}
-              </Button>
-            </div>
-          </form>
-        </DialogContent>
-      </Dialog>
-
-      <ConfirmDialog
-        open={showDeleteConfirm}
-        onOpenChange={setShowDeleteConfirm}
-        onConfirm={handleDelete}
-        title="Delete Record"
-        description="Are you sure you want to delete this record? This action cannot be undone."
-        confirmText="Delete"
-        variant="destructive"
-      />
-    </div>
+    </PageWrapper>
   );
 }
+
+function SummaryCard({ label, value, color, icon: Icon }) {
+   const colors = {
+      red: "text-red-500 bg-red-50",
+      green: "text-green-500 bg-green-50",
+      blue: "text-blue-500 bg-blue-50"
+   };
+   
+   return (
+      <Card className="border-none shadow-xl rounded-[2rem] bg-white p-6 relative overflow-hidden group">
+         <div className={`absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity`}>
+            <Icon className="h-16 w-16" />
+         </div>
+         <div className="space-y-1">
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">{label}</p>
+            <h3 className={`text-3xl font-black ${colors[color].split(' ')[0]}`}>₹{Math.abs(value).toLocaleString()}</h3>
+         </div>
+         <div className={`mt-4 w-10 h-10 rounded-xl ${colors[color]} flex items-center justify-center`}>
+            <Icon className="h-5 w-5" />
+         </div>
+      </Card>
+   );
+}
+
+function Wallet() { return <HandCoins className="h-6 w-6" />; }

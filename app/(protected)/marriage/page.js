@@ -1,14 +1,31 @@
 'use client'
 
-import { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Plus, Edit, Trash2, Search, Users } from 'lucide-react';
-import { toast } from 'sonner';
+import { 
+  Plus, 
+  Search, 
+  Users, 
+  Heart, 
+  MapPin, 
+  Calendar, 
+  Trash2, 
+  Edit,
+  Cake,
+  Filter,
+  Users2
+} from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
+import PageWrapper from '@/components/PageWrapper';
+import { motion, AnimatePresence } from 'framer-motion';
+import { secureFetch } from '@/lib/api-utils';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { toast } from 'sonner';
 
 export default function MarriagePage() {
   const [records, setRecords] = useState([]);
@@ -16,7 +33,6 @@ export default function MarriagePage() {
   const [showDialog, setShowDialog] = useState(false);
   const [editingRecord, setEditingRecord] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [recordToDelete, setRecordToDelete] = useState(null);
   
   const [formData, setFormData] = useState({
@@ -31,26 +47,16 @@ export default function MarriagePage() {
   }, []);
 
   const fetchRecords = async () => {
+    setLoading(true);
     try {
-      const response = await fetch('/api/marriage', {
-        credentials: 'include',
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        setRecords(data.records || []);
-      }
-    } catch (error) {
-      console.error('Failed to fetch records:', error);
-      toast.error('Failed to load records');
-    } finally {
-      setLoading(false);
-    }
+      const data = await secureFetch('/api/marriage');
+      setRecords(data.records || []);
+    } catch (err) {} 
+    finally { setLoading(false); }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
     try {
       const url = editingRecord 
         ? `/api/marriage/${editingRecord.marriage_id}`
@@ -58,53 +64,26 @@ export default function MarriagePage() {
       
       const method = editingRecord ? 'PUT' : 'POST';
       
-      const response = await fetch(url, {
+      await secureFetch(url, {
         method,
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
         body: JSON.stringify(formData),
       });
       
-      if (response.ok) {
-        toast.success(editingRecord ? 'Record updated!' : 'Vayvhar added!');
-        setShowDialog(false);
-        resetForm();
-        fetchRecords();
-      } else {
-        toast.error('Failed to save record');
-      }
-    } catch (error) {
-      console.error('Failed to save record:', error);
-      toast.error('Failed to save record');
-    }
+      toast.success(editingRecord ? 'Record updated!' : 'Vayvhar added!');
+      setShowDialog(false);
+      resetForm();
+      fetchRecords();
+    } catch (err) {}
   };
 
   const handleDelete = async () => {
     if (!recordToDelete) return;
-    
     try {
-      const response = await fetch(`/api/marriage/${recordToDelete}`, {
-        method: 'DELETE',
-        credentials: 'include',
-      });
-      
-      if (response.ok) {
-        toast.success('Record deleted!');
-        fetchRecords();
-      } else {
-        toast.error('Failed to delete record');
-      }
-    } catch (error) {
-      console.error('Failed to delete record:', error);
-      toast.error('Failed to delete record');
-    } finally {
-      setRecordToDelete(null);
-    }
-  };
-
-  const confirmDelete = (recordId) => {
-    setRecordToDelete(recordId);
-    setShowDeleteConfirm(true);
+      await secureFetch(`/api/marriage/${recordToDelete}`, { method: 'DELETE' });
+      toast.success('Record deleted!');
+      fetchRecords();
+    } catch (err) {} 
+    finally { setRecordToDelete(null); }
   };
 
   const handleEdit = (record) => {
@@ -135,7 +114,6 @@ export default function MarriagePage() {
 
   const totalAmount = filteredRecords.reduce((sum, r) => sum + r.amount, 0);
 
-  // Group by person
   const groupedByPerson = filteredRecords.reduce((acc, record) => {
     if (!acc[record.name]) {
       acc[record.name] = { total: 0, city: record.city, count: 0 };
@@ -146,218 +124,211 @@ export default function MarriagePage() {
   }, {});
 
   return (
-    <div className="p-4 space-y-4 max-w-7xl mx-auto">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Marriage Hisab</h1>
-          <p className="text-gray-600">Vayvhar management system</p>
+    <PageWrapper>
+      <div className="p-4 space-y-8 max-w-5xl mx-auto pb-32">
+        {/* Header */}
+        <div className="space-y-6">
+           <div className="flex justify-between items-end">
+             <div className="space-y-1">
+                <h1 className="text-4xl font-black text-slate-900 tracking-tight">Marriage</h1>
+                <p className="text-slate-500 font-medium">Manage social gifting and vayvhar.</p>
+             </div>
+             <Button onClick={() => { resetForm(); setShowDialog(true); }} className="rounded-2xl h-12 px-6 shadow-xl shadow-rose-200 bg-rose-600 hover:bg-rose-700 font-bold">
+                <Heart className="mr-2 h-5 w-5 fill-current" /> Add Vayvhar
+             </Button>
+           </div>
+
+           {/* Hero Card */}
+           <Card className="border-none shadow-2xl bg-gradient-to-br from-rose-600 to-rose-700 text-white rounded-[2.5rem] overflow-hidden relative">
+              <div className="absolute top-0 right-0 p-8 opacity-10">
+                 <Users2 className="h-32 w-32 rotate-12" />
+              </div>
+              <CardContent className="p-8 relative z-10 space-y-2">
+                 <p className="text-rose-100 font-black uppercase tracking-[0.2em] text-[10px]">Total Social Gifting</p>
+                 <div className="flex items-baseline gap-2">
+                    <h2 className="text-5xl font-black">₹{totalAmount.toLocaleString()}</h2>
+                    <span className="text-rose-100/60 font-medium text-sm">Given</span>
+                 </div>
+                 <p className="text-rose-100/80 text-xs font-bold pt-4 flex items-center">
+                    <Cake className="h-4 w-4 mr-2" /> Shared across {filteredRecords.length} celebrations
+                 </p>
+              </CardContent>
+           </Card>
         </div>
-      </div>
 
-      {/* Total */}
-      <Card className="bg-gradient-to-r from-purple-500 to-purple-600 text-white">
-        <CardContent className="p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm opacity-90">Total Given</p>
-              <p className="text-4xl font-bold mt-1">₹{totalAmount.toFixed(2)}</p>
-              <p className="text-sm opacity-90 mt-2">{filteredRecords.length} vayvhar records</p>
-            </div>
-            <Users className="h-16 w-16 opacity-80" />
-          </div>
-        </CardContent>
-      </Card>
+        {/* Search & Layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+           <div className="lg:col-span-1 space-y-6">
+              <div className="relative group">
+                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 group-focus-within:text-rose-600 transition-colors" />
+                 <Input 
+                  placeholder="Filter families..." 
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-12 h-14 rounded-2xl border-none bg-white shadow-lg focus-visible:ring-rose-200"
+                 />
+              </div>
 
-      {/* Search */}
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-        <Input
-          placeholder="Search by name or city..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="pl-10"
+              <div className="space-y-4">
+                 <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 px-4">Family Aggregates</h3>
+                 <div className="space-y-3">
+                    {Object.entries(groupedByPerson).length === 0 ? (
+                       <p className="text-center py-8 text-slate-400 text-sm italic font-medium">No family records</p>
+                    ) : (
+                       Object.entries(groupedByPerson).map(([name, data]) => (
+                          <motion.div key={name} layout>
+                             <Card className="border-none shadow-md rounded-2xl overflow-hidden hover:scale-[1.02] transition-transform bg-white">
+                                <CardContent className="p-4 flex items-center justify-between">
+                                   <div className="flex items-center gap-3">
+                                      <div className="w-10 h-10 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center font-black">
+                                         {name.charAt(0).toUpperCase()}
+                                      </div>
+                                      <div>
+                                         <p className="font-bold text-slate-900 leading-tight">{name}</p>
+                                         <p className="text-[10px] text-slate-400 font-medium flex items-center">
+                                            <MapPin className="h-2.5 w-2.5 mr-1" /> {data.city || 'N/A'}
+                                         </p>
+                                      </div>
+                                   </div>
+                                   <div className="text-right">
+                                      <p className="text-sm font-black text-rose-600">₹{data.total.toLocaleString()}</p>
+                                      <p className="text-[9px] font-black text-slate-300 uppercase leading-none">{data.count} Events</p>
+                                   </div>
+                                </CardContent>
+                             </Card>
+                          </motion.div>
+                       ))
+                    )}
+                 </div>
+              </div>
+           </div>
+
+           <div className="lg:col-span-2 space-y-4">
+              <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 px-4">Event Timeline</h3>
+              {loading ? (
+                 [1,2,3].map(i => <Skeleton key={i} className="h-24 rounded-3xl" />)
+              ) : (
+                 <AnimatePresence mode="popLayout">
+                    {filteredRecords.map((record, idx) => (
+                       <motion.div
+                          key={record.marriage_id}
+                          layout
+                          initial={{ opacity: 0, x: 20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          exit={{ opacity: 0, scale: 0.95 }}
+                          transition={{ delay: idx * 0.05 }}
+                       >
+                          <Card className="group border-none shadow-xl rounded-3xl bg-white overflow-hidden p-6 hover:-translate-y-1 transition-all">
+                             <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-5">
+                                   <div className="w-12 h-12 rounded-2xl bg-slate-50 flex items-center justify-center text-slate-300 group-hover:bg-rose-50 group-hover:text-rose-400 transition-colors">
+                                      <Users className="h-6 w-6" />
+                                   </div>
+                                   <div>
+                                      <h3 className="font-bold text-slate-900 leading-tight text-lg">{record.name}</h3>
+                                      <div className="flex items-center gap-3 mt-1">
+                                         <span className="text-[10px] bg-indigo-50 text-indigo-500 px-2 py-0.5 rounded-full font-black uppercase tracking-tighter">Event</span>
+                                         <span className="flex items-center gap-1 text-[10px] text-slate-400 font-bold uppercase">
+                                            <Calendar className="h-2.5 w-2.5" /> {new Date(record.date).toLocaleDateString()}
+                                         </span>
+                                      </div>
+                                   </div>
+                                </div>
+                                <div className="flex items-center gap-4">
+                                   <div className="text-right">
+                                      <p className="text-2xl font-black text-rose-600">₹{record.amount.toLocaleString()}</p>
+                                      <p className="text-[9px] font-black uppercase tracking-widest text-slate-300">{record.city || 'No City'}</p>
+                                   </div>
+                                   <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-all scale-95 group-hover:scale-100">
+                                      <button onClick={() => handleEdit(record)} className="p-2 rounded-xl bg-slate-50 text-slate-400 hover:bg-rose-50 hover:text-rose-600 transition-colors">
+                                         <Edit className="h-4 w-4" />
+                                      </button>
+                                      <button onClick={() => setRecordToDelete(record.marriage_id)} className="p-2 rounded-xl bg-slate-50 text-slate-400 hover:bg-rose-50 hover:text-rose-600 transition-colors">
+                                         <Trash2 className="h-4 w-4" />
+                                      </button>
+                                   </div>
+                                </div>
+                             </div>
+                          </Card>
+                       </motion.div>
+                    ))}
+                 </AnimatePresence>
+              )}
+           </div>
+        </div>
+
+        {/* Dialogs */}
+        <Dialog open={showDialog} onOpenChange={setShowDialog}>
+           <DialogContent className="max-w-md rounded-[2.5rem] p-0 overflow-hidden bg-white border-none shadow-2xl">
+              <div className="bg-rose-600 p-8 text-white relative">
+                 <div className="absolute top-4 right-4 opacity-10">
+                    <Heart className="h-20 w-20 fill-current" />
+                 </div>
+                 <h2 className="text-3xl font-black mb-1">{editingRecord ? 'Edit Entry' : 'New Vayvhar'}</h2>
+                 <p className="text-rose-100 text-sm font-medium">Capture relationship tokens & gifts.</p>
+              </div>
+              <form onSubmit={handleSubmit} className="p-8 space-y-6">
+                 <div className="space-y-4">
+                    <div className="space-y-2">
+                       <Label className="text-[10px] font-black tracking-widest uppercase text-slate-400 ml-1">Family / Person Name</Label>
+                       <Input 
+                        placeholder="e.g. Mehta Family"
+                        value={formData.name}
+                        onChange={(e) => setFormData({...formData, name: e.target.value})}
+                        className="h-12 rounded-xl bg-slate-50 border-none px-4"
+                        required
+                       />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                       <div className="space-y-2">
+                          <Label className="text-[10px] font-black tracking-widest uppercase text-slate-400 ml-1">City / Location</Label>
+                          <Input 
+                           placeholder="e.g. Mumbai"
+                           value={formData.city}
+                           onChange={(e) => setFormData({...formData, city: e.target.value})}
+                           className="h-12 rounded-xl bg-slate-50 border-none px-4"
+                          />
+                       </div>
+                       <div className="space-y-2">
+                          <Label className="text-[10px] font-black tracking-widest uppercase text-slate-400 ml-1">Amount (₹)</Label>
+                          <Input 
+                            type="number"
+                            placeholder="0.00"
+                            value={formData.amount}
+                            onChange={(e) => setFormData({...formData, amount: e.target.value})}
+                            className="h-12 rounded-xl bg-slate-50 border-none px-4 font-black text-lg"
+                            required
+                          />
+                       </div>
+                    </div>
+                    <div className="space-y-2">
+                       <Label className="text-[10px] font-black tracking-widest uppercase text-slate-400 ml-1">Date of Event</Label>
+                       <Input 
+                         type="date"
+                         value={formData.date}
+                         onChange={(e) => setFormData({...formData, date: e.target.value})}
+                         className="h-12 rounded-xl bg-slate-50 border-none px-4 font-bold"
+                         required
+                       />
+                    </div>
+                 </div>
+                 <Button className="w-full h-14 rounded-2xl bg-rose-600 font-black text-lg shadow-xl shadow-rose-100">
+                    {editingRecord ? 'Update Record' : 'Record Vayvhar'}
+                 </Button>
+              </form>
+           </DialogContent>
+        </Dialog>
+
+        <ConfirmDialog
+          open={!!recordToDelete}
+          onOpenChange={() => setRecordToDelete(null)}
+          onConfirm={handleDelete}
+          title="Remove Record?"
+          description="Are you sure you want to permanently delete this social gifting entry?"
+          confirmText="Yes, delete"
+          variant="destructive"
         />
       </div>
-
-      {/* Person-wise Summary */}
-      {Object.keys(groupedByPerson).length > 0 && (
-        <div className="space-y-3">
-          <h2 className="text-xl font-semibold text-gray-900">Person-wise Summary</h2>
-          {Object.entries(groupedByPerson).map(([name, data]) => (
-            <Card key={name} className="hover:shadow-md transition-shadow">
-              <CardContent className="p-4">
-                <div className="flex justify-between items-center">
-                  <div>
-                    <h3 className="font-semibold text-gray-900 text-lg">{name}</h3>
-                    <div className="flex gap-2 mt-1 text-sm text-gray-600">
-                      {data.city && (
-                        <span className="bg-gray-100 px-2 py-1 rounded">{data.city}</span>
-                      )}
-                      <span className="bg-purple-100 text-purple-700 px-2 py-1 rounded">
-                        {data.count} event{data.count > 1 ? 's' : ''}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-xs text-gray-500">Total Given</p>
-                    <p className="text-xl font-bold text-purple-600">₹{data.total.toFixed(2)}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
-
-      {/* All Records */}
-      <div className="space-y-3">
-        <h2 className="text-xl font-semibold text-gray-900">All Records</h2>
-        {loading ? (
-          <div className="space-y-3">
-            {[1, 2, 3].map(i => (
-              <div key={i} className="h-24 bg-gray-200 rounded-xl animate-pulse"></div>
-            ))}
-          </div>
-        ) : filteredRecords.length === 0 ? (
-          <Card>
-            <CardContent className="p-12 text-center">
-              <p className="text-gray-500">No records found</p>
-              <Button onClick={() => setShowDialog(true)} className="mt-4">
-                <Plus className="mr-2 h-4 w-4" />
-                Add First Vayvhar
-              </Button>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="space-y-3">
-            {filteredRecords.map((record) => (
-              <Card key={record.marriage_id} className="hover:shadow-md transition-shadow">
-                <CardContent className="p-4">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-gray-900">{record.name}</h3>
-                      <div className="flex gap-2 mt-1 text-sm">
-                        {record.city && (
-                          <span className="bg-gray-100 px-2 py-1 rounded text-gray-600">{record.city}</span>
-                        )}
-                        <span className="bg-purple-100 text-purple-700 px-2 py-1 rounded">Marriage</span>
-                      </div>
-                      <p className="text-xs text-gray-500 mt-2">
-                        {new Date(record.date).toLocaleDateString('en-IN')}
-                      </p>
-                    </div>
-                    <div className="flex flex-col items-end gap-2 ml-4">
-                      <p className="text-xl font-bold text-purple-600">₹{record.amount.toFixed(2)}</p>
-                      <div className="flex gap-1">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => handleEdit(record)}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => confirmDelete(record.marriage_id)}
-                        >
-                          <Trash2 className="h-4 w-4 text-red-500" />
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Floating Add Button */}
-      <Button
-        onClick={() => {
-          resetForm();
-          setShowDialog(true);
-        }}
-        className="fixed bottom-24 right-6 h-14 w-14 rounded-full shadow-lg bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 z-40"
-      >
-        <Plus className="h-6 w-6" />
-      </Button>
-
-      {/* Add/Edit Dialog */}
-      <Dialog open={showDialog} onOpenChange={setShowDialog}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>{editingRecord ? 'Edit Record' : 'Add Vayvhar'}</DialogTitle>
-          </DialogHeader>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <Label htmlFor="name">Name *</Label>
-              <Input
-                id="name"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                required
-                placeholder="Person's name"
-              />
-            </div>
-            
-            <div>
-              <Label htmlFor="city">City (optional)</Label>
-              <Input
-                id="city"
-                value={formData.city}
-                onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                placeholder="e.g., Ahmedabad"
-              />
-            </div>
-            
-            <div>
-              <Label htmlFor="amount">Amount (₹) *</Label>
-              <Input
-                id="amount"
-                type="number"
-                step="0.01"
-                value={formData.amount}
-                onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-                required
-                placeholder="0.00"
-              />
-            </div>
-            
-            <div>
-              <Label htmlFor="date">Date *</Label>
-              <Input
-                id="date"
-                type="date"
-                value={formData.date}
-                onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                required
-              />
-            </div>
-            
-            <div className="flex gap-3 pt-4">
-              <Button type="button" variant="outline" onClick={() => setShowDialog(false)} className="flex-1">
-                Cancel
-              </Button>
-              <Button type="submit" className="flex-1">
-                {editingRecord ? 'Update' : 'Add'}
-              </Button>
-            </div>
-          </form>
-        </DialogContent>
-      </Dialog>
-
-      <ConfirmDialog
-        open={showDeleteConfirm}
-        onOpenChange={setShowDeleteConfirm}
-        onConfirm={handleDelete}
-        title="Delete Record"
-        description="Are you sure you want to delete this record? This action cannot be undone."
-        confirmText="Delete"
-        variant="destructive"
-      />
-    </div>
+    </PageWrapper>
   );
 }

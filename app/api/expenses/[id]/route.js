@@ -3,12 +3,12 @@ import { getAuthenticatedUser } from '@/lib/auth';
 
 export async function PUT(request, { params }) {
   try {
-    const user = await getAuthenticatedUser(request);
+    const user = await getAuthenticatedUser();
     if (!user) {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { id: expenseId } = params;
+    const { id: expenseId } = await params;
     const body = await request.json();
     const db = await getDb();
 
@@ -21,7 +21,10 @@ export async function PUT(request, { params }) {
     if (body.notes !== undefined) updateData.notes = body.notes;
 
     const result = await db.collection('expenses').updateOne(
-      { expense_id: expenseId, user_id: user.user_id },
+      { 
+        expense_id: expenseId, 
+        $or: [{ user_id: user.user_id }, { shared_with: user.user_id }]
+      },
       { $set: updateData }
     );
 
@@ -46,17 +49,17 @@ export async function PUT(request, { params }) {
 
 export async function DELETE(request, { params }) {
   try {
-    const user = await getAuthenticatedUser(request);
+    const user = await getAuthenticatedUser();
     if (!user) {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { id: expenseId } = params;
+    const { id: expenseId } = await params;
     const db = await getDb();
     
     const result = await db.collection('expenses').deleteOne({
       expense_id: expenseId,
-      user_id: user.user_id,
+      $or: [{ user_id: user.user_id }, { shared_with: user.user_id }]
     });
 
     if (result.deletedCount === 0) {

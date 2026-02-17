@@ -1,5 +1,7 @@
 import './globals.css'
 import { Toaster } from '@/components/ui/sonner'
+import { auth } from "@/auth"
+import { Providers } from '@/components/Providers'
 
 export const metadata = {
   title: 'Hisab Management System',
@@ -19,16 +21,16 @@ export const viewport = {
   maximumScale: 1,
 }
 
-import { Providers } from '@/components/Providers'
+export default async function RootLayout({ children }) {
+  const session = await auth();
 
-export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <head>
         <script dangerouslySetInnerHTML={{__html:'window.addEventListener("error",function(e){if(e.error instanceof DOMException&&e.error.name==="DataCloneError"&&e.message&&e.message.includes("PerformanceServerTiming")){e.stopImmediatePropagation();e.preventDefault()}},true);'}} />
       </head>
       <body className="bg-background">
-        <Providers>
+        <Providers session={session}>
           {children}
         </Providers>
         <Toaster position="top-center" />

@@ -3,14 +3,15 @@ import { getAuthenticatedUser } from '@/lib/auth';
 
 export async function PUT(request, { params }) {
   try {
-    const user = await getAuthenticatedUser(request);
+    const user = await getAuthenticatedUser();
     if (!user) {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { id: hisabId } = params;
+    const { id: recordId } = await params;
     const body = await request.json();
     const db = await getDb();
+    const spaceId = user.space_id || user.user_id;
 
     const updateData = {};
     if (body.name) updateData.name = body.name;
@@ -20,7 +21,7 @@ export async function PUT(request, { params }) {
     if (body.date) updateData.date = new Date(body.date);
 
     const result = await db.collection('hisab').updateOne(
-      { hisab_id: hisabId, user_id: user.user_id },
+      { hisab_id: recordId, space_id: spaceId },
       { $set: updateData }
     );
 
@@ -29,33 +30,30 @@ export async function PUT(request, { params }) {
     }
 
     const record = await db.collection('hisab').findOne(
-      { hisab_id: hisabId },
+      { hisab_id: recordId },
       { projection: { _id: 0 } }
     );
 
     return Response.json({ record });
   } catch (error) {
-    console.error('API Error:', error);
-    return Response.json(
-      { error: 'Internal server error', details: error.message },
-      { status: 500 }
-    );
+    return Response.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
 
 export async function DELETE(request, { params }) {
   try {
-    const user = await getAuthenticatedUser(request);
+    const user = await getAuthenticatedUser();
     if (!user) {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { id: hisabId } = params;
+    const { id: recordId } = await params;
     const db = await getDb();
+    const spaceId = user.space_id || user.user_id;
     
     const result = await db.collection('hisab').deleteOne({
-      hisab_id: hisabId,
-      user_id: user.user_id,
+      hisab_id: recordId,
+      space_id: spaceId,
     });
 
     if (result.deletedCount === 0) {
@@ -64,10 +62,6 @@ export async function DELETE(request, { params }) {
 
     return Response.json({ success: true });
   } catch (error) {
-    console.error('API Error:', error);
-    return Response.json(
-      { error: 'Internal server error', details: error.message },
-      { status: 500 }
-    );
+    return Response.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
