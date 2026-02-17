@@ -15,8 +15,7 @@ import {
   Trash2, 
   Edit,
   Cake,
-  Filter,
-  Users2
+  Filter
 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import PageWrapper from '@/components/PageWrapper';
@@ -139,21 +138,28 @@ export default function MarriagePage() {
            </div>
 
            {/* Hero Card */}
-           <Card className="border-none shadow-2xl bg-gradient-to-br from-rose-600 to-rose-700 text-white rounded-[2.5rem] overflow-hidden relative">
-              <div className="absolute top-0 right-0 p-8 opacity-10">
-                 <Users2 className="h-32 w-32 rotate-12" />
-              </div>
-              <CardContent className="p-8 relative z-10 space-y-2">
-                 <p className="text-rose-100 font-black uppercase tracking-[0.2em] text-[10px]">Total Social Gifting</p>
-                 <div className="flex items-baseline gap-2">
-                    <h2 className="text-5xl font-black">₹{totalAmount.toLocaleString()}</h2>
-                    <span className="text-rose-100/60 font-medium text-sm">Given</span>
+           <Card className="border-none shadow-xl bg-gradient-to-br from-rose-600 to-rose-700 text-white rounded-[1.5rem] sm:rounded-[2.5rem] overflow-hidden relative">
+              <CardContent className="p-5 sm:p-10 relative z-10">
+                 <div className="flex items-center gap-4 sm:gap-8">
+                    <div className="w-16 h-16 sm:w-28 sm:h-28 rounded-2xl sm:rounded-[2rem] bg-white/10 flex items-center justify-center flex-shrink-0 backdrop-blur-sm border border-white/10">
+                       <Users className="h-8 w-8 sm:h-14 sm:w-14 text-rose-100" />
+                    </div>
+                    <div className="space-y-0.5 sm:space-y-2">
+                       <p className="text-rose-100 font-black uppercase tracking-[0.1em] sm:tracking-[0.2em] text-[8px] sm:text-xs">Total Social Gifting</p>
+                       <div className="flex items-baseline gap-1.5 sm:gap-3">
+                          <h2 className="text-2xl sm:text-6xl font-black italic">₹{totalAmount.toLocaleString()}</h2>
+                          <span className="text-rose-100/60 font-medium text-[8px] sm:text-base">Given</span>
+                       </div>
+                       <p className="text-rose-100/80 text-[8px] sm:text-sm font-bold flex items-center">
+                          <Cake className="h-2.5 w-2.5 sm:h-5 sm:w-5 mr-1.5 opacity-70" /> {filteredRecords.length} celebrations
+                       </p>
+                    </div>
                  </div>
-                 <p className="text-rose-100/80 text-xs font-bold pt-4 flex items-center">
-                    <Cake className="h-4 w-4 mr-2" /> Shared across {filteredRecords.length} celebrations
-                 </p>
               </CardContent>
            </Card>
+
+
+
         </div>
 
         {/* Search & Layout */}
@@ -210,47 +216,47 @@ export default function MarriagePage() {
               ) : (
                  <AnimatePresence mode="popLayout">
                     {filteredRecords.map((record, idx) => (
-                       <motion.div
-                          key={record.marriage_id}
-                          layout
-                          initial={{ opacity: 0, x: 20 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          exit={{ opacity: 0, scale: 0.95 }}
-                          transition={{ delay: idx * 0.05 }}
-                       >
-                          <Card className="group border-none shadow-xl rounded-3xl bg-white overflow-hidden p-6 hover:-translate-y-1 transition-all">
-                             <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-5">
-                                   <div className="w-12 h-12 rounded-2xl bg-slate-50 flex items-center justify-center text-slate-300 group-hover:bg-rose-50 group-hover:text-rose-400 transition-colors">
-                                      <Users className="h-6 w-6" />
-                                   </div>
-                                   <div>
-                                      <h3 className="font-bold text-slate-900 leading-tight text-lg">{record.name}</h3>
-                                      <div className="flex items-center gap-3 mt-1">
-                                         <span className="text-[10px] bg-indigo-50 text-indigo-500 px-2 py-0.5 rounded-full font-black uppercase tracking-tighter">Event</span>
-                                         <span className="flex items-center gap-1 text-[10px] text-slate-400 font-bold uppercase">
-                                            <Calendar className="h-2.5 w-2.5" /> {new Date(record.date).toLocaleDateString()}
-                                         </span>
-                                      </div>
-                                   </div>
-                                </div>
-                                <div className="flex items-center gap-4">
-                                   <div className="text-right">
-                                      <p className="text-2xl font-black text-rose-600">₹{record.amount.toLocaleString()}</p>
-                                      <p className="text-[9px] font-black uppercase tracking-widest text-slate-300">{record.city || 'No City'}</p>
-                                   </div>
-                                   <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-all scale-95 group-hover:scale-100">
-                                      <button onClick={() => handleEdit(record)} className="p-2 rounded-xl bg-slate-50 text-slate-400 hover:bg-rose-50 hover:text-rose-600 transition-colors">
-                                         <Edit className="h-4 w-4" />
-                                      </button>
-                                      <button onClick={() => setRecordToDelete(record.marriage_id)} className="p-2 rounded-xl bg-slate-50 text-slate-400 hover:bg-rose-50 hover:text-rose-600 transition-colors">
-                                         <Trash2 className="h-4 w-4" />
-                                      </button>
-                                   </div>
-                                </div>
-                             </div>
-                          </Card>
-                       </motion.div>
+                        <motion.div
+                           key={record.marriage_id}
+                           layout
+                           initial={{ opacity: 0, x: 20 }}
+                           animate={{ opacity: 1, x: 0 }}
+                           exit={{ opacity: 0, scale: 0.95 }}
+                           transition={{ delay: idx * 0.05 }}
+                        >
+                           <Card className="group border-none shadow-lg hover:shadow-xl rounded-2xl sm:rounded-3xl bg-white overflow-hidden p-3 sm:p-5 hover:-translate-y-0.5 transition-all">
+                              <div className="flex items-center justify-between gap-2">
+                                 <div className="flex items-center gap-3 sm:gap-5 flex-1 min-w-0">
+                                    <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-slate-50 flex items-center justify-center text-slate-300 group-hover:bg-rose-50 group-hover:text-rose-400 transition-colors flex-shrink-0">
+                                       <Users className="h-5 w-5 sm:h-6 sm:w-6" />
+                                    </div>
+                                    <div className="min-w-0">
+                                       <h3 className="font-bold text-slate-900 leading-tight text-sm sm:text-lg truncate">{record.name}</h3>
+                                       <div className="flex items-center gap-2 mt-0.5 sm:mt-1">
+                                          <span className="text-[8px] sm:text-[10px] bg-indigo-50 text-indigo-500 px-1.5 py-0.5 rounded-full font-black uppercase tracking-tighter">Event</span>
+                                          <span className="flex items-center gap-1 text-[8px] sm:text-[10px] text-slate-400 font-bold uppercase truncate">
+                                             <Calendar className="h-2 w-2 sm:h-2.5 sm:w-2.5" /> {new Date(record.date).toLocaleDateString()}
+                                          </span>
+                                       </div>
+                                    </div>
+                                 </div>
+                                 <div className="flex items-center gap-3 sm:gap-4">
+                                    <div className="text-right flex-shrink-0">
+                                       <p className="text-lg sm:text-2xl font-black text-rose-600">₹{record.amount.toLocaleString()}</p>
+                                       <p className="text-[8px] sm:text-[9px] font-black uppercase tracking-widest text-slate-300 truncate max-w-[60px] sm:max-w-none">{record.city || 'No City'}</p>
+                                    </div>
+                                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-all scale-90 sm:scale-95 group-hover:scale-100 flex-shrink-0">
+                                       <button onClick={() => handleEdit(record)} className="p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-slate-50 text-slate-400 hover:bg-rose-50 hover:text-rose-600 transition-colors">
+                                          <Edit className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                                       </button>
+                                       <button onClick={() => setRecordToDelete(record.marriage_id)} className="p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-slate-50 text-slate-400 hover:bg-rose-50 hover:text-rose-600 transition-colors">
+                                          <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                                       </button>
+                                    </div>
+                                 </div>
+                              </div>
+                           </Card>
+                        </motion.div>
                     ))}
                  </AnimatePresence>
               )}

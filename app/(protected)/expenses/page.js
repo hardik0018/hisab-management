@@ -136,18 +136,24 @@ export default function ExpensesPage() {
            </div>
 
            {/* Quick Summary Card */}
-           <Card className="border-none shadow-2xl bg-slate-950 text-white rounded-[2.5rem] overflow-hidden relative p-8">
-              <div className="absolute top-0 right-0 p-8 opacity-10">
-                 <Receipt className="h-32 w-32 rotate-12" />
-              </div>
-              <div className="relative z-10 space-y-1">
-                 <p className="text-slate-400 font-black uppercase tracking-[0.2em] text-[10px]">Filter Aggregate</p>
-                 <div className="flex items-baseline gap-2">
-                    <h2 className="text-5xl font-black">₹{totalSpent.toLocaleString()}</h2>
-                    <span className="text-slate-400 font-bold text-sm">Total Spent</span>
+           <Card className="border-none shadow-xl bg-slate-950 text-white rounded-[1.5rem] sm:rounded-[2.5rem] overflow-hidden relative">
+              <CardContent className="p-5 sm:p-10 relative z-10">
+                 <div className="flex items-center gap-4 sm:gap-8">
+                    <div className="w-16 h-16 sm:w-28 sm:h-28 rounded-2xl sm:rounded-[2rem] bg-white/5 flex items-center justify-center flex-shrink-0 border border-white/5 shadow-inner">
+                       <Receipt className="h-8 w-8 sm:h-14 sm:w-14 text-slate-400 opacity-80" />
+                    </div>
+                    <div className="space-y-0.5 sm:space-y-1">
+                       <p className="text-slate-400 font-black uppercase tracking-[0.1em] sm:tracking-[0.2em] text-[8px] sm:text-xs">Filter Aggregate</p>
+                       <div className="flex items-baseline gap-1.5 sm:gap-3">
+                          <h2 className="text-2xl sm:text-6xl font-black">₹{totalSpent.toLocaleString()}</h2>
+                          <span className="text-slate-400 font-bold text-[8px] sm:text-base">Total Spent</span>
+                       </div>
+                    </div>
                  </div>
-              </div>
+              </CardContent>
            </Card>
+
+
         </div>
 
         {/* Filters & Search */}
@@ -188,41 +194,42 @@ export default function ExpensesPage() {
                    transition={{ delay: idx * 0.05 }}
                    className="group relative"
                  >
-                    <Card className="border-none shadow-xl hover:shadow-2xl transition-all rounded-3xl bg-white overflow-hidden p-6 hover:-translate-y-1">
-                       <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-5">
-                             <div className="w-14 h-14 rounded-2xl bg-slate-50 flex items-center justify-center group-hover:bg-primary/5 transition-colors">
-                                <span className="text-2xl">
+                    <Card className="border-none shadow-lg hover:shadow-xl transition-all rounded-2xl bg-white overflow-hidden p-3 sm:p-5 hover:-translate-y-0.5 group">
+                       <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0">
+                             <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-slate-50 flex items-center justify-center group-hover:bg-primary/5 transition-colors flex-shrink-0">
+                                <span className="text-xl sm:text-2xl">
                                   {PAYMENT_MODES.find(p => p.value === exp.paymentMode)?.icon ? 
-                                   <exp.paymentMode className="h-6 w-6" /> : '💰'}
+                                   <exp.paymentMode className="h-5 w-5 sm:h-6 sm:w-6" /> : '💰'}
                                 </span>
                              </div>
-                             <div>
-                                <h3 className="font-bold text-slate-900 text-lg leading-tight">{exp.title}</h3>
-                                <div className="flex items-center gap-3 mt-1">
-                                   <span className="flex items-center gap-1 text-[10px] bg-slate-50 text-slate-500 px-2 py-0.5 rounded-full font-black uppercase tracking-tighter">
-                                      <Tag className="h-2.5 w-2.5" /> {exp.category}
+                             <div className="min-w-0">
+                                <h3 className="font-bold text-slate-900 text-sm sm:text-base leading-tight truncate">{exp.title}</h3>
+                                <div className="flex items-center gap-2 mt-0.5">
+                                   <span className="flex items-center gap-1 text-[9px] sm:text-[10px] bg-slate-50 text-slate-500 px-1.5 py-0.5 rounded-full font-black uppercase tracking-tighter">
+                                      <Tag className="h-2 w-2 sm:h-2.5 sm:w-2.5" /> {exp.category}
                                    </span>
-                                   <span className="flex items-center gap-1 text-[10px] text-slate-400 font-bold">
-                                      <Calendar className="h-2.5 w-2.5" /> {new Date(exp.date).toLocaleDateString()}
+                                   <span className="hidden xs:flex items-center gap-1 text-[9px] sm:text-[10px] text-slate-400 font-bold">
+                                      <Calendar className="h-2 w-2 sm:h-2.5 sm:w-2.5" /> {new Date(exp.date).toLocaleDateString()}
                                    </span>
                                 </div>
                              </div>
                           </div>
-                          <div className="flex items-center gap-6">
-                             <div className="text-right">
-                                <p className="text-2xl font-black text-red-500">-₹{exp.amount.toLocaleString()}</p>
-                                <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">{exp.paymentMode}</p>
+                          <div className="flex items-center gap-3 sm:gap-6">
+                             <div className="text-right flex-shrink-0">
+                                <p className="text-lg sm:text-xl font-black text-red-500">-₹{exp.amount.toLocaleString()}</p>
+                                <p className="text-[8px] sm:text-[10px] text-slate-400 font-black uppercase tracking-widest">{exp.paymentMode}</p>
                              </div>
                              <button 
                                onClick={() => setDeleteConfirm(exp.expense_id)}
-                               className="opacity-0 group-hover:opacity-100 p-3 rounded-xl bg-red-50 text-red-500 hover:bg-red-500 hover:text-white transition-all shadow-sm"
+                               className="xs:opacity-0 group-hover:opacity-100 p-2 sm:p-3 rounded-lg sm:rounded-xl bg-red-50 text-red-500 hover:bg-red-500 hover:text-white transition-all shadow-sm"
                              >
-                                <Trash2 className="h-5 w-5" />
+                                <Trash2 className="h-4 w-4 sm:h-5 sm:w-5" />
                              </button>
                           </div>
                        </div>
                     </Card>
+
                  </motion.div>
                ))}
              </AnimatePresence>

@@ -38,8 +38,11 @@ export default function ProfilePage() {
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [showCollabDialog, setShowCollabDialog] = useState(false);
   const [collaborators, setCollaborators] = useState([]);
+  const [sentRequests, setSentRequests] = useState([]);
+  const [receivedRequests, setReceivedRequests] = useState([]);
   const [inviteEmail, setInviteEmail] = useState('');
   const [isInviting, setIsInviting] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   useEffect(() => {
     if (status === 'authenticated') {
@@ -51,7 +54,24 @@ export default function ProfilePage() {
     try {
       const data = await secureFetch('/api/collaboration');
       setCollaborators(data.collaborators || []);
+      setSentRequests(data.sentRequests || []);
+      setReceivedRequests(data.receivedRequests || []);
     } catch (e) {}
+  };
+
+  const handleRequestAction = async (requestId, action) => {
+    setIsProcessing(true);
+    try {
+      const data = await secureFetch(`/api/collaboration/requests/${requestId}`, {
+        method: 'POST',
+        body: JSON.stringify({ action }),
+      });
+      toast.success(data.message);
+      fetchCollaborators();
+    } catch (e) {
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const handleInvite = async (e) => {
@@ -109,46 +129,49 @@ export default function ProfilePage() {
         </div>
 
         {/* Profile Card */}
-        <Card className="border-none shadow-2xl bg-slate-950 text-white rounded-[2.5rem] overflow-hidden relative group">
-          <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-all duration-700">
-             <Settings className="h-40 w-40 rotate-[30deg] animate-pulse" />
+        <Card className="border-none shadow-2xl bg-slate-950 text-white rounded-[2rem] sm:rounded-[2.5rem] overflow-hidden relative group">
+          <div className="absolute top-0 right-0 p-4 sm:p-8 opacity-10 group-hover:opacity-20 transition-all duration-700">
+             <Settings className="h-24 w-24 sm:h-40 sm:w-40 rotate-[30deg] animate-pulse" />
           </div>
-          <CardContent className="p-8 relative z-10">
-             <div className="flex flex-col sm:flex-row items-center gap-8 text-center sm:text-left">
+          <CardContent className="p-5 sm:p-8 relative z-10">
+             <div className="flex items-center gap-4 sm:gap-8">
                 <motion.div
                   initial={{ scale: 0.8, opacity: 0 }}
                   animate={{ scale: 1, opacity: 1 }}
                   transition={{ type: "spring", bounce: 0.5 }}
+                  className="flex-shrink-0"
                 >
-                  <Avatar className="h-32 w-32 border-4 border-white/10 ring-8 ring-white/5 shadow-2xl">
+                  <Avatar className="h-16 w-16 sm:h-32 sm:w-32 border-2 sm:border-4 border-white/10 ring-4 sm:ring-8 ring-white/5 shadow-2xl">
                     <AvatarImage src={user?.image} alt={user?.name} />
-                    <AvatarFallback className="text-4xl font-black bg-primary text-white">
+                    <AvatarFallback className="text-xl sm:text-4xl font-black bg-primary text-white">
                       {user?.name?.charAt(0).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
                 </motion.div>
-                <div className="space-y-2">
+                <div className="space-y-0.5 sm:space-y-2 min-w-0">
                   <motion.h2 
                     initial={{ opacity: 0, x: 20 }}
                     animate={{ opacity: 1, x: 0 }}
-                    className="text-4xl font-black leading-none"
+                    className="text-xl sm:text-4xl font-black leading-tight truncate px-1"
                   >
                     {user?.name}
                   </motion.h2>
-                  <div className="flex items-center justify-center sm:justify-start gap-2 text-slate-400 font-medium">
-                    <Mail className="h-4 w-4" />
-                    <span className="text-sm">{user?.email}</span>
+                  <div className="flex items-center gap-1.5 text-slate-400 font-medium px-1">
+                    <Mail className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
+                    <span className="text-[10px] sm:text-sm truncate">{user?.email}</span>
                   </div>
-                  <div className="pt-4 flex flex-wrap justify-center sm:justify-start gap-2">
-                     <span className="px-4 py-1.5 rounded-full bg-white/10 text-white text-[10px] font-black uppercase tracking-widest border border-white/10 shadow-inner">
-                        <Sparkles className="h-3 w-3 inline mr-2 text-yellow-400" />
-                        Space: {collaborators.length > 1 ? 'Collaborative' : 'Private'}
+                  <div className="pt-1.5 sm:pt-4 flex flex-wrap gap-2">
+                     <span className="px-2.5 py-1 sm:px-4 sm:py-1.5 rounded-full bg-white/10 text-white text-[7px] sm:text-[10px] font-black uppercase tracking-widest border border-white/10 shadow-inner inline-flex items-center">
+                        <Sparkles className="h-2.5 w-2.5 sm:h-3 sm:w-3 mr-1.5 text-yellow-400" />
+                        {collaborators.length > 1 ? 'Collaborative' : 'Private'}
                      </span>
                   </div>
                 </div>
              </div>
           </CardContent>
+
         </Card>
+
 
         {/* Space Management Section */}
         <div className="space-y-4">
@@ -163,11 +186,12 @@ export default function ProfilePage() {
                          </div>
                          <div className="text-left">
                             <p className="font-black text-slate-900 leading-tight text-lg">Manage Collaborators</p>
-                            <p className="text-xs text-slate-500 font-bold mt-1 uppercase tracking-tighter opacity-70">
-                               {collaborators.length > 1 
-                                 ? `Sharing with ${collaborators.length - 1} people` 
-                                 : "Invite partners to track together"}
-                            </p>
+                             <p className="text-xs text-slate-500 font-bold mt-1 uppercase tracking-tighter opacity-70">
+                                {collaborators.length > 1 
+                                  ? `Sharing with ${collaborators.length - 1} people` 
+                                  : "Invite partners to track together"}
+                                {receivedRequests.length > 0 && ` • ${receivedRequests.length} pending`}
+                             </p>
                          </div>
                       </div>
                       <div className="flex items-center gap-4">
@@ -246,35 +270,94 @@ export default function ProfilePage() {
                     </form>
                  </div>
 
-                 <div className="space-y-4">
-                    <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 ml-1">Current Members</Label>
-                    <div className="space-y-3 max-h-[250px] overflow-y-auto pr-2 custom-scrollbar">
-                       {collaborators.map((c) => (
-                          <motion.div 
-                            key={c.user_id} 
-                            initial={{ opacity: 0, scale: 0.95 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            className="flex items-center justify-between p-4 rounded-3xl bg-slate-50 border border-slate-100 group"
-                          >
-                             <div className="flex items-center gap-4">
-                                <Avatar className="h-10 w-10 ring-2 ring-white shadow-sm">
-                                   <AvatarImage src={c.image} />
-                                   <AvatarFallback className="bg-slate-200 text-xs font-black">{c.name?.charAt(0)}</AvatarFallback>
-                                </Avatar>
-                                <div>
-                                   <p className="text-sm font-black text-slate-900 leading-none">{c.name}</p>
-                                   <p className="text-[10px] text-slate-400 font-bold mt-1.5">{c.email}</p>
+                  {/* Received Requests */}
+                  {receivedRequests.length > 0 && (
+                    <div className="space-y-4">
+                       <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-500 ml-1">Pending Invitations (To You)</Label>
+                       <div className="space-y-3">
+                          {receivedRequests.map((req) => (
+                             <motion.div 
+                               key={req._id} 
+                               initial={{ opacity: 0, x: -10 }}
+                               animate={{ opacity: 1, x: 0 }}
+                               className="p-4 rounded-3xl bg-amber-50 border border-amber-100 space-y-4"
+                             >
+                                <div className="flex items-center gap-4">
+                                   <div className="w-10 h-10 rounded-full bg-amber-200 flex items-center justify-center text-amber-700 font-black">
+                                      {req.from_name?.charAt(0)}
+                                   </div>
+                                   <div>
+                                      <p className="text-sm font-black text-slate-900 leading-none">{req.from_name}</p>
+                                      <p className="text-[10px] text-slate-500 font-bold mt-1.5">Invited you to their space</p>
+                                   </div>
                                 </div>
-                             </div>
-                             {c.email === user?.email ? (
-                                <span className="text-[8px] font-black bg-slate-900 text-white px-3 py-1 rounded-full uppercase tracking-widest">You</span>
-                             ) : (
-                                <CheckCircle2 className="h-5 w-5 text-green-500" />
-                             )}
-                          </motion.div>
-                       ))}
+                                <div className="flex gap-2">
+                                   <Button 
+                                     disabled={isProcessing}
+                                     variant="default" 
+                                     className="flex-1 rounded-xl h-10 bg-amber-500 hover:bg-amber-600 font-bold text-xs"
+                                     onClick={() => handleRequestAction(req._id, 'accept')}
+                                   >
+                                      Accept
+                                   </Button>
+                                   <Button 
+                                     disabled={isProcessing}
+                                     variant="outline" 
+                                     className="flex-1 rounded-xl h-10 border-amber-200 text-amber-700 font-bold text-xs"
+                                     onClick={() => handleRequestAction(req._id, 'reject')}
+                                   >
+                                      Decline
+                                   </Button>
+                                </div>
+                             </motion.div>
+                          ))}
+                       </div>
                     </div>
-                 </div>
+                  )}
+
+                  <div className="space-y-4">
+                     <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 ml-1">Current Members</Label>
+                     <div className="space-y-3 max-h-[250px] overflow-y-auto pr-2 custom-scrollbar">
+                        {collaborators.map((c) => (
+                           <motion.div 
+                             key={c.user_id} 
+                             className="flex items-center justify-between p-4 rounded-3xl bg-slate-50 border border-slate-100 group"
+                           >
+                              <div className="flex items-center gap-4">
+                                 <Avatar className="h-10 w-10 ring-2 ring-white shadow-sm">
+                                    <AvatarImage src={c.image} />
+                                    <AvatarFallback className="bg-slate-200 text-xs font-black">{c.name?.charAt(0)}</AvatarFallback>
+                                 </Avatar>
+                                 <div>
+                                    <p className="text-sm font-black text-slate-900 leading-none">{c.name}</p>
+                                    <p className="text-[10px] text-slate-400 font-bold mt-1.5">{c.email}</p>
+                                 </div>
+                              </div>
+                              {c.email === user?.email ? (
+                                 <span className="text-[8px] font-black bg-slate-900 text-white px-3 py-1 rounded-full uppercase tracking-widest">You</span>
+                              ) : (
+                                 <CheckCircle2 className="h-5 w-5 text-green-500" />
+                              )}
+                           </motion.div>
+                        ))}
+                        {sentRequests.map((req) => (
+                           <motion.div 
+                             key={req._id} 
+                             className="flex items-center justify-between p-4 rounded-3xl border border-dashed border-slate-200 opacity-60"
+                           >
+                              <div className="flex items-center gap-4">
+                                 <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-400">
+                                    <Mail className="h-4 w-4" />
+                                 </div>
+                                 <div>
+                                    <p className="text-sm font-black text-slate-400 leading-none">{req.to_email}</p>
+                                    <p className="text-[10px] text-slate-300 font-bold mt-1.5 italic">Pending Invitation...</p>
+                                 </div>
+                              </div>
+                           </motion.div>
+                        ))}
+                     </div>
+                  </div>
               </div>
               <DialogFooter className="p-6 pt-0">
                  <Button variant="outline" className="w-full h-14 rounded-2xl font-black uppercase tracking-widest text-xs border-slate-200 hover:bg-slate-50" onClick={() => setShowCollabDialog(false)}>

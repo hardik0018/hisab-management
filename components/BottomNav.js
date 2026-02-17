@@ -1,5 +1,7 @@
 'use client'
 
+// Repaint trigger for HMR
+
 import { usePathname, useRouter } from 'next/navigation';
 import { LayoutDashboard, Receipt, HandCoins, Heart, UserCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';

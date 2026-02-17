@@ -114,10 +114,12 @@ export default function HisabPage() {
            </div>
 
            {/* Summary Cards */}
-           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <SummaryCard label="I Gave (Debit)" value={totalDebit} color="red" icon={ArrowUpRight} />
-              <SummaryCard label="I Took (Credit)" value={totalCredit} color="green" icon={ArrowDownLeft} />
-              <SummaryCard label="Net Balance" value={netBalance} color={netBalance >= 0 ? 'green' : 'red'} icon={Wallet} />
+           <div className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
+              <SummaryCard label="I Gave" value={totalDebit} color="red" icon={ArrowUpRight} />
+              <SummaryCard label="I Took" value={totalCredit} color="green" icon={ArrowDownLeft} />
+              <div className="col-span-2 md:col-span-1">
+                 <SummaryCard label="Net Balance" value={netBalance} color={netBalance >= 0 ? 'green' : 'red'} icon={Wallet} isFullWidth />
+              </div>
            </div>
         </div>
 
@@ -134,34 +136,35 @@ export default function HisabPage() {
                  />
               </div>
 
-              <div className="space-y-4">
-                 <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 px-4">People Involved</h3>
+              <div className="grid grid-cols-2 lg:grid-cols-1 gap-3">
+                 <h3 className="col-span-2 lg:col-span-1 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 px-4">People Involved</h3>
                  {Object.keys(peopleGroups).length === 0 ? (
-                    <p className="text-center py-8 text-slate-400 text-sm font-medium italic">No groups to show</p>
+                    <p className="col-span-2 lg:col-span-1 text-center py-8 text-slate-400 text-sm font-medium italic">No groups to show</p>
                  ) : (
                     Object.entries(peopleGroups).map(([name, stats], idx) => (
-                       <Card key={idx} className="border-none shadow-md rounded-2xl overflow-hidden hover:scale-[1.02] transition-transform">
-                          <CardContent className="p-4 flex items-center justify-between">
-                             <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600">
-                                   <User className="h-5 w-5" />
+                       <Card key={idx} className="border-none shadow-md rounded-2xl overflow-hidden hover:scale-[1.02] transition-transform bg-white">
+                          <CardContent className="p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                             <div className="flex items-center gap-2 sm:gap-3">
+                                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600 flex-shrink-0">
+                                   <User className="h-4 w-4 sm:h-5 sm:w-5" />
                                 </div>
-                                <div>
-                                   <p className="font-bold text-slate-900 leading-tight">{name}</p>
-                                   <p className="text-[10px] text-slate-400 font-medium">Last: {new Date(stats.latest).toLocaleDateString()}</p>
+                                <div className="min-w-0">
+                                   <p className="font-bold text-slate-900 leading-tight text-xs sm:text-sm truncate">{name}</p>
+                                   <p className="text-[8px] sm:text-[10px] text-slate-400 font-medium">Last: {new Date(stats.latest).toLocaleDateString()}</p>
                                 </div>
                              </div>
-                             <div className="text-right">
-                                <p className={`font-black text-sm ${stats.credit - stats.debit >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                             <div className="text-left sm:text-right">
+                                <p className={`font-black text-xs sm:text-sm ${stats.credit - stats.debit >= 0 ? 'text-green-500' : 'text-red-500'}`}>
                                    ₹{Math.abs(stats.credit - stats.debit).toLocaleString()}
                                 </p>
-                                <p className="text-[8px] font-bold uppercase text-slate-300">{stats.credit - stats.debit >= 0 ? 'To Return' : 'Give Him'}</p>
+                                <p className="text-[7px] sm:text-[8px] font-bold uppercase text-slate-300">{stats.credit - stats.debit >= 0 ? 'To Return' : 'Give Him'}</p>
                              </div>
                           </CardContent>
                        </Card>
                     ))
                  )}
               </div>
+
            </div>
 
            <div className="lg:col-span-2 space-y-4">
@@ -178,30 +181,30 @@ export default function HisabPage() {
                         exit={{ opacity: 0, scale: 0.95 }}
                         transition={{ delay: idx * 0.05 }}
                        >
-                          <Card className="border-none shadow-xl rounded-3xl bg-white overflow-hidden p-6 group">
-                             <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-5">
-                                   <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${r.type === 'debit' ? 'bg-red-50 text-red-500' : 'bg-green-50 text-green-500'}`}>
-                                      {r.type === 'debit' ? <ArrowUpRight className="h-6 w-6" /> : <ArrowDownLeft className="h-6 w-6" />}
+                          <Card className="border-none shadow-lg hover:shadow-xl rounded-2xl sm:rounded-3xl bg-white overflow-hidden p-3 sm:p-6 group transition-all hover:-translate-y-0.5">
+                             <div className="flex items-center justify-between gap-2">
+                                <div className="flex items-center gap-3 sm:gap-5 flex-1 min-w-0">
+                                   <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl flex items-center justify-center flex-shrink-0 ${r.type === 'debit' ? 'bg-red-50 text-red-500' : 'bg-green-50 text-green-500'}`}>
+                                      {r.type === 'debit' ? <ArrowUpRight className="h-5 w-5 sm:h-6 sm:w-6" /> : <ArrowDownLeft className="h-5 w-5 sm:h-6 sm:w-6" />}
                                    </div>
-                                   <div>
-                                      <h3 className="font-bold text-slate-900 leading-tight">{r.name}</h3>
-                                      <p className="text-xs text-slate-500 line-clamp-1">{r.description || 'No description'}</p>
-                                      <span className="text-[9px] text-slate-300 font-bold mt-1 block">{new Date(r.date).toLocaleDateString()}</span>
+                                   <div className="min-w-0">
+                                      <h3 className="font-bold text-slate-900 leading-tight text-sm sm:text-base truncate">{r.name}</h3>
+                                      <p className="text-[10px] sm:text-xs text-slate-500 truncate">{r.description || 'No description'}</p>
+                                      <span className="text-[8px] sm:text-[9px] text-slate-300 font-bold mt-0.5 sm:mt-1 block uppercase">{new Date(r.date).toLocaleDateString()}</span>
                                    </div>
                                 </div>
-                                <div className="flex items-center gap-4">
-                                   <div className="text-right">
-                                      <p className={`text-xl font-black ${r.type === 'debit' ? 'text-red-500' : 'text-green-500'}`}>
+                                <div className="flex items-center gap-3 sm:gap-4">
+                                   <div className="text-right flex-shrink-0">
+                                      <p className={`text-lg sm:text-xl font-black ${r.type === 'debit' ? 'text-red-500' : 'text-green-500'}`}>
                                          ₹{r.amount.toLocaleString()}
                                       </p>
-                                      <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">{r.type}</span>
+                                      <span className="text-[8px] sm:text-[9px] font-black uppercase tracking-widest text-slate-400">{r.type}</span>
                                    </div>
                                    <button 
                                     onClick={() => setDeleteConfirm(r.hisab_id)}
-                                    className="opacity-0 group-hover:opacity-100 p-2 rounded-xl bg-slate-50 text-slate-400 hover:text-red-500 transition-all"
+                                    className="xs:opacity-0 group-hover:opacity-100 p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-slate-50 text-slate-400 hover:text-red-500 transition-all flex-shrink-0"
                                    >
-                                      <Trash2 className="h-5 w-5" />
+                                      <Trash2 className="h-4 w-4 sm:h-5 sm:w-5" />
                                    </button>
                                 </div>
                              </div>
@@ -310,16 +313,15 @@ function SummaryCard({ label, value, color, icon: Icon }) {
    };
    
    return (
-      <Card className="border-none shadow-xl rounded-[2rem] bg-white p-6 relative overflow-hidden group">
-         <div className={`absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity`}>
-            <Icon className="h-16 w-16" />
-         </div>
-         <div className="space-y-1">
-            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">{label}</p>
-            <h3 className={`text-3xl font-black ${colors[color].split(' ')[0]}`}>₹{Math.abs(value).toLocaleString()}</h3>
-         </div>
-         <div className={`mt-4 w-10 h-10 rounded-xl ${colors[color]} flex items-center justify-center`}>
-            <Icon className="h-5 w-5" />
+      <Card className="border-none shadow-md rounded-2xl sm:rounded-[2rem] bg-white p-3 sm:p-6 relative overflow-hidden group h-full">
+         <div className="flex items-center gap-3 sm:gap-5">
+            <div className={`w-10 h-10 sm:w-16 sm:h-16 rounded-xl sm:rounded-3xl ${colors[color]} flex items-center justify-center flex-shrink-0 transition-transform group-hover:scale-110`}>
+               <Icon className="h-5 w-5 sm:h-8 sm:w-8" />
+            </div>
+            <div className="min-w-0">
+               <p className="text-[8px] sm:text-[10px] font-black uppercase tracking-widest text-slate-400 leading-none mb-1">{label}</p>
+               <h3 className={`text-sm sm:text-3xl font-black ${colors[color]?.split(' ')[0]} truncate`}>₹{Math.abs(value).toLocaleString()}</h3>
+            </div>
          </div>
       </Card>
    );
