@@ -192,7 +192,7 @@ export default function MarriagePage() {
                               <div className="flex items-center justify-between gap-2">
                                  <div className="flex items-center gap-3 sm:gap-5 flex-1 min-w-0">
                                    
-                                       <div className="w-10 h-10 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center font-black">
+                                       <div className="w-12 h-12 font-bold rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center">
                                          {record.name.charAt(0).toUpperCase()}
                                       </div>
                                    

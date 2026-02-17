@@ -15,6 +15,7 @@ export async function PUT(request, { params }) {
 
     const updateData = {};
     if (body.name) updateData.name = body.name;
+    if (body.mobile !== undefined) updateData.mobile = body.mobile;
     if (body.type) updateData.type = body.type;
     if (body.amount) updateData.amount = parseFloat(body.amount);
     if (body.description !== undefined) updateData.description = body.description;

@@ -19,7 +19,8 @@ import {
   CheckCircle2,
   Sparkles,
   LayoutGrid,
-  Settings
+  Settings,
+  Trash2
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
@@ -40,7 +41,10 @@ export default function ProfilePage() {
   const [collaborators, setCollaborators] = useState([]);
   const [sentRequests, setSentRequests] = useState([]);
   const [receivedRequests, setReceivedRequests] = useState([]);
+  const [currentUserId, setCurrentUserId] = useState(null);
+  const [currentSpaceId, setCurrentSpaceId] = useState(null);
   const [inviteEmail, setInviteEmail] = useState('');
+  const [removeConfirm, setRemoveConfirm] = useState(null); // { userId, name }
   const [isInviting, setIsInviting] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
 
@@ -56,6 +60,8 @@ export default function ProfilePage() {
       setCollaborators(data.collaborators || []);
       setSentRequests(data.sentRequests || []);
       setReceivedRequests(data.receivedRequests || []);
+      setCurrentUserId(data.currentUserId);
+      setCurrentSpaceId(data.currentSpaceId);
     } catch (e) {}
   };
 
@@ -88,6 +94,23 @@ export default function ProfilePage() {
     } catch (e) {
     } finally {
       setIsInviting(false);
+    }
+  };
+
+  const handleRemoveCollaborator = async () => {
+    if (!removeConfirm) return;
+    setIsProcessing(true);
+    try {
+      const data = await secureFetch('/api/collaboration', {
+        method: 'DELETE',
+        body: JSON.stringify({ targetUserId: removeConfirm.userId }),
+      });
+      toast.success(data.message);
+      fetchCollaborators();
+    } catch (e) {
+    } finally {
+      setIsProcessing(false);
+      setRemoveConfirm(null);
     }
   };
 
@@ -333,12 +356,38 @@ export default function ProfilePage() {
                                     <p className="text-[10px] text-slate-400 font-bold mt-1.5">{c.email}</p>
                                  </div>
                               </div>
-                              {c.email === user?.email ? (
-                                 <span className="text-[8px] font-black bg-slate-900 text-white px-3 py-1 rounded-full uppercase tracking-widest">You</span>
-                              ) : (
-                                 <CheckCircle2 className="h-5 w-5 text-green-500" />
-                              )}
-                           </motion.div>
+                               <div className="flex items-center gap-2">
+                                 {c.user_id === currentSpaceId && (
+                                    <span className="text-[7px] font-black bg-slate-900/5 text-slate-400 px-2 py-0.5 rounded-full uppercase tracking-widest border border-slate-200 mr-1">Admin</span>
+                                 )}
+                                 
+                                 {c.user_id === currentUserId ? (
+                                    <div className="flex items-center gap-2">
+                                       <span className="text-[8px] font-black bg-slate-900 text-white px-3 py-1 rounded-full uppercase tracking-widest">You</span>
+                                       {currentUserId !== currentSpaceId && (
+                                          <button 
+                                             onClick={() => setRemoveConfirm({ userId: c.user_id, name: 'this space' })}
+                                             className="p-2 rounded-xl bg-red-50 text-red-500 hover:bg-red-500 hover:text-white transition-all shadow-sm"
+                                          >
+                                             <LogOut className="h-3.5 w-3.5" />
+                                          </button>
+                                       )}
+                                    </div>
+                                 ) : (
+                                    <div className="flex items-center gap-2">
+                                       {currentUserId === currentSpaceId && (
+                                          <button 
+                                             onClick={() => setRemoveConfirm({ userId: c.user_id, name: c.name })}
+                                             className="p-2 rounded-xl bg-slate-100 text-slate-400 hover:bg-red-500 hover:text-white transition-all shadow-sm"
+                                          >
+                                             <Trash2 className="h-3.5 w-3.5" />
+                                          </button>
+                                       )}
+                                       <CheckCircle2 className="h-5 w-5 text-green-500" />
+                                    </div>
+                                 )}
+                               </div>
+                            </motion.div>
                         ))}
                         {sentRequests.map((req) => (
                            <motion.div 
@@ -374,6 +423,18 @@ export default function ProfilePage() {
           title="Sign Out?"
           description="Are you sure you want to end your session? You'll need to login again to access your records."
           confirmText="Yes, End Session"
+          variant="destructive"
+        />
+
+        <ConfirmDialog
+          open={!!removeConfirm}
+          onOpenChange={() => setRemoveConfirm(null)}
+          onConfirm={handleRemoveCollaborator}
+          title={removeConfirm?.userId === currentUserId ? "Leave Space?" : "Remove Collaborator?"}
+          description={removeConfirm?.userId === currentUserId 
+            ? "Are you sure you want to leave this shared space? You will lose access to its records and return to your private space."
+            : `Are you sure you want to remove ${removeConfirm?.name} from your space? They will no longer have access to these records.`}
+          confirmText={removeConfirm?.userId === currentUserId ? "Leave Now" : "Remove Now"}
           variant="destructive"
         />
       </div>

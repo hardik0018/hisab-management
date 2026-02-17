@@ -75,7 +75,7 @@ export async function GET() {
         // Get current collaborators
         const collaborators = await db.collection('users')
             .find({ space_id: user.space_id })
-            .project({ name: 1, email: 1, image: 1, user_id: 1 })
+            .project({ name: 1, email: 1, image: 1, user_id: 1, space_id: 1 })
             .toArray();
 
         // Get pending requests sent by the user
@@ -91,10 +91,66 @@ export async function GET() {
         return Response.json({ 
           collaborators,
           sentRequests,
-          receivedRequests
+          receivedRequests,
+          currentUserId: user.user_id,
+          currentSpaceId: user.space_id
         });
     } catch (error) {
         return Response.json({ error: 'Internal server error' }, { status: 500 });
     }
+}
+
+export async function DELETE(request) {
+  try {
+    const user = await getAuthenticatedUser();
+    if (!user) {
+      return Response.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { targetUserId } = await request.json();
+    if (!targetUserId) {
+      return Response.json({ error: 'Target User ID is required' }, { status: 400 });
+    }
+
+    const db = await getDb();
+
+    // Case 1: User wants to leave a shared space
+    if (targetUserId === user.user_id) {
+       // Only allow leaving if they are NOT the owner of the current space
+       if (user.user_id === user.space_id) {
+          return Response.json({ error: 'You are the owner of this space. You cannot leave it, but you can remove others.' }, { status: 400 });
+       }
+
+       await db.collection('users').updateOne(
+         { user_id: user.user_id },
+         { $set: { space_id: user.user_id } }
+       );
+
+       return Response.json({ success: true, message: 'You have left the space.' });
+    }
+
+    // Case 2: Owner wants to remove a collaborator
+    // Verify current user is the owner of the space
+    if (user.user_id !== user.space_id) {
+      return Response.json({ error: 'Only the space owner can remove collaborators.' }, { status: 403 });
+    }
+
+    // Find the target user to ensure they are actually in this space
+    const targetUser = await db.collection('users').findOne({ user_id: targetUserId, space_id: user.space_id });
+    if (!targetUser) {
+      return Response.json({ error: 'Collaborator not found in your space.' }, { status: 404 });
+    }
+
+    // Reset their space_id back to their own user_id
+    await db.collection('users').updateOne(
+      { user_id: targetUserId },
+      { $set: { space_id: targetUserId } }
+    );
+
+    return Response.json({ success: true, message: `Removed ${targetUser.name} from your space.` });
+  } catch (error) {
+    console.error('Collaboration DELETE Error:', error);
+    return Response.json({ error: 'Internal server error' }, { status: 500 });
+  }
 }
 

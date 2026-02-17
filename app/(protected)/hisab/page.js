@@ -38,6 +38,7 @@ export default function HisabPage() {
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
+  const [editId, setEditId] = useState(null);
 
   const [selectedPerson, setSelectedPerson] = useState(null); // { name, mobile }
   const [showLedgerModal, setShowLedgerModal] = useState(false);
@@ -67,10 +68,19 @@ export default function HisabPage() {
     e.preventDefault();
     setIsSubmitting(true);
     try {
-      await secureFetch('/api/hisab', {
-        method: 'POST',
-        body: JSON.stringify({ ...formData, amount: parseFloat(formData.amount) }),
-      });
+      if (editId) {
+        await secureFetch(`/api/hisab/${editId}`, {
+          method: 'PUT',
+          body: JSON.stringify({ ...formData, amount: parseFloat(formData.amount) }),
+        });
+        toast.success('Updated successfully');
+      } else {
+        await secureFetch('/api/hisab', {
+          method: 'POST',
+          body: JSON.stringify({ ...formData, amount: parseFloat(formData.amount) }),
+        });
+        toast.success('Recorded successfully');
+      }
       setFormData({ 
         name: '', 
         mobile: '', 
@@ -79,6 +89,8 @@ export default function HisabPage() {
         description: '', 
         date: new Date().toISOString().split('T')[0] 
       });
+      setEditId(null);
+      setShowAddDialog(false);
       fetchRecords();
     } catch (err) {} 
     finally { setIsSubmitting(false); }
@@ -101,8 +113,25 @@ export default function HisabPage() {
     return matchesSearch && matchesPerson;
   });
 
-  // Group filtered records by date
-  const recordsByDate = filteredRecords.reduce((acc, r) => {
+  // Calculate person-wise history with running balance
+  const personRecords = records
+    .filter(r => selectedPerson && r.name === selectedPerson.name && r.mobile === selectedPerson.mobile)
+    .sort((a, b) => {
+      const dateA = new Date(a.date).getTime();
+      const dateB = new Date(b.date).getTime();
+      if (dateA !== dateB) return dateA - dateB;
+      return new Date(a.created_at) - new Date(b.created_at);
+    });
+
+  let bal = 0;
+  const recordsWithBalance = personRecords.map(r => {
+    if (r.type === 'credit') bal += r.amount;
+    else bal -= r.amount;
+    return { ...r, balance: bal };
+  }).reverse();
+
+  // Group by date for display
+  const recordsByDate = recordsWithBalance.reduce((acc, r) => {
     const date = new Date(r.date).toLocaleDateString();
     if (!acc[date]) acc[date] = [];
     acc[date].push(r);
@@ -138,11 +167,15 @@ export default function HisabPage() {
              </div>
               <Button 
                 onClick={() => {
-                   setFormData(prev => ({ 
-                     ...prev, 
+                   setFormData({ 
                      name: selectedPerson?.name || '', 
-                     mobile: selectedPerson?.mobile || '' 
-                   }));
+                     mobile: selectedPerson?.mobile || '',
+                     type: 'debit',
+                     amount: '',
+                     description: '',
+                     date: new Date().toISOString().split('T')[0]
+                   });
+                   setEditId(null);
                    setShowAddDialog(true);
                 }} 
                 className="rounded-2xl h-12 px-6 shadow-xl shadow-indigo-200 bg-indigo-600 hover:bg-indigo-700 font-bold"
@@ -198,8 +231,8 @@ export default function HisabPage() {
                        >
                           <CardContent className="p-5 flex items-center justify-between">
                              <div className="flex items-center gap-4">
-                                <div className="w-14 h-14 rounded-2xl bg-indigo-600 text-white flex items-center justify-center shadow-lg shadow-indigo-100 group-hover:scale-110 transition-transform">
-                                   <User className="h-7 w-7" />
+                                <div className="w-12 h-12 font-bold rounded-2xl bg-indigo-600 text-white flex items-center justify-center shadow-lg shadow-indigo-100 group-hover:scale-110 transition-transform">
+                                     {p.name.charAt(0).toUpperCase()}
                                 </div>
                                 <div className="min-w-0">
                                    <p className="font-black text-slate-900 text-lg leading-tight mb-0.5">{p.name}</p>
@@ -232,7 +265,7 @@ export default function HisabPage() {
                   <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -mr-10 -mt-10" />
                   <div className="flex items-center gap-4 relative z-10">
                      <div className="w-14 h-14 rounded-2xl bg-white/20 flex items-center justify-center backdrop-blur-sm shadow-xl">
-                        <User className="h-7 w-7" />
+                        <ArrowLeft className="h-7 w-7 cursor-pointer" onClick={() => setShowLedgerModal(false)} />
                      </div>
                      <div>
                         <h2 className="text-2xl font-black leading-none mb-1">{selectedPerson?.name}</h2>
@@ -278,19 +311,45 @@ export default function HisabPage() {
                                         </div>
                                       </div>
                                       <div className="flex items-center gap-4">
-                                        <div className="text-right">
+                                         <div className="text-right">
                                             <p className={`font-black text-lg ${r.type === 'debit' ? 'text-red-500' : 'text-green-500'}`}>
                                               ₹{r.amount.toLocaleString()}
                                             </p>
                                             <p className="text-[8px] font-black uppercase text-slate-300 leading-none">{r.type}</p>
                                         </div>
-                                        <button
-                                            onClick={() => setDeleteConfirm(r.hisab_id)}
-                                            className="p-2 rounded-xl bg-slate-50 text-slate-300 hover:text-red-500 hover:bg-red-50 transition-all opacity-0 group-hover:opacity-100"
-                                        >
-                                            <Trash2 className="h-4 w-4" />
-                                        </button>
+                                        <div className="flex flex-col gap-1">
+                                            <button
+                                                onClick={() => {
+                                                    setFormData({
+                                                        name: r.name,
+                                                        mobile: r.mobile || '',
+                                                        type: r.type,
+                                                        amount: r.amount.toString(),
+                                                        description: r.description || '',
+                                                        date: new Date(r.date).toISOString().split('T')[0]
+                                                    });
+                                                    setEditId(r.hisab_id);
+                                                    setShowLedgerModal(false);
+                                                    setShowAddDialog(true);
+                                                }}
+                                                className="p-2 rounded-xl bg-slate-50 text-slate-300 hover:text-indigo-600 hover:bg-indigo-50 transition-all opacity-0 group-hover:opacity-100"
+                                            >
+                                                <MoreVertical className="h-4 w-4" />
+                                            </button>
+                                            <button
+                                                onClick={() => setDeleteConfirm(r.hisab_id)}
+                                                className="p-2 rounded-xl bg-slate-50 text-slate-300 hover:text-red-500 hover:bg-red-50 transition-all opacity-0 group-hover:opacity-100"
+                                            >
+                                                <Trash2 className="h-4 w-4" />
+                                            </button>
+                                        </div>
                                       </div>
+                                  </div>
+                                  <div className="mt-2 pt-2 border-t border-slate-50 flex justify-between items-center">
+                                      <p className="text-[10px] font-bold text-slate-400">
+                                          Bal. <span className={r.balance >= 0 ? 'text-green-600' : 'text-red-600'}>₹{Math.abs(r.balance).toLocaleString()}</span>
+                                      </p>
+                                      {r.description && <p className="text-[10px] text-slate-400 italic font-medium">{r.description}</p>}
                                   </div>
                                 </Card>
                             ))}
@@ -302,21 +361,37 @@ export default function HisabPage() {
 
                <div className="p-6 bg-white border-t shrink-0 flex gap-4 shadow-[0_-10px_40px_rgba(0,0,0,0.02)] relative z-20">
                   <Button
-                     onClick={() => {
-                        setShowLedgerModal(false);
-                        setFormData(prev => ({ ...prev, name: selectedPerson?.name, mobile: selectedPerson?.mobile, type: 'credit' }));
-                        setShowAddDialog(true);
-                     }}
+                         onClick={() => {
+                            setFormData({ 
+                                name: selectedPerson?.name, 
+                                mobile: selectedPerson?.mobile || '', 
+                                type: 'credit',
+                                amount: '',
+                                description: '',
+                                date: new Date().toISOString().split('T')[0]
+                            });
+                            setEditId(null);
+                            setShowLedgerModal(false);
+                            setShowAddDialog(true);
+                         }}
                      className="flex-1 h-14 rounded-2xl bg-green-600 hover:bg-green-700 font-black text-sm uppercase shadow-xl shadow-green-100 transition-all active:scale-95"
                   >
                      I Took (Credit)
                   </Button>
                   <Button
-                     onClick={() => {
-                        setShowLedgerModal(false);
-                        setFormData(prev => ({ ...prev, name: selectedPerson?.name, mobile: selectedPerson?.mobile, type: 'debit' }));
-                        setShowAddDialog(true);
-                     }}
+                         onClick={() => {
+                            setFormData({ 
+                                name: selectedPerson?.name, 
+                                mobile: selectedPerson?.mobile || '', 
+                                type: 'debit',
+                                amount: '',
+                                description: '',
+                                date: new Date().toISOString().split('T')[0]
+                            });
+                            setEditId(null);
+                            setShowLedgerModal(false);
+                            setShowAddDialog(true);
+                         }}
                      className="flex-1 h-14 rounded-2xl bg-red-600 hover:bg-red-700 font-black text-sm uppercase shadow-xl shadow-red-100 transition-all active:scale-95"
                   >
                      I Gave (Debit)
@@ -332,8 +407,8 @@ export default function HisabPage() {
                  <div className="absolute top-4 right-4 opacity-10">
                     <HandCoins className="h-20 w-20" />
                  </div>
-                 <h2 className="text-3xl font-black mb-1">New Entry</h2>
-                 <p className="text-indigo-100 text-sm font-medium">Capture a new money exchange.</p>
+                  <h2 className="text-3xl font-black mb-1">{editId ? 'Edit Entry' : 'New Entry'}</h2>
+                  <p className="text-indigo-100 text-sm font-medium">{editId ? 'Modify this transaction record.' : 'Capture a new money exchange.'}</p>
               </div>
               <form onSubmit={handleAddRecord} className="p-8 space-y-6">
                  <div className="space-y-4">
@@ -395,6 +470,16 @@ export default function HisabPage() {
                        </div>
                     </div>
                         <div className="space-y-2">
+                           <Label className="text-[10px] font-black tracking-widest uppercase text-slate-400 ml-1">Date</Label>
+                           <Input 
+                             type="date"
+                             value={formData.date}
+                             onChange={(e) => setFormData({...formData, date: e.target.value})}
+                             className="h-12 rounded-xl bg-slate-50 border-2 border-transparent focus-visible:border-indigo-600 focus-visible:ring-4 focus-visible:ring-indigo-50 transition-all font-medium px-4"
+                             required
+                           />
+                        </div>
+                        <div className="space-y-2">
                            <Label className="text-[10px] font-black tracking-widest uppercase text-slate-400 ml-1">Description (Optional)</Label>
                            <Input 
                             placeholder="Purpose of transaction..."
@@ -404,9 +489,9 @@ export default function HisabPage() {
                            />
                         </div>
                  </div>
-                 <Button disabled={isSubmitting} className="w-full h-14 rounded-2xl bg-indigo-600 font-black text-lg shadow-xl shadow-indigo-100">
-                    {isSubmitting ? 'Recording...' : 'Record Transaction'}
-                 </Button>
+                  <Button disabled={isSubmitting} className="w-full h-14 rounded-2xl bg-indigo-600 font-black text-lg shadow-xl shadow-indigo-100">
+                     {isSubmitting ? (editId ? 'Updating...' : 'Recording...') : (editId ? 'Update Transaction' : 'Record Transaction')}
+                  </Button>
               </form>
            </DialogContent>
         </Dialog>
