@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import { getDb } from '@/lib/db';
 import { getAuthenticatedUser } from '@/lib/auth';
 import { NextRequest } from 'next/server';
@@ -19,7 +20,7 @@ export async function PUT(
 
     const updateData: any = {};
     if (body.name) updateData.name = body.name;
-    if (body.mobile !== undefined) updateData.mobile = body.mobile;
+    if (body.mobile !== undefined) updateData.mobile = body.mobile ? String(body.mobile) : '';
     if (body.type) updateData.type = body.type;
     if (body.amount) updateData.amount = parseFloat(body.amount);
     if (body.description !== undefined) updateData.description = body.description;

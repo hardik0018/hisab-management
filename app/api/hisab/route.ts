@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
       user_id: user.user_id,
       space_id: spaceId,
       name,
-      mobile: mobile || '',
+      mobile: mobile ? String(mobile) : '',
       type,
       amount: parseFloat(amount),
       description: description || '',

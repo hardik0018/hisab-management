@@ -118,7 +118,7 @@ export default function HisabClient({ initialRecords }: HisabClientProps) {
 
   const filteredRecords = records.filter(r => {
     const matchesSearch = r.name.toLowerCase().includes(search.toLowerCase()) || 
-                          (r.mobile && r.mobile.includes(search));
+                          (r.mobile && String(r.mobile).includes(search));
     const matchesPerson = selectedPerson ? (r.name === selectedPerson.name && r.mobile === selectedPerson.mobile) : true;
     return matchesSearch && matchesPerson;
   });
@@ -160,7 +160,7 @@ export default function HisabClient({ initialRecords }: HisabClientProps) {
 
   const displayedPeople = Object.values(peopleGroups).filter(p => 
     p.name.toLowerCase().includes(search.toLowerCase()) || 
-    (p.mobile && p.mobile.includes(search))
+    (p.mobile && String(p.mobile).includes(search))
   );
 
   return (
