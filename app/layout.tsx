@@ -2,7 +2,14 @@ import './globals.css'
 import { Toaster } from '@/components/ui/sonner'
 import { auth } from "@/auth"
 import { Providers } from '@/components/Providers'
+import { Plus_Jakarta_Sans } from 'next/font/google'
 import { ReactNode } from 'react'
+
+const plusJakartaSans = Plus_Jakarta_Sans({ 
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-jakarta',
+})
 
 export const metadata = {
   title: 'Hisab Management System',
@@ -34,7 +41,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
       <head>
         <script dangerouslySetInnerHTML={{__html:'window.addEventListener("error",function(e){if(e.error instanceof DOMException&&e.error.name==="DataCloneError"&&e.message&&e.message.includes("PerformanceServerTiming")){e.stopImmediatePropagation();e.preventDefault()}},true);'}} />
       </head>
-      <body className="bg-background">
+      <body className={`${plusJakartaSans.variable} font-sans bg-background`}>
         <Providers session={session}>
           {children}
         </Providers>

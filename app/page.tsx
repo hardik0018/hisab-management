@@ -8,12 +8,14 @@ export const dynamic = 'force-dynamic';
  * Decides whether to send the user to the Dashboard or Login page based on session.
  * Justification for SSR: Eliminates the loading flicker and client-side fetch on the landing page.
  */
-export default async function IndexPage(): Promise<never> {
+import LandingPage from "@/components/LandingPage";
+
+export default async function IndexPage() {
   const session = await auth();
 
   if (session) {
     redirect('/dashboard');
-  } else {
-    redirect('/login');
   }
+
+  return <LandingPage />;
 }

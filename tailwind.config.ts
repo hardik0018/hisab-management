@@ -18,6 +18,9 @@ const config: Config = {
     		}
     	},
     	extend: {
+    		fontFamily: {
+    			sans: ['var(--font-jakarta)', 'Inter', 'sans-serif'],
+    		},
     		colors: {
     			border: 'hsl(var(--border))',
     			input: 'hsl(var(--input))',
