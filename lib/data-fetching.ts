@@ -100,6 +100,9 @@ export async function getMarriageRecords(): Promise<MarriageRecord[] | null> {
 /**
  * Fetches dashboard statistics.
  */
+/**
+ * Fetches dashboard statistics using optimized aggregation pipelines.
+ */
 export async function getDashboardStats(): Promise<DashboardStats | null> {
     const user = await getAuthenticatedUser();
     if (!user) return null;
@@ -107,29 +110,63 @@ export async function getDashboardStats(): Promise<DashboardStats | null> {
     const db = await getDb();
     const spaceId = user.space_id;
 
-    const [expensesRaw, hisabRaw, marriageRaw] = await Promise.all([
-        db.collection('expenses').find({ space_id: spaceId }, { projection: { _id: 0 } }).toArray(),
-        db.collection('hisab').find({ space_id: spaceId }, { projection: { _id: 0 } }).toArray(),
-        db.collection('marriage_hisab').find({ space_id: spaceId }, { projection: { _id: 0 } }).toArray()
+    const [
+        expensesAgg,
+        hisabAgg,
+        marriageAgg,
+        recentExpenses,
+        recentHisab
+    ] = await Promise.all([
+        // 1. Total Expenses
+        db.collection('expenses').aggregate([
+            { $match: { space_id: spaceId } },
+            { $group: { _id: null, total: { $sum: "$amount" } } }
+        ]).toArray(),
+
+        // 2. Total Debit/Credit
+        db.collection('hisab').aggregate([
+             { $match: { space_id: spaceId } },
+             { $group: { 
+                 _id: null, 
+                 debit: { $sum: { $cond: [{ $eq: ["$type", "debit"] }, "$amount", 0] } }, 
+                 credit: { $sum: { $cond: [{ $eq: ["$type", "credit"] }, "$amount", 0] } } 
+             } }
+        ]).toArray(),
+
+        // 3. Total Marriage Gifting
+        db.collection('marriage_hisab').aggregate([
+            { $match: { space_id: spaceId } },
+            { $group: { _id: null, total: { $sum: "$amount" } } }
+        ]).toArray(),
+
+        // 4. Recent Expenses (Limit 5)
+        db.collection('expenses')
+            .find({ space_id: spaceId }, { projection: { _id: 0 } })
+            .sort({ date: -1 })
+            .limit(5)
+            .toArray(),
+
+        // 5. Recent Hisab (Limit 5) - Fixed sort order
+        db.collection('hisab')
+            .find({ space_id: spaceId }, { projection: { _id: 0 } })
+            .sort({ date: -1, created_at: -1 }) // Tie-break with created_at if needed
+            .limit(5)
+            .toArray()
     ]);
 
-    const expenses = expensesRaw as unknown as ExpenseRecord[];
-    const hisab = hisabRaw as unknown as HisabRecord[];
-    const marriage = marriageRaw as unknown as MarriageRecord[];
-
-    const totalExpense = expenses.reduce((sum, e) => sum + (e.amount || 0), 0);
-    const totalDebit = hisab.filter(h => h.type === 'debit').reduce((sum, h) => sum + (h.amount || 0), 0);
-    const totalCredit = hisab.filter(h => h.type === 'credit').reduce((sum, h) => sum + (h.amount || 0), 0);
-    const totalMarriage = marriage.reduce((sum, m) => sum + (m.amount || 0), 0);
+    const totalExpense = expensesAgg[0]?.total || 0;
+    const totalDebit = hisabAgg[0]?.debit || 0;
+    const totalCredit = hisabAgg[0]?.credit || 0;
+    const totalMarriage = marriageAgg[0]?.total || 0;
 
     return {
       totalExpense,
       totalDebit,
       totalCredit,
       totalMarriage,
-      balance: totalCredit - totalDebit,
-      recentExpenses: expenses.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 5),
-      recentHisab: hisab.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 5),
+      balance: totalCredit - totalDebit, // Assuming balance is credit - debit? Or do we need expense factored in? The original code was just credit - debit.
+      recentExpenses: recentExpenses as unknown as ExpenseRecord[],
+      recentHisab: recentHisab as unknown as HisabRecord[],
     };
 }
 

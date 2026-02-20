@@ -1,6 +1,7 @@
 'use client'
 
 import { usePathname, useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { LayoutDashboard, Receipt, HandCoins, Heart, UserCircle, LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
@@ -29,12 +30,14 @@ export default function BottomNav() {
         <div className="flex justify-between items-center h-[72px] px-2">
           {NAV_ITEMS.map((item) => {
             const Icon = item.icon;
-            const isActive = pathname === item.path;
+            // Robust active check: exact match or sub-path match
+            const isActive = pathname === item.path || pathname.startsWith(`${item.path}/`);
             
             return (
-              <button
+              <Link
                 key={item.path}
-                onClick={() => router.push(item.path)}
+                href={item.path}
+                prefetch={true}
                 className={cn(
                   'relative flex flex-col items-center justify-center w-full h-[60px] transition-all duration-500 rounded-3xl',
                   isActive ? 'text-white' : 'text-slate-500 hover:text-slate-400'
@@ -62,7 +65,7 @@ export default function BottomNav() {
                     <div className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-[2px] bg-primary rounded-full shadow-[0_0_10px_#3B82F6]" />
                   </motion.div>
                 )}
-              </button>
+              </Link>
             );
           })}
         </div>
