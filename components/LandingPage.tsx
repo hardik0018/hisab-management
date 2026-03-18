@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useRef, useState, useEffect } from "react";
-import { motion, useScroll, useTransform } from "framer-motion";
 import { 
   ArrowUpRight, 
   ArrowDownLeft, 
@@ -45,16 +44,15 @@ const TiltCard = ({ children, className = "" }: { children: React.ReactNode, cla
   };
 
   return (
-    <motion.div
+    <div
       ref={cardRef}
       onMouseMove={handleMouseMove}
       onMouseLeave={() => setRotate({ x: 0, y: 0 })}
-      style={{ transformStyle: "preserve-3d", rotateX: rotate.x, rotateY: rotate.y }}
-      transition={{ type: "spring", stiffness: 300, damping: 30 }}
+      style={{ transformStyle: "preserve-3d", transform: `rotateX(${rotate.x}deg) rotateY(${rotate.y}deg)`, transition: "transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)" }}
       className={`relative ${className}`}
     >
       {children}
-    </motion.div>
+    </div>
   );
 };
 
@@ -162,29 +160,29 @@ const LandingPage = () => {
         {/* HERO SECTION */}
         <section className="relative pt-28 pb-16 px-6">
           <div className="max-w-7xl mx-auto flex flex-col items-center text-center">
-            <motion.div 
-              initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+            <div 
+              
               className="px-4 py-1.5 bg-slate-100 rounded-full text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 mb-8"
             >
               All your records in one professional space
-            </motion.div>
+            </div>
 
-            <motion.h1 
-               initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
+            <h1 
+               
                className="text-6xl lg:text-[7rem] font-[1000] tracking-[-0.05em] leading-[0.9] mb-10 text-slate-900"
             >
               MANAGE YOUR<br /> <span className="text-blue-600 italic">HISAB</span> & <span className="text-rose-500 italic">VAYVHAR</span>
-            </motion.h1>
+            </h1>
 
-            <motion.p 
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}
+            <p 
+              
               className="max-w-2xl text-lg lg:text-xl text-slate-500 font-medium mb-12"
             >
               Ditch the paper books. A professional tool for Indian users to manage debit-credit, daily expenses, and social gifting flawlessly.
-            </motion.p>
+            </p>
 
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
+            <div 
+              
               className="flex flex-col sm:flex-row items-center gap-6"
             >
               <Link href="/login" className="px-10 py-5 bg-black text-white rounded-[2rem] font-black text-lg hover:bg-blue-600 transition-all shadow-2xl active:scale-95 flex items-center gap-3">
@@ -194,7 +192,7 @@ const LandingPage = () => {
               <div className="flex items-center gap-4 text-sm font-black text-slate-400">
                 <CheckCircle2 className="w-5 h-5 text-green-500" /> Secure Cloud Backup
               </div>
-            </motion.div>
+            </div>
           </div>
 
           {/* Interactive Mockup */}

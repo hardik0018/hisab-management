@@ -39,6 +39,7 @@ interface GetExpensesParams {
  */
 export async function getExpenses({ category, page = 1, limit = 50 }: GetExpensesParams = {}): Promise<{
   expenses: ExpenseRecord[];
+  topCategories: string[];
   pagination: {
     total: number;
     page: number;
@@ -57,18 +58,27 @@ export async function getExpenses({ category, page = 1, limit = 50 }: GetExpense
     query.category = category;
   }
 
-  const [expenses, total] = await Promise.all([
+  const [expenses, total, categoryStats] = await Promise.all([
     db.collection('expenses')
       .find(query, { projection: { _id: 0 } })
       .sort({ date: -1 })
       .skip((page - 1) * limit)
       .limit(limit)
       .toArray(),
-    db.collection('expenses').countDocuments(query)
+    db.collection('expenses').countDocuments(query),
+    db.collection('expenses').aggregate([
+      { $match: { space_id: spaceId } },
+      { $group: { _id: "$category", count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+      { $limit: 3 }
+    ]).toArray()
   ]);
+
+  const topCategories = categoryStats.map((stat: any) => stat._id);
 
   return {
     expenses: expenses as unknown as ExpenseRecord[],
+    topCategories,
     pagination: {
       total,
       page,
@@ -114,8 +124,9 @@ export async function getDashboardStats(): Promise<DashboardStats | null> {
         expensesAgg,
         hisabAgg,
         marriageAgg,
-        recentExpenses,
-        recentHisab
+        mostUsedCatAgg,
+        recentExpensesData,
+        recentHisabData
     ] = await Promise.all([
         // 1. Total Expenses
         db.collection('expenses').aggregate([
@@ -137,6 +148,14 @@ export async function getDashboardStats(): Promise<DashboardStats | null> {
         db.collection('marriage_hisab').aggregate([
             { $match: { space_id: spaceId } },
             { $group: { _id: null, total: { $sum: "$amount" } } }
+        ]).toArray(),
+
+        // 4. Most Used Category
+        db.collection('expenses').aggregate([
+            { $match: { space_id: spaceId } },
+            { $group: { _id: "$category", count: { $sum: 1 } } },
+            { $sort: { count: -1 } },
+            { $limit: 1 }
         ]).toArray(),
 
         // 4. Recent Expenses (Limit 5)
@@ -165,8 +184,9 @@ export async function getDashboardStats(): Promise<DashboardStats | null> {
       totalCredit,
       totalMarriage,
       balance: totalCredit - totalDebit, // Assuming balance is credit - debit? Or do we need expense factored in? The original code was just credit - debit.
-      recentExpenses: recentExpenses as unknown as ExpenseRecord[],
-      recentHisab: recentHisab as unknown as HisabRecord[],
+      recentExpenses: recentExpensesData as unknown as ExpenseRecord[],
+      recentHisab: recentHisabData as unknown as HisabRecord[],
+      mostUsedCategory: mostUsedCatAgg[0]?._id as string | undefined,
     };
 }
 

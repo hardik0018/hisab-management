@@ -6,7 +6,6 @@ import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Sparkles, ShieldCheck, Zap, Globe, LucideIcon } from 'lucide-react';
 import { signIn, useSession } from 'next-auth/react';
-import { motion } from 'framer-motion';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -44,52 +43,44 @@ export default function LoginPage() {
          </div>
          
          <div className="relative z-10 space-y-8 max-w-lg">
-            <motion.div 
-               initial={{ opacity: 0, y: 20 }}
-               animate={{ opacity: 1, y: 0 }}
+            <div 
+               
                className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 text-white text-sm font-bold border border-white/10 backdrop-blur-md"
             >
                <Sparkles className="h-4 w-4 text-yellow-400" />
                Join 10,000+ users worldwide
-            </motion.div>
+            </div>
             
-            <motion.h1 
-               initial={{ opacity: 0, y: 20 }}
-               animate={{ opacity: 1, y: 0 }}
-               transition={{ delay: 0.1 }}
+            <h1 
+               
                className="text-6xl font-black text-white leading-tight"
             >
                Master your <span className="text-primary italic">Hisab</span> with precision.
-            </motion.h1>
+            </h1>
             
-            <motion.p 
-               initial={{ opacity: 0, y: 20 }}
-               animate={{ opacity: 1, y: 0 }}
-               transition={{ delay: 0.2 }}
+            <p 
+               
                className="text-xl text-slate-400 leading-relaxed"
             >
                The all-in-one financial toolkit for modern households. Track expenses, manage credit, and social gifts in one place.
-            </motion.p>
+            </p>
             
-            <motion.div 
-               initial={{ opacity: 0 }}
-               animate={{ opacity: 1 }}
-               transition={{ delay: 0.4 }}
+            <div 
+               
                className="grid grid-cols-2 gap-6 pt-8"
             >
                <Feature icon={ShieldCheck} text="Secure Bank-Grade Encryption" />
                <Feature icon={Zap} text="Real-time Synchronization" />
                <Feature icon={Globe} text="Cloud-based Accessibility" />
                <Feature icon={Sparkles} text="Intelligent Data Analysis" />
-            </motion.div>
+            </div>
          </div>
       </div>
 
       {/* Right Side - Login Form */}
       <div className="flex-1 flex items-center justify-center p-6 bg-slate-50 lg:bg-white">
-        <motion.div 
-           initial={{ opacity: 0, scale: 0.95 }}
-           animate={{ opacity: 1, scale: 1 }}
+        <div 
+           
            className="w-full max-w-md space-y-8"
         >
           <div className="text-center lg:text-left space-y-2">
@@ -107,9 +98,9 @@ export default function LoginPage() {
                onMouseLeave={() => setIsHovered(false)}
                className="w-full group relative flex items-center justify-center h-14 bg-slate-900 text-white rounded-2xl font-bold text-lg overflow-hidden transition-all hover:shadow-2xl hover:shadow-primary/30"
             >
-               <motion.div 
+               <div 
                   className="absolute inset-0 bg-primary opacity-0 group-hover:opacity-100 transition-opacity"
-                  initial={false}
+                  
                />
                <div className="relative z-10 flex items-center gap-3">
                   <svg className="w-6 h-6 fill-current" viewBox="0 0 24 24">
@@ -131,7 +122,7 @@ export default function LoginPage() {
              <p className="text-sm font-bold text-slate-800">New here?</p>
              <button className="text-primary font-bold text-sm hover:underline">Create an account</button>
           </div>
-        </motion.div>
+        </div>
       </div>
     </div>
   );

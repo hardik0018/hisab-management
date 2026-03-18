@@ -26,7 +26,7 @@ export default async function ExpensesPage({ searchParams }: ExpensesPageProps) 
 
   if (!initialData) {
     // Handle null case if needed, or pass empty defaults
-    return <ExpensesClient initialData={{ expenses: [], pagination: { total: 0, page: 1, limit: 50, totalPages: 0 } }} initialCategory={category} />;
+    return <ExpensesClient initialData={{ expenses: [], topCategories: [], pagination: { total: 0, page: 1, limit: 50, totalPages: 0 } }} initialCategory={category} />;
   }
 
   return <ExpensesClient initialData={initialData} initialCategory={category} />;

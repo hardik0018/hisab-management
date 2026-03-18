@@ -18,7 +18,6 @@ import {
 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import PageWrapper from '@/components/PageWrapper';
-import { motion, AnimatePresence } from 'framer-motion';
 import { secureFetch } from '@/lib/api-utils';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
@@ -45,6 +44,7 @@ const PAYMENT_MODES: PaymentModeConfig[] = [
 interface ExpensesClientProps {
   initialData: {
     expenses: ExpenseRecord[];
+    topCategories: string[];
     pagination: {
       total: number;
       page: number;
@@ -73,15 +73,23 @@ export default function ExpensesClient({ initialData, initialCategory }: Expense
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
-  // Form State
   const [formData, setFormData] = useState<FormData>({
     title: '',
     amount: '',
-    category: 'Other',
+    category: initialData.expenses?.[0]?.category || 'Other',
     paymentMode: 'cash',
     date: new Date().toISOString().split('T')[0],
     notes: '',
   });
+
+  const [debouncedSearch, setDebouncedSearch] = useState(search);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 300);
+    return () => clearTimeout(handler);
+  }, [search]);
 
   useEffect(() => {
     // Only fetch if category changes from initial
@@ -107,7 +115,7 @@ export default function ExpensesClient({ initialData, initialCategory }: Expense
     e.preventDefault();
     setIsSubmitting(true);
     try {
-      await secureFetch('/api/expenses', {
+      const response = await secureFetch<{ expense: ExpenseRecord }>('/api/expenses', {
         method: 'POST',
         body: JSON.stringify({
           ...formData,
@@ -116,15 +124,15 @@ export default function ExpensesClient({ initialData, initialCategory }: Expense
       });
       toast.success('Expense added successfully');
       setShowAddDialog(false);
+      setExpenses([response.expense, ...expenses]);
       setFormData({
         title: '',
         amount: '',
-        category: 'Other',
+        category: response.expense.category,
         paymentMode: 'cash',
         date: new Date().toISOString().split('T')[0],
         notes: '',
       });
-      fetchExpenses();
     } catch (err) {
        // secureFetch handles toast
     } finally {
@@ -146,7 +154,7 @@ export default function ExpensesClient({ initialData, initialCategory }: Expense
   };
 
   const filteredExpenses = expenses.filter(exp => 
-    exp.title.toLowerCase().includes(search.toLowerCase())
+    exp.title.toLowerCase().includes(debouncedSearch.toLowerCase())
   );
 
   const totalSpent = filteredExpenses.reduce((sum, e) => sum + e.amount, 0);
@@ -212,19 +220,15 @@ export default function ExpensesClient({ initialData, initialCategory }: Expense
         <div className="space-y-4">
            {loading ? (
              [1,2,3].map(i => <Skeleton key={i} className="h-24 rounded-3xl" />)
-           ) : (
-             <AnimatePresence mode="popLayout">
-               {filteredExpenses.map((exp, idx) => {
+           ) : 
+               filteredExpenses.map((exp, idx) => {
                  const modeInfo = PAYMENT_MODES.find(p => p.value === exp.paymentMode);
                  const ModeIcon = modeInfo ? modeInfo.icon : CreditCard;
 
                  return (
-                   <motion.div
+                   <div
                      key={exp.expense_id}
-                     initial={{ opacity: 0, scale: 0.95 }}
-                     animate={{ opacity: 1, scale: 1 }}
-                     exit={{ opacity: 0, scale: 0.95 }}
-                     transition={{ delay: idx * 0.05 }}
+                     
                      className="group relative"
                    >
                       <Card className="border-none shadow-lg hover:shadow-xl transition-all rounded-2xl bg-white overflow-hidden p-3 sm:p-5 hover:-translate-y-0.5 group">
@@ -259,11 +263,11 @@ export default function ExpensesClient({ initialData, initialCategory }: Expense
                             </div>
                          </div>
                       </Card>
-                   </motion.div>
+                   </div>
                  );
                })}
-             </AnimatePresence>
-           )}
+       
+           
            {!loading && filteredExpenses.length === 0 && (
              <div className="text-center py-20 bg-slate-50 rounded-[3rem] border-2 border-dashed border-slate-200">
                 <div className="w-16 h-16 bg-white rounded-2xl shadow-lg flex items-center justify-center mx-auto mb-4 text-slate-300">
@@ -301,7 +305,9 @@ export default function ExpensesClient({ initialData, initialCategory }: Expense
                        <div className="space-y-2">
                           <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Amount (₹)</Label>
                           <Input 
-                            type="number" 
+                            autoFocus
+                            type="number"
+                            inputMode="decimal"
                             placeholder="0.00" 
                             value={formData.amount}
                             onChange={(e) => setFormData({...formData, amount: e.target.value})}
@@ -320,8 +326,27 @@ export default function ExpensesClient({ initialData, initialCategory }: Expense
                           />
                        </div>
                     </div>
-                    <div className="space-y-2">
-                       <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Category</Label>
+                    <div className="space-y-3">
+                       {initialData.topCategories?.length > 0 && (
+                         <div className="space-y-2 mb-4">
+                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Frequent Categories</Label>
+                            <div className="grid grid-cols-3 gap-2">
+                               {initialData.topCategories.slice(0, 3).map(c => (
+                                  <button
+                                    key={`top-${c}`}
+                                    type="button"
+                                    onClick={() => setFormData({...formData, category: c})}
+                                    className={`p-3 rounded-2xl text-[12px] font-black uppercase tracking-tighter transition-all flex items-center justify-center border-2 ${
+                                      formData.category === c ? 'bg-primary text-white border-primary shadow-lg shadow-primary/30' : 'bg-slate-50 text-slate-500 border-transparent hover:border-slate-200'
+                                    }`}
+                                  >
+                                     {c}
+                                  </button>
+                               ))}
+                            </div>
+                         </div>
+                       )}
+                       <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">All Categories</Label>
                        <div className="flex flex-wrap gap-2">
                           {CATEGORIES.map(c => (
                              <button

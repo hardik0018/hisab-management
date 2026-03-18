@@ -76,4 +76,5 @@ export interface DashboardStats {
   balance: number;
   recentExpenses: ExpenseRecord[];
   recentHisab: HisabRecord[];
+  mostUsedCategory?: string;
 }

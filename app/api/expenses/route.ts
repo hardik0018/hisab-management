@@ -82,18 +82,27 @@ export async function GET(request: NextRequest) {
       query.category = category;
     }
 
-    const [expenses, total] = await Promise.all([
+    const [expenses, total, categoryStats] = await Promise.all([
       db.collection('expenses')
         .find(query, { projection: { _id: 0 } })
         .sort({ date: -1 })
         .skip((page - 1) * limit)
         .limit(limit)
         .toArray(),
-      db.collection('expenses').countDocuments(query)
+      db.collection('expenses').countDocuments(query),
+      db.collection('expenses').aggregate([
+        { $match: { space_id: spaceId } },
+        { $group: { _id: "$category", count: { $sum: 1 } } },
+        { $sort: { count: -1 } },
+        { $limit: 3 }
+      ]).toArray()
     ]);
+
+    const topCategories = categoryStats.map(stat => stat._id);
 
     return Response.json({ 
       expenses, 
+      topCategories,
       pagination: {
         total,
         page,

@@ -4,7 +4,6 @@ import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { LayoutDashboard, Receipt, HandCoins, Heart, UserCircle, LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { motion } from 'framer-motion';
 
 interface NavItem {
   label: string;
@@ -57,13 +56,13 @@ export default function BottomNav() {
                 </div>
 
                 {isActive && (
-                  <motion.div 
-                    layoutId="nav-glow"
+                  <div 
+
                     className="absolute inset-x-2 inset-y-1 bg-white/10 rounded-2xl z-0"
-                    transition={{ type: "spring", bounce: 0.25, duration: 0.6 }}
+                    
                   >
                     <div className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-[2px] bg-primary rounded-full shadow-[0_0_10px_#3B82F6]" />
-                  </motion.div>
+                  </div>
                 )}
               </Link>
             );

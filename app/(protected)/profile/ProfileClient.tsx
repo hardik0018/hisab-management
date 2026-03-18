@@ -27,7 +27,6 @@ import { Skeleton } from '@/components/ui/skeleton';
 import PageWrapper from '@/components/PageWrapper';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { Dialog, DialogContent, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { motion } from 'framer-motion';
 import { secureFetch } from '@/lib/api-utils';
 import { User, CollaborationRequest, CollaborationData } from '@/types';
 
@@ -142,13 +141,12 @@ export default function ProfileClient({ initialCollaborationData }: ProfileClien
     <PageWrapper>
       <div className="p-4 space-y-8 max-w-2xl mx-auto pb-32">
         <div className="space-y-1">
-          <motion.h1 
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
+          <h1 
+            
             className="text-4xl font-black text-slate-900 tracking-tight"
           >
             My <span className="text-primary italic">Profile</span>
-          </motion.h1>
+          </h1>
           <p className="text-slate-500 font-medium">Manage your personal details and shared space.</p>
         </div>
 
@@ -158,10 +156,8 @@ export default function ProfileClient({ initialCollaborationData }: ProfileClien
           </div>
           <CardContent className="p-5 sm:p-8 relative z-10">
              <div className="flex items-center gap-4 sm:gap-8">
-                <motion.div
-                  initial={{ scale: 0.8, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  transition={{ type: "spring", bounce: 0.5 }}
+                <div
+
                   className="flex-shrink-0"
                 >
                   <Avatar className="h-16 w-16 sm:h-32 sm:w-32 border-2 sm:border-4 border-white/10 ring-4 sm:ring-8 ring-white/5 shadow-2xl">
@@ -170,15 +166,14 @@ export default function ProfileClient({ initialCollaborationData }: ProfileClien
                       {user?.name?.charAt(0).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
-                </motion.div>
+                </div>
                 <div className="space-y-0.5 sm:space-y-2 min-w-0">
-                  <motion.h2 
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
+                  <h2 
+                    
                     className="text-xl sm:text-4xl font-black leading-tight truncate px-1 text-white"
                   >
                     {user?.name}
-                  </motion.h2>
+                  </h2>
                   <div className="flex items-center gap-1.5 text-slate-400 font-medium px-1">
                     <Mail className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
                     <span className="text-[10px] sm:text-sm truncate">{user?.email}</span>
@@ -196,7 +191,7 @@ export default function ProfileClient({ initialCollaborationData }: ProfileClien
 
         <div className="space-y-4">
            <SectionLabel label="Your Space" />
-           <motion.div whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}>
+           <div >
              <Card className="border-none shadow-xl bg-white rounded-[2rem] overflow-hidden group cursor-pointer" onClick={() => setShowCollabDialog(true)}>
                 <CardContent className="p-6">
                    <div className="flex items-center justify-between">
@@ -233,7 +228,7 @@ export default function ProfileClient({ initialCollaborationData }: ProfileClien
                    </div>
                 </CardContent>
              </Card>
-           </motion.div>
+           </div>
         </div>
 
         <div className="space-y-3">
@@ -244,7 +239,7 @@ export default function ProfileClient({ initialCollaborationData }: ProfileClien
            </div>
         </div>
 
-        <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+        <div >
           <Button
             onClick={() => setShowLogoutConfirm(true)}
             variant="ghost"
@@ -253,7 +248,7 @@ export default function ProfileClient({ initialCollaborationData }: ProfileClien
             <LogOut className="mr-3 h-6 w-6" />
             Sign Out of Application
           </Button>
-        </motion.div>
+        </div>
 
         <Dialog open={showCollabDialog} onOpenChange={setShowCollabDialog}>
            <DialogContent className="max-w-md rounded-[2.5rem] border-none shadow-2xl p-0 overflow-hidden bg-white">
@@ -289,10 +284,9 @@ export default function ProfileClient({ initialCollaborationData }: ProfileClien
                        <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-500 ml-1">Pending Invitations (To You)</Label>
                        <div className="space-y-3">
                           {receivedRequests.map((req) => (
-                             <motion.div 
+                             <div 
                                key={req._id} 
-                               initial={{ opacity: 0, x: -10 }}
-                               animate={{ opacity: 1, x: 0 }}
+                               
                                className="p-4 rounded-3xl bg-amber-50 border border-amber-100 space-y-4"
                              >
                                 <div className="flex items-center gap-4">
@@ -322,7 +316,7 @@ export default function ProfileClient({ initialCollaborationData }: ProfileClien
                                       Decline
                                    </Button>
                                 </div>
-                             </motion.div>
+                             </div>
                           ))}
                        </div>
                     </div>
@@ -332,7 +326,7 @@ export default function ProfileClient({ initialCollaborationData }: ProfileClien
                      <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 ml-1">Current Members</Label>
                      <div className="space-y-3 max-h-[250px] overflow-y-auto pr-2 custom-scrollbar">
                         {collaborators.map((c) => (
-                           <motion.div 
+                           <div 
                              key={c.user_id} 
                              className="flex items-center justify-between p-4 rounded-3xl bg-slate-50 border border-slate-100 group"
                            >
@@ -377,10 +371,10 @@ export default function ProfileClient({ initialCollaborationData }: ProfileClien
                                     </div>
                                  )}
                                </div>
-                            </motion.div>
+                            </div>
                         ))}
                         {sentRequests.map((req) => (
-                           <motion.div 
+                           <div 
                              key={req._id} 
                              className="flex items-center justify-between p-4 rounded-3xl border border-dashed border-slate-200 opacity-60"
                            >
@@ -393,7 +387,7 @@ export default function ProfileClient({ initialCollaborationData }: ProfileClien
                                     <p className="text-[10px] text-slate-300 font-bold mt-1.5 italic">Pending Invitation...</p>
                                  </div>
                               </div>
-                           </motion.div>
+                           </div>
                         ))}
                      </div>
                   </div>
@@ -445,9 +439,7 @@ interface MenuButtonProps {
 
 function MenuButton({ icon: Icon, label, badge, subLabel }: MenuButtonProps) {
   return (
-    <motion.button 
-      whileHover={{ x: 5 }}
-      whileTap={{ scale: 0.98 }}
+    <button 
       className="w-full flex items-center justify-between p-5 rounded-[2rem] bg-white border border-slate-100 shadow-sm hover:shadow-xl hover:border-primary/20 transition-all group"
     >
        <div className="flex items-center gap-5">
@@ -463,6 +455,6 @@ function MenuButton({ icon: Icon, label, badge, subLabel }: MenuButtonProps) {
           {badge && <span className="bg-primary/10 text-primary text-[8px] font-black px-3 py-1 rounded-full border border-primary/10 uppercase tracking-widest">{badge}</span>}
           <ChevronRight className="h-5 w-5 text-slate-300 group-hover:translate-x-1 transition-transform group-hover:text-primary" />
        </div>
-    </motion.button>
+    </button>
   );
 }

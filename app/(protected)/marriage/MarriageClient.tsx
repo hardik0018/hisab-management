@@ -16,7 +16,6 @@ import {
 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import PageWrapper from '@/components/PageWrapper';
-import { motion, AnimatePresence } from 'framer-motion';
 import { secureFetch } from '@/lib/api-utils';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
@@ -172,16 +171,11 @@ export default function MarriageClient({ initialRecords }: MarriageClientProps) 
               <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 px-4">Family Aggregates</h3>
               {loading ? (
                  [1,2,3].map(i => <Skeleton key={i} className="h-24 rounded-3xl" />)
-              ) : (
-                 <AnimatePresence mode="popLayout">
-                    {filteredRecords.map((record, idx) => (
-                        <motion.div
+              ) : filteredRecords.map((record, idx) => (
+                        <div
                            key={record.marriage_id}
-                           layout
-                           initial={{ opacity: 0, x: 20 }}
-                           animate={{ opacity: 1, x: 0 }}
-                           exit={{ opacity: 0, scale: 0.95 }}
-                           transition={{ delay: idx * 0.05 }}
+                           
+                           
                         >
                            <Card className="group border-none shadow-lg hover:shadow-xl rounded-2xl sm:rounded-3xl bg-white overflow-hidden p-3 sm:p-5 hover:-translate-y-0.5 transition-all">
                               <div className="flex items-center justify-between gap-2">
@@ -218,10 +212,9 @@ export default function MarriageClient({ initialRecords }: MarriageClientProps) 
                                  </div>
                               </div>
                            </Card>
-                        </motion.div>
+                        </div>
                     ))}
-                 </AnimatePresence>
-              )}
+
            </div>
         </div>
 
