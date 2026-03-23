@@ -21,7 +21,7 @@ import {
 import PageWrapper from '@/components/PageWrapper';
 import { secureFetch } from '@/lib/api-utils';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
-import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { HisabRecord, TransactionType } from '@/types';
@@ -49,7 +49,12 @@ interface PersonSummary {
 
 export default function HisabClient({ initialRecords }: HisabClientProps) {
   const [records, setRecords] = useState<HisabRecord[]>(initialRecords);
+  const [mounted, setMounted] = React.useState(false);
   const [search, setSearch] = useState('');
+
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
@@ -173,14 +178,16 @@ export default function HisabClient({ initialRecords }: HisabClientProps) {
     (p.mobile && String(p.mobile).includes(debouncedSearch))
   );
 
+  if (!mounted) return null;
+
   return (
     <PageWrapper>
       <div className="p-4 sm:p-6 lg:p-8 space-y-8 max-w-5xl mx-auto pb-32">
         <div className="space-y-6">
-           <div className="flex justify-between items-end">
+           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
              <div className="space-y-1">
-                <h1 className="text-4xl font-black text-slate-900 tracking-tight">Hisab</h1>
-                <p className="text-slate-500 font-medium">Manage your personal debit-credit.</p>
+                <h1 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">Hisab</h1>
+                <p className="text-slate-500 font-medium text-sm sm:text-base">Manage your personal debit-credit.</p>
              </div>
               <Button 
                 onClick={() => {
@@ -195,7 +202,7 @@ export default function HisabClient({ initialRecords }: HisabClientProps) {
                    setEditId(null);
                    setShowAddDialog(true);
                 }} 
-                className="rounded-2xl h-12 px-6 shadow-xl shadow-indigo-200 bg-indigo-600 hover:bg-indigo-700 font-bold"
+                className="w-full sm:w-auto rounded-2xl h-12 px-6 shadow-xl shadow-indigo-200 bg-indigo-600 hover:bg-indigo-700 font-bold"
               >
                  <Plus className="mr-2 h-5 w-5" /> Log Transaction
               </Button>
@@ -257,11 +264,11 @@ export default function HisabClient({ initialRecords }: HisabClientProps) {
                                    </p>
                                 </div>
                              </div>
-                             <div className="text-right">
-                                <p className={`font-black text-base sm:text-xl leading-none mb-1 ${p.credit - p.debit >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                             <div className="text-right flex-shrink-0">
+                                <p className={`font-black text-lg sm:text-xl leading-none mb-1 ${p.credit - p.debit >= 0 ? 'text-green-500' : 'text-red-500'}`}>
                                    ₹{Math.abs(p.credit - p.debit).toLocaleString()}
                                 </p>
-                                <p className="text-[9px] font-black uppercase tracking-widest text-slate-300 whitespace-nowrap">
+                                <p className="text-[10px] sm:text-[11px] font-black uppercase tracking-widest text-slate-300 whitespace-nowrap">
                                    {p.credit - p.debit >= 0 ? 'To Return' : 'Give Him'}
                                 </p>
                              </div>
@@ -274,24 +281,24 @@ export default function HisabClient({ initialRecords }: HisabClientProps) {
         </div>
 
         <Dialog open={showLedgerModal} onOpenChange={setShowLedgerModal}>
-            <DialogContent className="max-w-2xl h-[85vh] flex flex-col p-0 overflow-hidden bg-slate-50 border-none shadow-2xl rounded-[2.5rem]">
-               <div className="bg-indigo-600 p-8 text-white flex justify-between items-center shrink-0 relative overflow-hidden">
+            <DialogContent className="max-w-2xl w-full h-full sm:h-[85vh] flex flex-col p-0 overflow-hidden bg-slate-50 border-none shadow-2xl sm:rounded-[2.5rem]">
+               <div className="bg-indigo-600 p-6 sm:p-8 text-white flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shrink-0 relative overflow-hidden">
                   <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -mr-10 -mt-10" />
-                  <div className="flex items-center gap-4 relative z-10">
-                     <div className="w-14 h-14 rounded-2xl bg-white/20 flex items-center justify-center backdrop-blur-sm shadow-xl">
-                        <ArrowLeft className="h-7 w-7 cursor-pointer" onClick={() => setShowLedgerModal(false)} />
+                  <div className="flex items-center gap-4 relative z-10 w-full sm:w-auto">
+                     <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-white/20 flex items-center justify-center backdrop-blur-sm shadow-xl">
+                        <ArrowLeft className="h-6 w-6 sm:h-7 sm:w-7 cursor-pointer" onClick={() => setShowLedgerModal(false)} />
                      </div>
-                     <div>
-                        <DialogTitle className="text-2xl font-black leading-none mb-1 text-white">{selectedPerson?.name}</DialogTitle>
-                        <p className="text-indigo-100 text-[10px] font-black uppercase tracking-widest flex items-center gap-1 opacity-80">
+                     <div className="min-w-0">
+                        <DialogTitle className="text-xl sm:text-2xl font-black leading-none mb-1 text-white truncate">{selectedPerson?.name}</DialogTitle>
+                        <DialogDescription className="text-indigo-100 text-[10px] font-black uppercase tracking-widest flex items-center gap-1 opacity-80">
                            <Phone className="h-3 w-3" /> {selectedPerson?.mobile || 'No mobile linked'}
-                        </p>
+                        </DialogDescription>
                      </div>
                   </div>
-                  <div className="text-right relative z-10 flex flex-col items-end">
-                     <p className="text-[10px] font-black uppercase tracking-widest text-indigo-200 leading-none mb-2">Settlement Balance</p>
+                  <div className="text-left sm:text-right relative z-10 flex flex-col items-start sm:items-end w-full sm:w-auto">
+                     <p className="text-[10px] font-black uppercase tracking-widest text-indigo-200 leading-none mb-1.5 sm:mb-2">Settlement Balance</p>
                      <div className="flex items-center gap-3">
-                        <p className="text-3xl font-black">₹{Math.abs(netBalance).toLocaleString()}</p>
+                        <p className="text-2xl sm:text-3xl font-black">₹{Math.abs(netBalance).toLocaleString()}</p>
                         {netBalance !== 0 && (
                           <button
                             onClick={() => {
@@ -310,7 +317,7 @@ export default function HisabClient({ initialRecords }: HisabClientProps) {
                             className="bg-white/20 hover:bg-white/30 p-2.5 rounded-xl backdrop-blur-md transition-all group/settle active:scale-95 border border-white/10"
                             title="Settle Balance"
                           >
-                            <HandCoins className="h-5 w-5 text-white" />
+                            <HandCoins className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
                           </button>
                         )}
                      </div>
@@ -320,7 +327,7 @@ export default function HisabClient({ initialRecords }: HisabClientProps) {
                   </div>
                </div>
 
-               <div className="flex-1 overflow-y-auto p-8 space-y-8 scrollbar-hide bg-slate-50/50">
+               <div className="flex-1 overflow-y-auto p-4 sm:p-8 space-y-6 sm:space-y-8 scrollbar-hide bg-slate-50/50">
                   {Object.entries(recordsByDate).length === 0 ? (
                     <div className="text-center py-20">
                        <AlertCircle className="h-12 w-12 text-slate-200 mx-auto mb-4" />
@@ -396,7 +403,7 @@ export default function HisabClient({ initialRecords }: HisabClientProps) {
                   )}
                </div>
 
-               <div className="p-6 bg-white border-t shrink-0 flex gap-4 shadow-[0_-10px_40px_rgba(0,0,0,0.02)] relative z-20">
+               <div className="p-4 sm:p-6 bg-white border-t shrink-0 flex gap-3 sm:gap-4 shadow-[0_-10px_40px_rgba(0,0,0,0.02)] relative z-20">
                   <Button
                          onClick={() => {
                             setFormData({ 
@@ -411,7 +418,7 @@ export default function HisabClient({ initialRecords }: HisabClientProps) {
                             setShowLedgerModal(false);
                             setShowAddDialog(true);
                          }}
-                     className="flex-1 h-14 rounded-2xl bg-green-600 hover:bg-green-700 font-black text-sm uppercase shadow-xl shadow-green-100 transition-all active:scale-95 text-white"
+                     className="flex-1 h-12 sm:h-14 rounded-2xl bg-green-600 hover:bg-green-700 font-black text-xs sm:text-sm uppercase shadow-xl shadow-green-100 transition-all active:scale-95 text-white"
                   >
                      I Took (Credit)
                   </Button>
@@ -429,7 +436,7 @@ export default function HisabClient({ initialRecords }: HisabClientProps) {
                             setShowLedgerModal(false);
                             setShowAddDialog(true);
                          }}
-                     className="flex-1 h-14 rounded-2xl bg-red-600 hover:bg-red-700 font-black text-sm uppercase shadow-xl shadow-red-100 transition-all active:scale-95 text-white"
+                     className="flex-1 h-12 sm:h-14 rounded-2xl bg-red-600 hover:bg-red-700 font-black text-xs sm:text-sm uppercase shadow-xl shadow-red-100 transition-all active:scale-95 text-white"
                   >
                      I Gave (Debit)
                   </Button>
@@ -444,7 +451,7 @@ export default function HisabClient({ initialRecords }: HisabClientProps) {
                     <HandCoins className="h-20 w-20" />
                  </div>
                   <DialogTitle className="text-3xl font-black mb-1 text-white">{editId ? 'Edit Entry' : 'New Entry'}</DialogTitle>
-                  <p className="text-indigo-100 text-sm font-medium">{editId ? 'Modify this transaction record.' : 'Capture a new money exchange.'}</p>
+                  <DialogDescription className="text-indigo-100 text-sm font-medium">{editId ? 'Modify this transaction record.' : 'Capture a new money exchange.'}</DialogDescription>
               </div>
               <form onSubmit={handleAddRecord} className="p-8 space-y-6">
                  <div className="space-y-4">
@@ -564,13 +571,13 @@ function SummaryCard({ label, value, color, icon: Icon }: SummaryCardProps) {
     
     return (
        <Card className="border-none shadow-sm hover:shadow-lg rounded-[2rem] bg-white p-4 sm:p-6 relative overflow-hidden group h-full border-2 border-slate-50 transition-all">
-          <div className="flex items-center gap-4 sm:gap-6">
-             <div className={`w-12 h-12 sm:w-16 sm:h-16 rounded-[1.25rem] sm:rounded-[1.5rem] ${colors[color]} flex items-center justify-center flex-shrink-0 transition-all group-hover:scale-110 shadow-sm`}>
-                <Icon className="h-6 w-6 sm:h-8 sm:w-8" />
+          <div className="flex items-center gap-3 sm:gap-6">
+             <div className={`w-11 h-11 sm:w-16 sm:h-16 rounded-[1.25rem] sm:rounded-[1.5rem] ${colors[color]} flex items-center justify-center flex-shrink-0 transition-all group-hover:scale-110 shadow-sm`}>
+                <Icon className="h-5 w-5 sm:h-8 sm:w-8" />
              </div>
-             <div className="min-w-0">
-                <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400 leading-none mb-2">{label}</p>
-                <h3 className={`text-lg sm:text-2xl lg:text-3xl font-black ${colors[color]?.split(' ')[0]} truncate tracking-tight`}>₹{Math.abs(value).toLocaleString()}</h3>
+             <div className="min-w-0 overflow-hidden">
+                <p className="text-[9px] sm:text-[10px] font-black uppercase tracking-[0.15em] text-slate-400 leading-none mb-1.5 sm:mb-2">{label}</p>
+                <h3 className={`text-base sm:text-2xl lg:text-3xl font-black ${colors[color]?.split(' ')[0]} truncate tracking-tight`}>₹{Math.abs(value).toLocaleString()}</h3>
              </div>
           </div>
           <div className={`absolute -right-4 -bottom-4 w-24 h-24 rounded-full ${colors[color]?.split(' ')[1]} opacity-20 blur-2xl group-hover:opacity-40 transition-opacity`} />

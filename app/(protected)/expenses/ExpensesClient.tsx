@@ -23,7 +23,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import PageWrapper from '@/components/PageWrapper';
 import { secureFetch } from '@/lib/api-utils';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
-import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import {
   Select,
@@ -343,8 +343,13 @@ const extractSingleItem = (rawText: string, lines: string[]): ExtractedBill => {
 // ═════════════════════════════════════════════════════════════════════════════
 export default function ExpensesClient({ initialData, initialCategory }: ExpensesClientProps) {
   const [expenses, setExpenses]         = useState<ExpenseRecord[]>(initialData.expenses || []);
+  const [mounted, setMounted]           = useState(false);
   const [loading, setLoading]           = useState(false);
   const [search, setSearch]             = useState('');
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
   const [filterCategory, setFilterCategory] = useState(initialCategory || 'all');
   const [showAddDialog, setShowAddDialog]   = useState(false);
   const [isSubmitting, setIsSubmitting]     = useState(false);
@@ -598,18 +603,20 @@ export default function ExpensesClient({ initialData, initialCategory }: Expense
   const totalSpent = filteredExpenses.reduce((sum, e) => sum + e.amount, 0);
 
   // ─────────────────────────────────────────────────────────────────────────
+  if (!mounted) return null;
+
   return (
     <PageWrapper>
       <div className="p-4 space-y-8 max-w-7xl mx-auto pb-32">
 
         {/* Header */}
         <div className="space-y-6">
-          <div className="flex justify-between items-end">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
             <div className="space-y-1">
-              <h1 className="text-4xl font-black text-slate-900 tracking-tight">Expenses</h1>
-              <p className="text-slate-500 font-medium">Keep your daily spendings in check.</p>
+              <h1 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">Expenses</h1>
+              <p className="text-slate-500 font-medium text-sm sm:text-base">Keep your daily spendings in check.</p>
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
               <input
                 type="file" ref={fileInputRef} onChange={onFileChange}
                 accept="image/*" capture="environment" className="hidden"
@@ -619,53 +626,55 @@ export default function ExpensesClient({ initialData, initialCategory }: Expense
                 accept="image/*" className="hidden"
               />
               <Button
-                onClick={handleGmailSync} disabled={isSyncing} variant="outline"
-                className="hidden lg:flex rounded-2xl h-12 px-4 shadow-lg border-slate-200 hover:bg-slate-50 font-bold text-slate-600"
-              >
-                {isSyncing
-                  ? <Loader2 className="h-5 w-5 animate-spin" />
-                  : <Mail className="mr-2 h-5 w-5 text-red-500" />}
-                Sync <span className="hidden md:inline ml-1 text-red-500">Gmail</span>
-              </Button>
-              <Button
-                onClick={handleUploadBill} disabled={isScanning} variant="outline"
-                className="rounded-2xl h-12 px-4 shadow-lg border-slate-200 hover:bg-slate-50 font-bold text-slate-600"
-              >
-                {isScanning
-                  ? <Loader2 className="h-5 w-5 animate-spin" />
-                  : <ImageIcon className="mr-2 h-5 w-5 text-indigo-500" />}
-                Upload
-              </Button>
-              <Button
-                onClick={handleTakePhoto} disabled={isScanning} variant="outline"
-                className="rounded-2xl h-12 px-4 shadow-lg border-slate-200 hover:bg-slate-50 font-bold text-slate-600"
-              >
-                {isScanning
-                  ? <Loader2 className="h-5 w-5 animate-spin" />
-                  : <Camera className="mr-2 h-5 w-5 text-rose-500" />}
-                Photo
-              </Button>
-              <Button
                 onClick={() => setShowAddDialog(true)}
-                className="rounded-2xl h-12 px-6 shadow-xl shadow-primary/20 bg-slate-900 hover:bg-black font-bold text-white transition-all active:scale-95"
+                className="flex-1 sm:flex-none order-first sm:order-last rounded-2xl h-12 px-6 shadow-xl shadow-primary/20 bg-slate-900 hover:bg-black font-bold text-white transition-all active:scale-95"
               >
                 <Plus className="mr-2 h-5 w-5" /> Log
               </Button>
+              <div className="flex gap-2 w-full sm:w-auto">
+                <Button
+                  onClick={handleUploadBill} disabled={isScanning} variant="outline"
+                  className="flex-1 sm:flex-none rounded-2xl h-12 px-3 sm:px-4 shadow-lg border-slate-200 hover:bg-slate-50 font-bold text-slate-600 text-xs sm:text-sm"
+                >
+                  {isScanning
+                    ? <Loader2 className="h-4 w-4 animate-spin" />
+                    : <ImageIcon className="mr-2 h-4 w-4 sm:h-5 sm:w-5 text-indigo-500" />}
+                  Upload
+                </Button>
+                <Button
+                  onClick={handleTakePhoto} disabled={isScanning} variant="outline"
+                  className="flex-1 sm:flex-none rounded-2xl h-12 px-3 sm:px-4 shadow-lg border-slate-200 hover:bg-slate-50 font-bold text-slate-600 text-xs sm:text-sm"
+                >
+                  {isScanning
+                    ? <Loader2 className="h-4 w-4 animate-spin" />
+                    : <Camera className="mr-2 h-4 w-4 sm:h-5 sm:w-5 text-rose-500" />}
+                  Photo
+                </Button>
+                <Button
+                  onClick={handleGmailSync} disabled={isSyncing} variant="outline"
+                  className="flex-1 sm:flex-none rounded-2xl h-12 px-3 sm:px-4 shadow-lg border-slate-200 hover:bg-slate-50 font-bold text-slate-600 text-xs sm:text-sm"
+                >
+                  {isSyncing
+                    ? <Loader2 className="h-4 w-4 animate-spin" />
+                    : <Mail className="mr-0 sm:mr-2 h-4 w-4 sm:h-5 sm:w-5 text-red-500" />}
+                  <span className="hidden sm:inline">Sync</span> Gmail
+                </Button>
+              </div>
             </div>
           </div>
 
           {/* Summary Card */}
-          <Card className="border-none shadow-xl bg-slate-950 text-white rounded-[1.5rem] sm:rounded-[2.5rem] overflow-hidden relative">
-            <CardContent className="p-5 sm:p-10 relative z-10">
+          <Card className="border-none shadow-xl bg-slate-950 text-white rounded-[2rem] sm:rounded-[2.5rem] overflow-hidden relative">
+            <CardContent className="p-6 sm:p-10 relative z-10">
               <div className="flex items-center gap-4 sm:gap-8">
                 <div className="w-16 h-16 sm:w-28 sm:h-28 rounded-2xl sm:rounded-[2rem] bg-white/5 flex items-center justify-center flex-shrink-0 border border-white/5 shadow-inner">
                   <Receipt className="h-8 w-8 sm:h-14 sm:w-14 text-slate-400 opacity-80" />
                 </div>
                 <div className="space-y-0.5 sm:space-y-1">
-                  <p className="text-slate-400 font-black uppercase tracking-[0.1em] sm:tracking-[0.2em] text-[8px] sm:text-xs">Filter Aggregate</p>
-                  <div className="flex items-baseline gap-1.5 sm:gap-3">
-                    <h2 className="text-2xl sm:text-6xl font-black text-white">₹{totalSpent.toLocaleString()}</h2>
-                    <span className="text-slate-400 font-bold text-[8px] sm:text-base">Total Spent</span>
+                  <p className="text-slate-400 font-bold uppercase tracking-[0.1em] sm:tracking-[0.2em] text-[10px] sm:text-xs">Filter Aggregate</p>
+                  <div className="flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-3">
+                    <h2 className="text-3xl sm:text-6xl font-black text-white">₹{totalSpent.toLocaleString()}</h2>
+                    <span className="text-slate-500 font-bold text-[10px] sm:text-base">Total Spent</span>
                   </div>
                 </div>
               </div>
@@ -729,20 +738,20 @@ export default function ExpensesClient({ initialData, initialCategory }: Expense
                 const ModeIcon = modeInfo ? modeInfo.icon : CreditCard;
                 return (
                   <div key={exp.expense_id} className="group relative">
-                    <Card className="border-none shadow-lg hover:shadow-xl transition-all rounded-2xl bg-white overflow-hidden p-3 sm:p-5 hover:-translate-y-0.5">
-                      <div className="flex items-center justify-between gap-2">
+                    <Card className="border-none shadow-lg hover:shadow-xl transition-all rounded-2xl bg-white overflow-hidden p-4 sm:p-5 hover:-translate-y-0.5">
+                      <div className="flex items-center justify-between gap-3">
                         <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0">
                           <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-slate-50 flex items-center justify-center group-hover:bg-primary/5 transition-colors flex-shrink-0">
                             <ModeIcon className="h-5 w-5 sm:h-6 sm:w-6 text-slate-400" />
                           </div>
                           <div className="min-w-0">
                             <h3 className="font-bold text-slate-900 text-sm sm:text-base leading-tight truncate">{exp.title}</h3>
-                            <div className="flex items-center gap-2 mt-0.5">
-                              <span className="flex items-center gap-1 text-[9px] sm:text-[10px] bg-slate-50 text-slate-500 px-1.5 py-0.5 rounded-full font-black uppercase tracking-tighter">
-                                <Tag className="h-2 w-2 sm:h-2.5 sm:w-2.5" /> {exp.category}
+                            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-1">
+                              <span className="flex items-center gap-1 text-[10px] bg-slate-100/80 text-slate-500 px-2 py-0.5 rounded-lg font-black uppercase tracking-tighter">
+                                <Tag className="h-2.5 w-2.5" /> {exp.category}
                               </span>
-                              <span className="hidden xs:flex items-center gap-1 text-[9px] sm:text-[10px] text-slate-400 font-bold">
-                                <Calendar className="h-2 w-2 sm:h-2.5 sm:w-2.5" /> {new Date(exp.date).toLocaleDateString()}
+                              <span className="flex items-center gap-1 text-[10px] text-slate-400 font-bold whitespace-nowrap">
+                                <Calendar className="h-2.5 w-2.5" /> {new Date(exp.date).toLocaleDateString()}
                               </span>
                             </div>
                           </div>
@@ -750,13 +759,13 @@ export default function ExpensesClient({ initialData, initialCategory }: Expense
                         <div className="flex items-center gap-3 sm:gap-6">
                           <div className="text-right flex-shrink-0">
                             <p className="text-lg sm:text-xl font-black text-red-500">-₹{exp.amount.toLocaleString()}</p>
-                            <p className="text-[8px] sm:text-[10px] text-slate-400 font-black uppercase tracking-widest">{exp.paymentMode}</p>
+                            <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">{exp.paymentMode}</p>
                           </div>
                           <button
                             onClick={() => setDeleteConfirm(exp.expense_id)}
-                            className="xs:opacity-0 group-hover:opacity-100 p-2 sm:p-3 rounded-lg sm:rounded-xl bg-red-50 text-red-500 hover:bg-red-500 hover:text-white transition-all shadow-sm"
+                            className="p-2.5 sm:p-3 rounded-xl bg-red-50 text-red-500 hover:bg-red-500 hover:text-white transition-all shadow-sm flex-shrink-0"
                           >
-                            <Trash2 className="h-4 w-4 sm:h-5 sm:w-5" />
+                            <Trash2 className="h-4.5 w-4.5 sm:h-5 sm:w-5" />
                           </button>
                         </div>
                       </div>
@@ -782,7 +791,7 @@ export default function ExpensesClient({ initialData, initialCategory }: Expense
             <div className="bg-slate-950 px-6 py-5 text-white relative">
               <div className="absolute top-4 right-4 opacity-10"><Receipt className="h-20 w-20" /></div>
               <DialogTitle className="text-3xl font-black mb-1 text-white">New Expense</DialogTitle>
-              <p className="text-slate-400 text-sm font-medium">Record where your money is going.</p>
+              <DialogDescription className="text-slate-400 text-sm font-medium">Record where your money is going.</DialogDescription>
             </div>
             <form onSubmit={handleAddExpense} className="p-8 space-y-6">
               <div className="space-y-4">
@@ -884,7 +893,7 @@ export default function ExpensesClient({ initialData, initialCategory }: Expense
               <DialogTitle className="text-2xl font-black mb-1 text-white">
                 {scannedItems.length} Items Found
               </DialogTitle>
-              <p className="text-slate-400 text-sm font-medium">Select which expenses to add.</p>
+              <DialogDescription className="text-slate-400 text-sm font-medium">Select which expenses to add.</DialogDescription>
             </div>
 
             <div className="p-6 space-y-5">
