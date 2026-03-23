@@ -57,7 +57,6 @@ export default function HisabClient({ initialRecords }: HisabClientProps) {
 
   const [selectedPerson, setSelectedPerson] = useState<{ name: string; mobile: string } | null>(null);
   const [showLedgerModal, setShowLedgerModal] = useState(false);
-  const [expandedPerson, setExpandedPerson] = useState<string | null>(null);
 
   const [debouncedSearch, setDebouncedSearch] = useState(search);
 
@@ -240,13 +239,10 @@ export default function HisabClient({ initialRecords }: HisabClientProps) {
                         <Card
                         key={idx}
                         onClick={() => {
-                           if (expandedPerson === p.name) {
-                               setExpandedPerson(null);
-                           } else {
-                               setExpandedPerson(p.name);
-                           }
+                           setSelectedPerson({ name: p.name, mobile: p.mobile });
+                           setShowLedgerModal(true);
                         }}
-                        className={`border-none shadow-sm hover:shadow-xl rounded-[2rem] overflow-hidden transition-all cursor-pointer bg-white group border-2 ${expandedPerson === p.name ? 'border-indigo-100 ring-2 ring-indigo-50' : 'border-transparent hover:border-indigo-100'}`}
+                        className="border-none shadow-sm hover:shadow-xl rounded-[2rem] overflow-hidden transition-all cursor-pointer bg-white group border-2 border-transparent hover:border-indigo-100 hover:ring-2 hover:ring-indigo-50"
                        >
                           <CardContent className="p-5 flex items-center justify-between">
                              <div className="flex items-center gap-4">
@@ -270,45 +266,6 @@ export default function HisabClient({ initialRecords }: HisabClientProps) {
                                 </p>
                              </div>
                            </CardContent>
-                           
-                           {expandedPerson === p.name && (
-                               <div className="border-t border-slate-100 p-5 bg-slate-50/50 space-y-3">
-                                   {(p.credit - p.debit) !== 0 && (
-                                     <Button 
-                                       className="w-full h-12 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-black shadow-lg shadow-indigo-100 transition-all"
-                                       onClick={(e) => {
-                                         e.stopPropagation();
-                                         const net = p.credit - p.debit;
-                                         setFormData({
-                                           name: p.name,
-                                           mobile: p.mobile || '',
-                                           type: net > 0 ? 'debit' : 'credit',
-                                           amount: Math.abs(net).toString(),
-                                           description: 'Settle Balance',
-                                           date: new Date().toISOString().split('T')[0]
-                                         });
-                                         setEditId(null);
-                                         setShowAddDialog(true);
-                                       }}
-                                     >
-                                       <HandCoins className="mr-2 h-5 w-5" /> Settle Balance of ₹{Math.abs(p.credit - p.debit).toLocaleString()}
-                                     </Button>
-                                   )}
-                                   <div className="flex gap-2">
-                                     <Button 
-                                        variant="outline" 
-                                        className="flex-1 h-12 rounded-xl border-slate-200 font-bold bg-white text-slate-600 hover:bg-slate-50"
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            setSelectedPerson({ name: p.name, mobile: p.mobile });
-                                            setShowLedgerModal(true);
-                                        }}
-                                     >
-                                        View Full Ledger
-                                     </Button>
-                                   </div>
-                               </div>
-                           )}
                         </Card>
                      ))
                   )}
@@ -331,9 +288,32 @@ export default function HisabClient({ initialRecords }: HisabClientProps) {
                         </p>
                      </div>
                   </div>
-                  <div className="text-right relative z-10">
+                  <div className="text-right relative z-10 flex flex-col items-end">
                      <p className="text-[10px] font-black uppercase tracking-widest text-indigo-200 leading-none mb-2">Settlement Balance</p>
-                     <p className="text-3xl font-black">₹{Math.abs(netBalance).toLocaleString()}</p>
+                     <div className="flex items-center gap-3">
+                        <p className="text-3xl font-black">₹{Math.abs(netBalance).toLocaleString()}</p>
+                        {netBalance !== 0 && (
+                          <button
+                            onClick={() => {
+                              setFormData({
+                                name: selectedPerson?.name || '',
+                                mobile: selectedPerson?.mobile || '',
+                                type: netBalance > 0 ? 'debit' : 'credit',
+                                amount: Math.abs(netBalance).toString(),
+                                description: 'Settle Balance',
+                                date: new Date().toISOString().split('T')[0]
+                              });
+                              setEditId(null);
+                              setShowLedgerModal(false);
+                              setShowAddDialog(true);
+                            }}
+                            className="bg-white/20 hover:bg-white/30 p-2.5 rounded-xl backdrop-blur-md transition-all group/settle active:scale-95 border border-white/10"
+                            title="Settle Balance"
+                          >
+                            <HandCoins className="h-5 w-5 text-white" />
+                          </button>
+                        )}
+                     </div>
                      <p className="text-[9px] font-bold opacity-75 uppercase tracking-tighter mt-1">
                         {netBalance >= 0 ? 'You owe this person' : 'This person owes you'}
                      </p>

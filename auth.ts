@@ -28,12 +28,49 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
        clientId: process.env.GOOGLE_CLIENT_ID,
        clientSecret: process.env.GOOGLE_CLIENT_SECRET,
        allowDangerousEmailAccountLinking: true,
+       authorization: {
+         params: {
+           scope: "openid profile email https://www.googleapis.com/auth/gmail.readonly",
+           access_type: "offline",
+           prompt: "consent",
+         },
+       },
     })
   ],
   session: {
     strategy: 'database',
   },
   callbacks: {
+    async signIn({ account, user }) {
+      if (account?.provider === "google" && user.id) {
+        console.log('[AUTH_SIGNIN] Google signin details:', {
+          hasRefreshToken: !!account.refresh_token,
+          expires_at: account.expires_at,
+          scope: account.scope
+        });
+
+        // Manually update the tokens in database as NextAuth database strategy 
+        // doesn't always update 'accounts' on subsequent logins.
+        const client = await clientPromise;
+        const db = client.db(process.env.DB_NAME || 'hisab_db');
+        
+        await db.collection('accounts').updateOne(
+          { userId: new ObjectId(user.id), provider: "google" },
+          { 
+            $set: { 
+              access_token: account.access_token,
+              expires_at: account.expires_at,
+              refresh_token: account.refresh_token || undefined,
+              scope: account.scope,
+              id_token: account.id_token
+            } 
+          },
+          { upsert: false } // We only want to update if it exists
+        );
+        console.log('[AUTH_SIGNIN] Database tokens updated manually');
+      }
+      return true;
+    },
     async session({ session, user }) {
       if (session.user) {
         session.user.id = user.id;
