@@ -2,7 +2,6 @@ import { getDb } from './db';
 import { getAuthenticatedUser } from './auth';
 import { 
   HisabRecord, 
-  ExpenseRecord, 
   MarriageRecord, 
   DashboardStats, 
   CollaborationData 
@@ -28,55 +27,6 @@ export async function getHisabRecords(): Promise<HisabRecord[] | null> {
   return records as unknown as HisabRecord[];
 }
 
-interface GetExpensesParams {
-  category?: string;
-  page?: number;
-  limit?: number;
-}
-
-/**
- * Fetches expenses for the authenticated user's space with filtering and pagination.
- */
-export async function getExpenses({ category, page = 1, limit = 50 }: GetExpensesParams = {}): Promise<{
-  expenses: ExpenseRecord[];
-  pagination: {
-    total: number;
-    page: number;
-    limit: number;
-    totalPages: number;
-  };
-} | null> {
-  const user = await getAuthenticatedUser();
-  if (!user) return null;
-
-  const db = await getDb();
-  const spaceId = user.space_id;
-  const query: any = { space_id: spaceId };
-
-  if (category && category !== 'all') {
-    query.category = category;
-  }
-
-  const [expenses, total] = await Promise.all([
-    db.collection('expenses')
-      .find(query, { projection: { _id: 0 } })
-      .sort({ date: -1 })
-      .skip((page - 1) * limit)
-      .limit(limit)
-      .toArray(),
-    db.collection('expenses').countDocuments(query)
-  ]);
-
-  return {
-    expenses: expenses as unknown as ExpenseRecord[],
-    pagination: {
-      total,
-      page,
-      limit,
-      totalPages: Math.ceil(total / limit)
-    }
-  };
-}
 
 /**
  * Fetches marriage/vayvhar records for the authenticated user's space.
@@ -97,12 +47,6 @@ export async function getMarriageRecords(): Promise<MarriageRecord[] | null> {
   return records as unknown as MarriageRecord[];
 }
 
-/**
- * Fetches dashboard statistics.
- */
-/**
- * Fetches dashboard statistics using optimized aggregation pipelines.
- */
 export async function getDashboardStats(): Promise<DashboardStats | null> {
     const user = await getAuthenticatedUser();
     if (!user) return null;
@@ -111,19 +55,10 @@ export async function getDashboardStats(): Promise<DashboardStats | null> {
     const spaceId = user.space_id;
 
     const [
-        expensesAgg,
         hisabAgg,
         marriageAgg,
-        recentExpenses,
         recentHisab
     ] = await Promise.all([
-        // 1. Total Expenses
-        db.collection('expenses').aggregate([
-            { $match: { space_id: spaceId } },
-            { $group: { _id: null, total: { $sum: "$amount" } } }
-        ]).toArray(),
-
-        // 2. Total Debit/Credit
         db.collection('hisab').aggregate([
              { $match: { space_id: spaceId } },
              { $group: { 
@@ -132,21 +67,10 @@ export async function getDashboardStats(): Promise<DashboardStats | null> {
                  credit: { $sum: { $cond: [{ $eq: ["$type", "credit"] }, "$amount", 0] } } 
              } }
         ]).toArray(),
-
-        // 3. Total Marriage Gifting
         db.collection('marriage_hisab').aggregate([
             { $match: { space_id: spaceId } },
             { $group: { _id: null, total: { $sum: "$amount" } } }
         ]).toArray(),
-
-        // 4. Recent Expenses (Limit 5)
-        db.collection('expenses')
-            .find({ space_id: spaceId }, { projection: { _id: 0 } })
-            .sort({ date: -1 })
-            .limit(5)
-            .toArray(),
-
-        // 5. Recent Hisab (Limit 5) - Fixed sort order
         db.collection('hisab')
             .find({ space_id: spaceId }, { projection: { _id: 0 } })
             .sort({ date: -1, created_at: -1 }) // Tie-break with created_at if needed
@@ -154,18 +78,17 @@ export async function getDashboardStats(): Promise<DashboardStats | null> {
             .toArray()
     ]);
 
-    const totalExpense = expensesAgg[0]?.total || 0;
     const totalDebit = hisabAgg[0]?.debit || 0;
     const totalCredit = hisabAgg[0]?.credit || 0;
     const totalMarriage = marriageAgg[0]?.total || 0;
 
     return {
-      totalExpense,
+      totalExpense: 0,
       totalDebit,
       totalCredit,
       totalMarriage,
-      balance: totalCredit - totalDebit, // Assuming balance is credit - debit? Or do we need expense factored in? The original code was just credit - debit.
-      recentExpenses: recentExpenses as unknown as ExpenseRecord[],
+      balance: totalCredit - totalDebit,
+      recentExpenses: [],
       recentHisab: recentHisab as unknown as HisabRecord[],
     };
 }

@@ -23,20 +23,6 @@ export interface HisabRecord {
   balance?: number; // Calculated field
 }
 
-export interface ExpenseRecord {
-  expense_id: string;
-  user_id: string;
-  space_id: string;
-  title: string;
-  amount: number;
-  category: string;
-  paymentMode: 'cash' | 'online' | 'card';
-  date: Date | string;
-  notes?: string;
-  created_at: Date | string;
-  updated_at: Date | string;
-}
-
 export interface MarriageRecord {
   marriage_id: string;
   user_id: string;
@@ -69,11 +55,14 @@ export interface CollaborationData {
 }
 
 export interface DashboardStats {
-  totalExpense: number;
+  totalExpense?: number;
   totalDebit: number;
   totalCredit: number;
   totalMarriage: number;
   balance: number;
-  recentExpenses: ExpenseRecord[];
+  recentExpenses?: any[];
   recentHisab: HisabRecord[];
 }
+
+export * from './expense';
+

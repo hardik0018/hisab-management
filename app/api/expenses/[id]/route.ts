@@ -1,51 +1,88 @@
-import { getDb } from '@/lib/db';
-import { getAuthenticatedUser } from '@/lib/auth';
-import { NextRequest } from 'next/server';
+export const dynamic = 'force-dynamic';
 
-export async function PUT(
+import { NextRequest } from 'next/server';
+import { getDb } from '@/lib/db';
+import { ObjectId } from 'mongodb';
+import { getAuthenticatedUser } from '@/lib/auth';
+import { validateExpense } from '@/models/Expense';
+import { Expense } from '@/types';
+
+export async function PATCH(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await getAuthenticatedUser();
     if (!user) {
-      return Response.json({ error: 'Unauthorized' }, { status: 401 });
+      return Response.json({ error: 'Unauthorized', message: 'You must be logged in' }, { status: 401 });
     }
 
-    const { id: expenseId } = await params;
+    const { id } = await context.params;
+    if (!ObjectId.isValid(id)) {
+      return Response.json(
+        { error: 'Bad Request', message: 'Invalid expense ID format' },
+        { status: 400 }
+      );
+    }
+
     const body = await request.json();
+    const { itemName, amount, note, date } = body;
+
     const db = await getDb();
+    const spaceId = user.space_id || user.user_id;
 
-    const updateData: any = {};
-    if (body.title) updateData.title = body.title;
-    if (body.amount) updateData.amount = parseFloat(body.amount);
-    if (body.category) updateData.category = body.category;
-    if (body.paymentMode) updateData.paymentMode = body.paymentMode;
-    if (body.date) updateData.date = new Date(body.date);
-    if (body.notes !== undefined) updateData.notes = body.notes;
+    // Ensure item belongs to the user's space
+    const existing = await db.collection('expenses').findOne({ 
+      _id: new ObjectId(id),
+      space_id: spaceId
+    });
 
-    const result = await db.collection('expenses').updateOne(
-      { 
-        expense_id: expenseId, 
-        $or: [{ user_id: user.user_id }, { shared_with: user.user_id }]
-      },
-      { $set: updateData }
-    );
-
-    if (result.matchedCount === 0) {
-      return Response.json({ error: 'Expense not found' }, { status: 404 });
+    if (!existing) {
+      return Response.json(
+        { error: 'Not Found', message: 'Expense record not found' },
+        { status: 404 }
+      );
     }
 
-    const expense = await db.collection('expenses').findOne(
-      { expense_id: expenseId },
-      { projection: { _id: 0 } }
+    // Merge updates
+    const updatedDoc: Partial<Expense> = {
+      space_id: spaceId,
+      user_id: existing.user_id, // keep original creator
+      date: date !== undefined ? date : existing.date,
+      itemName: itemName !== undefined ? itemName : existing.itemName,
+      amount: amount !== undefined ? Number(amount) : existing.amount,
+      note: note !== undefined ? note : existing.note,
+    };
+
+    const validation = validateExpense(updatedDoc);
+    if (!validation.isValid) {
+      return Response.json(
+        { error: 'Validation Error', message: validation.reason || 'Invalid expense data' },
+        { status: 400 }
+      );
+    }
+
+    const setObj = {
+      ...updatedDoc,
+      updatedAt: new Date(),
+    };
+
+    await db.collection('expenses').updateOne(
+      { _id: new ObjectId(id), space_id: spaceId },
+      { $set: setObj }
     );
 
-    return Response.json({ expense });
-  } catch (error: any) {
-    console.error('API Error:', error);
+    const result = {
+      _id: id,
+      ...existing,
+      ...setObj,
+    };
+
+    return Response.json({ expense: result });
+  } catch (error) {
+    console.error('[API_EXPENSE_PATCH_ERROR]', error);
     return Response.json(
-      { error: 'Internal server error', details: error.message },
+      { error: 'Internal Server Error', message: 'Failed to update expense' },
       { status: 500 }
     );
   }
@@ -53,33 +90,43 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await getAuthenticatedUser();
     if (!user) {
-      return Response.json({ error: 'Unauthorized' }, { status: 401 });
+      return Response.json({ error: 'Unauthorized', message: 'You must be logged in' }, { status: 401 });
     }
 
-    const { id: expenseId } = await params;
+    const { id } = await context.params;
+    if (!ObjectId.isValid(id)) {
+      return Response.json(
+        { error: 'Bad Request', message: 'Invalid expense ID format' },
+        { status: 400 }
+      );
+    }
+
     const db = await getDb();
-    
-    // In actual implementation, we'd want to check if the user has access.
-    // The current logic checks if it's their record or shared with them.
-    const result = await db.collection('expenses').deleteOne({
-      expense_id: expenseId,
-      $or: [{ user_id: user.user_id }, { shared_with: user.user_id }]
+    const spaceId = user.space_id || user.user_id;
+
+    // Delete item constrained by space_id
+    const result = await db.collection('expenses').deleteOne({ 
+      _id: new ObjectId(id),
+      space_id: spaceId
     });
 
     if (result.deletedCount === 0) {
-      return Response.json({ error: 'Expense not found' }, { status: 404 });
+      return Response.json(
+        { error: 'Not Found', message: 'Expense record not found' },
+        { status: 404 }
+      );
     }
 
     return Response.json({ success: true });
-  } catch (error: any) {
-    console.error('API Error:', error);
+  } catch (error) {
+    console.error('[API_EXPENSE_DELETE_ERROR]', error);
     return Response.json(
-      { error: 'Internal server error', details: error.message },
+      { error: 'Internal Server Error', message: 'Failed to delete expense' },
       { status: 500 }
     );
   }

@@ -14,7 +14,7 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
   { label: 'Home', icon: LayoutDashboard, path: '/dashboard' },
-  { label: 'Spend', icon: Receipt, path: '/expenses' },
+  { label: 'Expenses', icon: Receipt, path: '/expenses' },
   { label: 'Hisab', icon: HandCoins, path: '/hisab' },
   { label: 'Social', icon: Heart, path: '/marriage' },
   { label: 'Account', icon: UserCircle, path: '/profile' },
@@ -32,7 +32,7 @@ export default function BottomNav() {
             const Icon = item.icon;
             // Robust active check: exact match or sub-path match
             const isActive = pathname === item.path || pathname.startsWith(`${item.path}/`);
-            
+
             return (
               <Link
                 key={item.path}
@@ -44,7 +44,7 @@ export default function BottomNav() {
                 )}
               >
                 <div className="relative z-10 flex flex-col items-center gap-0.5">
-                   <Icon className={cn(
+                  <Icon className={cn(
                     'h-6 w-6 transition-all duration-500',
                     isActive ? 'scale-110' : 'scale-100'
                   )} />
@@ -57,7 +57,7 @@ export default function BottomNav() {
                 </div>
 
                 {isActive && (
-                  <motion.div 
+                  <motion.div
                     layoutId="nav-glow"
                     className="absolute inset-x-2 inset-y-1 bg-white/10 rounded-2xl z-0"
                     transition={{ type: "spring", bounce: 0.25, duration: 0.6 }}

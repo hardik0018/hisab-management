@@ -1,33 +1,43 @@
-export const dynamic = 'force-dynamic';
-import { getExpenses } from '@/lib/data-fetching';
-import ExpensesClient from './ExpensesClient';
-import { redirect } from 'next/navigation';
-import { getAuthenticatedUser } from '@/lib/auth';
+'use client';
 
-interface ExpensesPageProps {
-  searchParams: Promise<{ category?: string }>;
-}
+import React, { useEffect, useState } from 'react';
+import PageWrapper from '@/components/PageWrapper';
+import ExpenseTopTabs from '@/components/expense/ExpenseTopTabs';
+import ExpenseEntryBox from '@/components/expense/ExpenseEntryBox';
+import BackupReminder from '@/components/settings/BackupReminder';
+import { Settings } from '@/types';
 
-/**
- * SSR Page for Expenses.
- * Fetches initial expense list on the server for instant rendering.
- * Justification for SSR: Expense tracking pages need quick feedback on total spend and recent entries.
- * SSR ensures the aggregate data is calculated before the page reaches the user.
- */
-export default async function ExpensesPage({ searchParams }: ExpensesPageProps) {
-  const user = await getAuthenticatedUser();
-  
-  if (!user) {
-    redirect('/login');
-  }
+export default function ExpensesPage() {
+  const [settings, setSettings] = useState<Settings | null>(null);
 
-  const { category = 'all' } = await searchParams;
-  const initialData = await getExpenses({ category });
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const res = await fetch('/api/settings');
+        if (res.ok) {
+          const data = await res.json();
+          setSettings(data.settings);
+        }
+      } catch (err) {
+        console.error('Failed to load settings', err);
+      }
+    };
+    
+    fetchSettings();
+  }, []);
 
-  if (!initialData) {
-    // Handle null case if needed, or pass empty defaults
-    return <ExpensesClient initialData={{ expenses: [], pagination: { total: 0, page: 1, limit: 50, totalPages: 0 } }} initialCategory={category} />;
-  }
+  return (
+    <PageWrapper>
+      <ExpenseTopTabs />
+      <div className="max-w-md mx-auto p-4 space-y-5 pb-32">
+        <div className="space-y-1">
+          <h2 className="text-2xl font-black text-slate-900 dark:text-white">Add Expenses</h2>
+          <p className="text-xs text-slate-500 font-medium">Record daily outflows using bulk plain text entries.</p>
+        </div>
 
-  return <ExpensesClient initialData={initialData} initialCategory={category} />;
+        <BackupReminder settings={settings} />
+        <ExpenseEntryBox />
+      </div>
+    </PageWrapper>
+  );
 }

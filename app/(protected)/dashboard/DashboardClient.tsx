@@ -3,11 +3,11 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent } from '@/components/ui/card';
-import { 
-  TrendingUp, 
-  TrendingDown, 
-  Wallet, 
-  Plus, 
+import {
+  TrendingUp,
+  TrendingDown,
+  Wallet,
+  Plus,
   Activity,
   Users,
 } from 'lucide-react';
@@ -16,7 +16,7 @@ import PageWrapper from '@/components/PageWrapper';
 import { motion, AnimatePresence } from 'framer-motion';
 import { HandCoins } from 'lucide-react';
 import { Heart } from 'lucide-react';
-import { DashboardStats, User, ExpenseRecord } from '@/types';
+import { DashboardStats, User } from '@/types';
 import { LucideIcon } from 'lucide-react';
 
 interface DashboardClientProps {
@@ -30,7 +30,6 @@ export default function DashboardClient({ initialStats, initialCollaborators }: 
   const [collaborators] = useState<User[]>(initialCollaborators);
 
   const chartData = [
-    { name: 'Expenses', value: stats?.totalExpense || 0, color: '#EF4444' },
     { name: 'Income/Credit', value: stats?.totalCredit || 0, color: '#10B981' },
     { name: 'Gifts/Marriage', value: stats?.totalMarriage || 0, color: '#6366F1' },
   ];
@@ -42,7 +41,7 @@ export default function DashboardClient({ initialStats, initialCollaborators }: 
         <div className="flex flex-col gap-6">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
             <div className="space-y-1">
-              <motion.h1 
+              <motion.h1
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 className="text-4xl font-black tracking-tight text-slate-900 lg:text-5xl"
@@ -50,32 +49,32 @@ export default function DashboardClient({ initialStats, initialCollaborators }: 
                 My <span className="text-primary italic">Financials</span>
               </motion.h1>
               <div className="flex items-center gap-3">
-                 <p className="text-slate-500 font-medium text-sm">Tracking flow across {collaborators.length} members.</p>
-                 {collaborators.length > 1 && (
-                   <div className="flex -space-x-2">
-                     {collaborators.map((c, i) => (
-                        <motion.div 
-                          key={i} 
-                          initial={{ scale: 0 }}
-                          animate={{ scale: 1 }}
-                          transition={{ delay: i * 0.1 }}
-                          className="w-7 h-7 rounded-full border-2 border-white bg-slate-200 overflow-hidden ring-2 ring-primary/10" 
-                          title={c.name}
-                        >
-                          {c.image && <img src={c.image} alt={c.name} className="w-full h-full object-cover" />}
-                        </motion.div>
-                     ))}
-                   </div>
-                 )}
+                <p className="text-slate-500 font-medium text-sm">Tracking flow across {collaborators.length} members.</p>
+                {collaborators.length > 1 && (
+                  <div className="flex -space-x-2">
+                    {collaborators.map((c, i) => (
+                      <motion.div
+                        key={i}
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        transition={{ delay: i * 0.1 }}
+                        className="w-7 h-7 rounded-full border-2 border-white bg-slate-200 overflow-hidden ring-2 ring-primary/10"
+                        title={c.name}
+                      >
+                        {c.image && <img src={c.image} alt={c.name} className="w-full h-full object-cover" />}
+                      </motion.div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           </div>
 
           {/* Quick Actions Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-             <QuickActionButton theme="sky" icon={Plus} label="New Expense" onClick={() => router.push('/expenses')} />
-             <QuickActionButton theme="indigo" icon={HandCoins} label="Log Hisab" onClick={() => router.push('/hisab')} />
-             <QuickActionButton theme="rose" icon={Heart} label="Social Gift" onClick={() => router.push('/marriage')} />
+            <QuickActionButton theme="indigo" icon={HandCoins} label="Log Hisab" onClick={() => router.push('/hisab')} />
+            <QuickActionButton theme="emerald" icon={TrendingDown} label="Log Expenses" onClick={() => router.push('/expenses')} />
+            <QuickActionButton theme="rose" icon={Heart} label="Social Gift" onClick={() => router.push('/marriage')} />
           </div>
 
         </div>
@@ -83,7 +82,6 @@ export default function DashboardClient({ initialStats, initialCollaborators }: 
 
         {/* Stats Grid */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-          <StatCard label="Spent" value={stats?.totalExpense || 0} icon={TrendingDown} color="red" />
           <StatCard label="Balance" value={stats?.balance || 0} icon={Wallet} color="blue" />
           <StatCard label="Credit" value={stats?.totalCredit || 0} icon={TrendingUp} color="green" />
           <StatCard label="Social" value={stats?.totalMarriage || 0} icon={Users} color="indigo" />
@@ -93,28 +91,28 @@ export default function DashboardClient({ initialStats, initialCollaborators }: 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <Card className="lg:col-span-2 border-none shadow-lg bg-white rounded-2xl sm:rounded-[2.5rem] overflow-hidden">
             <div className="p-4 sm:p-8 border-b border-slate-50">
-               <h3 className="text-base sm:text-xl font-black text-slate-900 leading-none">Spending Overview</h3>
-               <p className="text-[10px] sm:text-sm text-slate-500 font-medium mt-1">Financial distribution this period</p>
+              <h3 className="text-base sm:text-xl font-black text-slate-900 leading-none">Spending Overview</h3>
+              <p className="text-[10px] sm:text-sm text-slate-500 font-medium mt-1">Financial distribution this period</p>
             </div>
             <CardContent className="p-2 sm:p-8 h-[250px] sm:h-[350px]">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F1F5F9" />
-                  <XAxis 
-                    dataKey="name" 
-                    axisLine={false} 
-                    tickLine={false} 
-                    tick={{fill: '#64748B', fontSize: 10, fontWeight: 700}} 
-                    dy={5} 
+                  <XAxis
+                    dataKey="name"
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fill: '#64748B', fontSize: 10, fontWeight: 700 }}
+                    dy={5}
                   />
-                  <YAxis 
-                    axisLine={false} 
-                    tickLine={false} 
-                    tick={{fill: '#64748B', fontSize: 10, fontWeight: 700}} 
+                  <YAxis
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fill: '#64748B', fontSize: 10, fontWeight: 700 }}
                   />
-                  <Tooltip 
-                    cursor={{fill: '#F8FAFC'}} 
-                    contentStyle={{borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', fontSize: '12px'}}
+                  <Tooltip
+                    cursor={{ fill: '#F8FAFC' }}
+                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', fontSize: '12px' }}
                   />
                   <Bar dataKey="value" radius={[6, 6, 0, 0]} barSize={40}>
                     {chartData.map((entry, index) => (
@@ -125,11 +123,6 @@ export default function DashboardClient({ initialStats, initialCollaborators }: 
               </ResponsiveContainer>
             </CardContent>
           </Card>
-
-
-          <div className="space-y-6">
-             <RecentList title="Recent Activity" items={stats?.recentExpenses || []} collaborators={collaborators} />
-          </div>
         </div>
       </div>
     </PageWrapper>
@@ -165,53 +158,6 @@ function StatCard({ label, value, icon: Icon, color }: StatCardProps) {
         </div>
       </Card>
     </motion.div>
-  );
-}
-
-interface RecentListProps {
-  title: string;
-  items: ExpenseRecord[];
-  collaborators: User[];
-}
-
-function RecentList({ title, items, collaborators }: RecentListProps) {
-  return (
-    <Card className="border-none shadow-xl rounded-[2.5rem] bg-slate-50 overflow-hidden">
-      <div className="p-6 border-b border-slate-100 bg-white">
-        <h3 className="font-black text-slate-900 text-lg uppercase tracking-tight">{title}</h3>
-      </div>
-      <CardContent className="p-4 space-y-3">
-        <AnimatePresence>
-          {items?.map((item, idx) => {
-            const addedBy = collaborators.find(c => c.user_id === item.user_id);
-            return (
-              <motion.div
-                key={idx}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: idx * 0.05 }}
-                className="flex items-center justify-between p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-white shadow-sm border border-transparent hover:border-primary/20 transition-all group"
-              >
-                <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
-                  <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-slate-50 flex items-center justify-center group-hover:bg-primary/5 transition-colors flex-shrink-0">
-                    <Activity className="h-4 w-4 sm:h-5 sm:w-5 text-slate-400 group-hover:text-primary" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="font-bold text-slate-900 text-xs sm:text-sm leading-tight truncate">{item.title}</p>
-                    <div className="flex items-center gap-1.5 sm:gap-2 mt-0.5 sm:mt-1">
-                       <span className="text-[8px] sm:text-[10px] text-slate-400 font-bold uppercase">{item.category}</span>
-                       {addedBy && <span className="text-[7px] sm:text-[9px] bg-slate-100 px-1 sm:px-1.5 py-0.5 rounded-full text-slate-500 font-black uppercase tracking-tighter">By {addedBy.name.split(' ')[0]}</span>}
-                    </div>
-                  </div>
-                </div>
-                <p className="font-black text-red-500 text-xs sm:text-sm flex-shrink-0">-₹{item.amount.toLocaleString()}</p>
-              </motion.div>
-            );
-          })}
-        </AnimatePresence>
-        {!items?.length && <p className="text-center py-8 text-slate-400 font-bold text-xs uppercase italic tracking-widest">Everything is quiet...</p>}
-      </CardContent>
-    </Card>
   );
 }
 
