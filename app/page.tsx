@@ -14,7 +14,7 @@ export default async function IndexPage() {
   const session = await auth();
 
   if (session) {
-    redirect('/dashboard');
+    redirect('/expenses');
   }
 
   return <LandingPage />;

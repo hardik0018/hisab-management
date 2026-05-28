@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
-import { Calendar, PenLine, Trash2, ArrowRight, PlayCircle, Loader2 } from 'lucide-react';
+import { Calendar, PenLine, Trash2, ArrowRight, Loader2 } from 'lucide-react';
 import PreviewDialog from './PreviewDialog';
 import { ParseResult } from '@/types';
 
@@ -22,7 +22,7 @@ export default function ExpenseEntryBox() {
   const [date, setDate] = useState<string>('');
   const [isParsing, setIsParsing] = useState<boolean>(false);
   const [isSaving, setIsSaving] = useState<boolean>(false);
-  
+
   const [parseResult, setParseResult] = useState<ParseResult | null>(null);
   const [isPreviewOpen, setIsPreviewOpen] = useState<boolean>(false);
 
@@ -74,14 +74,6 @@ export default function ExpenseEntryBox() {
       saveDraft('', date);
       toast.success('Entry cleared');
     }
-  };
-
-  const loadExample = () => {
-    const todayStr = new Date().toISOString().split('T')[0];
-    const example = `${todayStr}\n\nBhugra-40\nWafer Biscuit 30\nMilk-32.50 for morning tea\nPetrol:200 bike refill\nTea = 10\nPhone-15000 (large amount demo)\nInvalidLineDemo`;
-    setText(example);
-    saveDraft(example, date);
-    toast.info('Example pasted into entry box!');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -179,22 +171,6 @@ export default function ExpenseEntryBox() {
 
   return (
     <div className="flex flex-col gap-4 font-sans text-foreground">
-      {/* Welcome Banner */}
-      <div className="bg-muted/50 border border-border rounded-xl p-5 space-y-2">
-        <h2 className="text-xs font-bold text-primary uppercase tracking-widest">Entry Panel</h2>
-        <p className="text-xs text-muted-foreground leading-relaxed">
-          Type or paste your daily expenses below. The app will automatically parse items, notes, and values.
-        </p>
-        <button
-          type="button"
-          onClick={loadExample}
-          className="flex items-center gap-1.5 text-[10px] font-bold uppercase text-primary hover:text-primary/80 bg-primary/10 px-2.5 py-1.5 rounded-lg border border-primary/20 transition-all cursor-pointer mt-1 font-sans"
-        >
-          <PlayCircle className="w-3.5 h-3.5" />
-          Load Demo Text
-        </button>
-      </div>
-
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         {/* Date Selector Row */}
         <div className="bg-card border border-border rounded-xl p-4 flex items-center justify-between gap-4 shadow-sm">
@@ -222,7 +198,7 @@ export default function ExpenseEntryBox() {
               {text.split('\n').filter(Boolean).length} lines
             </span>
           </div>
-          
+
           <textarea
             value={text}
             onChange={handleTextChange}

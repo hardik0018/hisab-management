@@ -12,6 +12,8 @@ export interface Expense {
   currency: string; // defaults to "INR"
   createdAt: Date | string;
   updatedAt: Date | string;
+  associatedId?: string;
+  associatedType?: 'hisab' | 'marriage';
 }
 
 export interface Settings {

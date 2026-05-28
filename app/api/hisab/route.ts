@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { name, mobile, type, amount, description, date } = body;
+    const { name, mobile, type, amount, description, date, logAsExpense } = body;
 
     if (!name || !type || !amount) {
       return Response.json({ error: 'Missing required fields' }, { status: 400 });
@@ -59,9 +59,37 @@ export async function POST(request: NextRequest) {
       description: description || '',
       date: date ? new Date(date) : new Date(),
       created_at: new Date(),
+      log_as_expense: !!logAsExpense,
     };
 
     await db.collection('hisab').insertOne(record);
+
+    if (logAsExpense) {
+      const expenseAmount = type === 'credit' ? -parseFloat(amount) : parseFloat(amount);
+      const dateObj = date ? new Date(date) : new Date();
+      const year = dateObj.getFullYear();
+      const monthStr = String(dateObj.getMonth() + 1).padStart(2, '0');
+      const dayStr = String(dateObj.getDate()).padStart(2, '0');
+      const dateStr = `${year}-${monthStr}-${dayStr}`;
+
+      const expenseDoc = {
+        space_id: spaceId,
+        user_id: user.user_id,
+        date: dateStr,
+        itemName: `Hisab: ${name}`,
+        amount: expenseAmount,
+        note: description || '',
+        category: 'Debt/Credit',
+        currency: 'INR',
+        associatedId: hisabId,
+        associatedType: 'hisab',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      await db.collection('expenses').insertOne(expenseDoc);
+    }
+
     return Response.json({ record }, { status: 201 });
   } catch (error) {
     console.error('API Error:', error);

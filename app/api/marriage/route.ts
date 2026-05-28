@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { name, city, amount, date } = body;
+    const { name, city, amount, date, logAsExpense } = body;
 
     if (!name || !amount) {
       return Response.json({ error: 'Missing required fields' }, { status: 400 });
@@ -57,9 +57,38 @@ export async function POST(request: NextRequest) {
       amount: parseFloat(amount),
       date: date ? new Date(date) : new Date(),
       created_at: new Date(),
+      log_as_expense: !!logAsExpense,
     };
 
     await db.collection('marriage_hisab').insertOne(record);
+
+    if (logAsExpense) {
+      const dateObj = date ? new Date(date) : new Date();
+      const year = dateObj.getFullYear();
+      const monthStr = String(dateObj.getMonth() + 1).padStart(2, '0');
+      const dayStr = String(dateObj.getDate()).padStart(2, '0');
+      const dateStr = `${year}-${monthStr}-${dayStr}`;
+
+      const locationStr = city ? ` (${city})` : '';
+
+      const expenseDoc = {
+        space_id: spaceId,
+        user_id: user.user_id,
+        date: dateStr,
+        itemName: `Vyahar: ${name}${locationStr}`,
+        amount: parseFloat(amount),
+        note: `Vyahar gift to ${name}${city ? ` from ${city}` : ''}`,
+        category: 'Marriage',
+        currency: 'INR',
+        associatedId: marriageId,
+        associatedType: 'marriage',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      await db.collection('expenses').insertOne(expenseDoc);
+    }
+
     return Response.json({ record }, { status: 201 });
   } catch (error) {
     console.error('API Error:', error);

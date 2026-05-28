@@ -21,6 +21,7 @@ export interface HisabRecord {
   date: Date | string;
   created_at: Date | string;
   balance?: number; // Calculated field
+  log_as_expense?: boolean;
 }
 
 export interface MarriageRecord {
@@ -32,6 +33,7 @@ export interface MarriageRecord {
   amount: number;
   date: Date | string;
   created_at: Date | string;
+  log_as_expense?: boolean;
 }
 
 export interface CollaborationRequest {

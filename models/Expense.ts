@@ -15,8 +15,14 @@ export function validateExpense(expense: Partial<Expense>): { isValid: boolean; 
     return { isValid: false, reason: 'Amount must be a number' };
   }
 
-  if (amount <= 0) {
-    return { isValid: false, reason: 'Amount must be greater than 0' };
+  if (expense.associatedType) {
+    if (amount === 0) {
+      return { isValid: false, reason: 'Amount must not be 0' };
+    }
+  } else {
+    if (amount <= 0) {
+      return { isValid: false, reason: 'Amount must be greater than 0' };
+    }
   }
 
   // Validate date format: YYYY-MM-DD

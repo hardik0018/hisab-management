@@ -15,12 +15,12 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (status === 'authenticated') {
-      router.push('/dashboard');
+      router.push('/expenses');
     }
   }, [status, router]);
 
   const handleGoogleLogin = () => {
-    signIn('google', { callbackUrl: '/dashboard' });
+    signIn('google', { callbackUrl: '/expenses' });
   };
 
   if (status === 'loading') {

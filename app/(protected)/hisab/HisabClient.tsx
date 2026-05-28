@@ -38,6 +38,7 @@ interface FormData {
   amount: string;
   description: string;
   date: string;
+  logAsExpense: boolean;
 }
 
 interface PersonSummary {
@@ -65,6 +66,7 @@ export default function HisabClient({ initialRecords }: HisabClientProps) {
     amount: '',
     description: '',
     date: new Date().toISOString().split('T')[0],
+    logAsExpense: true,
   });
 
   const fetchRecords = async () => {
@@ -97,7 +99,8 @@ export default function HisabClient({ initialRecords }: HisabClientProps) {
         type: 'debit', 
         amount: '', 
         description: '', 
-        date: new Date().toISOString().split('T')[0] 
+        date: new Date().toISOString().split('T')[0],
+        logAsExpense: true
       });
       setEditId(null);
       setShowAddDialog(false);
@@ -180,7 +183,8 @@ export default function HisabClient({ initialRecords }: HisabClientProps) {
                      type: 'debit',
                      amount: '',
                      description: '',
-                     date: new Date().toISOString().split('T')[0]
+                     date: new Date().toISOString().split('T')[0],
+                     logAsExpense: true
                    });
                    setEditId(null);
                    setShowAddDialog(true);
@@ -330,7 +334,8 @@ export default function HisabClient({ initialRecords }: HisabClientProps) {
                                                         type: r.type,
                                                         amount: r.amount.toString(),
                                                         description: r.description || '',
-                                                        date: new Date(r.date).toISOString().split('T')[0]
+                                                        date: new Date(r.date).toISOString().split('T')[0],
+                                                        logAsExpense: r.log_as_expense !== undefined ? !!r.log_as_expense : true
                                                     });
                                                     setEditId(r.hisab_id);
                                                     setShowLedgerModal(false);
@@ -372,7 +377,8 @@ export default function HisabClient({ initialRecords }: HisabClientProps) {
                                 type: 'credit',
                                 amount: '',
                                 description: '',
-                                date: new Date().toISOString().split('T')[0]
+                                date: new Date().toISOString().split('T')[0],
+                                logAsExpense: true
                             });
                             setEditId(null);
                             setShowLedgerModal(false);
@@ -390,7 +396,8 @@ export default function HisabClient({ initialRecords }: HisabClientProps) {
                                 type: 'debit',
                                 amount: '',
                                 description: '',
-                                date: new Date().toISOString().split('T')[0]
+                                date: new Date().toISOString().split('T')[0],
+                                logAsExpense: true
                             });
                             setEditId(null);
                             setShowLedgerModal(false);
@@ -490,6 +497,20 @@ export default function HisabClient({ initialRecords }: HisabClientProps) {
                             onChange={(e) => setFormData({...formData, description: e.target.value})}
                             className="h-12 rounded-xl bg-slate-50 border-2 border-transparent focus-visible:border-indigo-600 focus-visible:ring-4 focus-visible:ring-indigo-50 transition-all font-medium px-4"
                            />
+                        </div>
+                        <div className="space-y-2 pt-2">
+                           <label className="flex items-center gap-3 cursor-pointer p-3 bg-slate-50 hover:bg-slate-100/70 border border-slate-100 rounded-xl transition-all select-none">
+                              <input 
+                                type="checkbox"
+                                checked={formData.logAsExpense}
+                                onChange={(e) => setFormData({...formData, logAsExpense: e.target.checked})}
+                                className="h-4 w-4 rounded border-slate-300 text-indigo-650 focus:ring-indigo-500 cursor-pointer"
+                              />
+                              <div className="flex flex-col">
+                                 <span className="text-xs font-bold text-slate-700">Log to Daily Expenses</span>
+                                 <span className="text-[10px] text-slate-400 font-semibold leading-none mt-0.5">Automatically sync this transaction with daily outflows/inflows.</span>
+                              </div>
+                           </label>
                         </div>
                  </div>
                   <Button disabled={isSubmitting} className="w-full h-14 rounded-2xl bg-indigo-600 font-black text-lg shadow-xl shadow-indigo-100 text-white">

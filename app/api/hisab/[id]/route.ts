@@ -18,6 +18,15 @@ export async function PUT(
     const db = await getDb();
     const spaceId = user.space_id || user.user_id;
 
+    const existingRecord = await db.collection('hisab').findOne({
+      hisab_id: recordId,
+      space_id: spaceId
+    });
+
+    if (!existingRecord) {
+      return Response.json({ error: 'Record not found' }, { status: 404 });
+    }
+
     const updateData: any = {};
     if (body.name) updateData.name = body.name;
     if (body.mobile !== undefined) updateData.mobile = body.mobile ? String(body.mobile) : '';
@@ -25,6 +34,7 @@ export async function PUT(
     if (body.amount) updateData.amount = parseFloat(body.amount);
     if (body.description !== undefined) updateData.description = body.description;
     if (body.date) updateData.date = new Date(body.date);
+    if (body.logAsExpense !== undefined) updateData.log_as_expense = !!body.logAsExpense;
 
     const result = await db.collection('hisab').updateOne(
       { hisab_id: recordId, space_id: spaceId },
@@ -33,6 +43,64 @@ export async function PUT(
 
     if (result.matchedCount === 0) {
       return Response.json({ error: 'Record not found' }, { status: 404 });
+    }
+
+    const isLoggedAsExpenseNow = body.logAsExpense !== undefined ? !!body.logAsExpense : !!existingRecord.log_as_expense;
+
+    if (isLoggedAsExpenseNow) {
+      const linkedExpense = await db.collection('expenses').findOne({
+        associatedId: recordId,
+        associatedType: 'hisab'
+      });
+
+      const nameToUse = body.name || existingRecord.name;
+      const typeToUse = body.type || existingRecord.type;
+      const amountToUse = body.amount ? parseFloat(body.amount) : existingRecord.amount;
+      const descToUse = body.description !== undefined ? body.description : existingRecord.description;
+      const dateToUse = body.date ? new Date(body.date) : new Date(existingRecord.date);
+      
+      const expenseAmount = typeToUse === 'credit' ? -amountToUse : amountToUse;
+      
+      const year = dateToUse.getFullYear();
+      const monthStr = String(dateToUse.getMonth() + 1).padStart(2, '0');
+      const dayStr = String(dateToUse.getDate()).padStart(2, '0');
+      const dateStr = `${year}-${monthStr}-${dayStr}`;
+
+      if (linkedExpense) {
+        await db.collection('expenses').updateOne(
+          { _id: linkedExpense._id },
+          {
+            $set: {
+              itemName: `Hisab: ${nameToUse}`,
+              amount: expenseAmount,
+              note: descToUse || '',
+              date: dateStr,
+              updatedAt: new Date()
+            }
+          }
+        );
+      } else {
+        const expenseDoc = {
+          space_id: spaceId,
+          user_id: user.user_id,
+          date: dateStr,
+          itemName: `Hisab: ${nameToUse}`,
+          amount: expenseAmount,
+          note: descToUse || '',
+          category: 'Debt/Credit',
+          currency: 'INR',
+          associatedId: recordId,
+          associatedType: 'hisab',
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        };
+        await db.collection('expenses').insertOne(expenseDoc);
+      }
+    } else {
+      await db.collection('expenses').deleteOne({
+        associatedId: recordId,
+        associatedType: 'hisab'
+      });
     }
 
     const record = await db.collection('hisab').findOne(
@@ -61,6 +129,13 @@ export async function DELETE(
     const db = await getDb();
     const spaceId = user.space_id || user.user_id;
     
+    // Delete linked expense first
+    await db.collection('expenses').deleteOne({
+      associatedId: recordId,
+      associatedType: 'hisab',
+      space_id: spaceId
+    });
+
     const result = await db.collection('hisab').deleteOne({
       hisab_id: recordId,
       space_id: spaceId,

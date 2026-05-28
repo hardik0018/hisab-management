@@ -47,7 +47,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
           {children}
         </Providers>
         <PwaRegister />
-        <Toaster position="top-center" />
+        <Toaster position="bottom-right" offset={96} />
       </body>
     </html>
   )

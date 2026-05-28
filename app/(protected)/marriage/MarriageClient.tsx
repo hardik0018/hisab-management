@@ -33,6 +33,7 @@ interface FormData {
   city: string;
   amount: string;
   date: string;
+  logAsExpense: boolean;
 }
 
 export default function MarriageClient({ initialRecords }: MarriageClientProps) {
@@ -48,6 +49,7 @@ export default function MarriageClient({ initialRecords }: MarriageClientProps) 
     city: '',
     amount: '',
     date: new Date().toISOString().split('T')[0],
+    logAsExpense: true,
   });
 
   const fetchRecords = async () => {
@@ -99,6 +101,7 @@ export default function MarriageClient({ initialRecords }: MarriageClientProps) 
       city: record.city || '',
       amount: record.amount.toString(),
       date: new Date(record.date).toISOString().split('T')[0],
+      logAsExpense: record.log_as_expense !== undefined ? !!record.log_as_expense : true,
     });
     setShowDialog(true);
   };
@@ -110,6 +113,7 @@ export default function MarriageClient({ initialRecords }: MarriageClientProps) 
       city: '',
       amount: '',
       date: new Date().toISOString().split('T')[0],
+      logAsExpense: true,
     });
   };
 
@@ -278,6 +282,20 @@ export default function MarriageClient({ initialRecords }: MarriageClientProps) 
                          className="h-12 rounded-xl bg-slate-50 border-none px-4 font-bold"
                          required
                        />
+                    </div>
+                    <div className="space-y-2 pt-2">
+                       <label className="flex items-center gap-3 cursor-pointer p-3 bg-slate-50 hover:bg-slate-100/70 border border-slate-100 rounded-xl transition-all select-none">
+                          <input 
+                            type="checkbox"
+                            checked={formData.logAsExpense}
+                            onChange={(e) => setFormData({...formData, logAsExpense: e.target.checked})}
+                            className="h-4 w-4 rounded border-slate-300 text-rose-600 focus:ring-rose-500 cursor-pointer"
+                          />
+                          <div className="flex flex-col">
+                             <span className="text-xs font-bold text-slate-700">Log to Daily Expenses</span>
+                             <span className="text-[10px] text-slate-400 font-semibold leading-none mt-0.5">Automatically sync this transaction with daily marriage expenses.</span>
+                          </div>
+                       </label>
                     </div>
                  </div>
                  <Button className="w-full h-14 rounded-2xl bg-rose-600 font-black text-lg shadow-xl shadow-rose-100 text-white">

@@ -157,7 +157,7 @@ export default function SummaryPage() {
 
         {/* Totals Cards Matrix */}
         <div className="grid grid-cols-2 gap-3.5">
-          <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl p-4.5 flex flex-col gap-1 shadow-sm">
+          <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl p-5 flex flex-col gap-1 shadow-sm">
             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Today's Total</span>
             <span className="text-lg font-black text-slate-800 dark:text-white">₹{formatCurrency(todayTotal)}</span>
             <span className="text-[9px] text-slate-400 mt-1 truncate">
@@ -165,7 +165,7 @@ export default function SummaryPage() {
             </span>
           </div>
 
-          <div className="bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-100/40 dark:border-indigo-900/30 rounded-3xl p-4.5 flex flex-col gap-1 relative overflow-hidden">
+          <div className="bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-100/40 dark:border-indigo-900/30 rounded-3xl p-5 flex flex-col gap-1 relative overflow-hidden">
             <div className="absolute right-0 bottom-0 translate-x-1 translate-y-1 opacity-5 text-indigo-400">
               <TrendingDown className="w-20 h-20" />
             </div>
