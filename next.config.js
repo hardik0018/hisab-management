@@ -4,7 +4,7 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
-  serverExternalPackages: ['mongodb'],
+  serverExternalPackages: ['mongodb', 'pdfkit'],
   async headers() {
     return [
       {

@@ -1,6 +1,7 @@
 import PDFDocument from 'pdfkit';
 import { Expense } from '@/types';
 import { formatDisplayDate, formatDisplayTime } from './date-utils';
+import path from 'path';
 
 export function generatePDFBuffer(
   expenses: Expense[],
@@ -15,6 +16,11 @@ export function generatePDFBuffer(
         margin: 50,
         bufferPages: true // Allows two-pass rendering for page count
       });
+
+      const regularFontPath = path.join(process.cwd(), 'public', 'fonts', 'Roboto-Regular.ttf');
+      const boldFontPath = path.join(process.cwd(), 'public', 'fonts', 'Roboto-Bold.ttf');
+      doc.registerFont('Roboto-Regular', regularFontPath);
+      doc.registerFont('Roboto-Bold', boldFontPath);
 
       const chunks: Buffer[] = [];
       doc.on('data', (chunk) => chunks.push(chunk));
@@ -40,27 +46,28 @@ export function generatePDFBuffer(
       // --- DOCUMENT HEADER ---
       // Primary banner (Deep Slate Blue)
       doc.rect(50, 45, 495, 60).fill('#1E293B');
+      doc.rect(50, 102, 495, 3).fill('#6366F1'); // Premium branding accent line
       
       doc.fillColor('#FFFFFF')
          .fontSize(18)
-         .font('Helvetica-Bold')
+         .font('Roboto-Bold')
          .text(reportTitle.toUpperCase(), 70, 58);
 
       doc.fillColor('#94A3B8')
          .fontSize(9)
-         .font('Helvetica')
+         .font('Roboto-Regular')
          .text('PERSONAL EXPENSE TRACKER REPORT', 70, 80);
 
       // Meta details side
       doc.fillColor('#E2E8F0')
          .fontSize(8)
-         .font('Helvetica-Bold')
+         .font('Roboto-Bold')
          .text('Generated On:', 400, 58, { width: 130, align: 'right' })
-         .font('Helvetica')
+         .font('Roboto-Regular')
          .text(generatedTime, 400, 68, { width: 130, align: 'right' })
-         .font('Helvetica-Bold')
+         .font('Roboto-Bold')
          .text('Range:', 400, 80, { width: 130, align: 'right' })
-         .font('Helvetica')
+         .font('Roboto-Regular')
          .text(dateRange, 400, 90, { width: 130, align: 'right' });
 
       let currentY = 125;
@@ -70,9 +77,9 @@ export function generatePDFBuffer(
         doc.rect(50, currentY, 495, 20).fill('#F1F5F9');
         doc.fillColor('#475569')
            .fontSize(8)
-           .font('Helvetica-Bold')
+           .font('Roboto-Bold')
            .text(`Filters: `, 60, currentY + 6, { continued: true })
-           .font('Helvetica')
+           .font('Roboto-Regular')
            .text(appliedFilters);
         currentY += 30;
       }
@@ -84,24 +91,28 @@ export function generatePDFBuffer(
       // Total Spent Card
       doc.rect(50, currentY, cardWidth, cardHeight).fill('#F8FAFC');
       doc.rect(50, currentY, cardWidth, cardHeight).stroke('#E2E8F0');
-      doc.fillColor('#64748B').fontSize(8).font('Helvetica-Bold').text('TOTAL SPENT', 65, currentY + 10);
-      doc.fillColor('#0F172A').fontSize(16).font('Helvetica-Bold').text(`INR ${totalAmount.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`, 65, currentY + 22);
+      doc.rect(50, currentY, 4, cardHeight).fill('#6366F1'); // Indigo accent line
+      
+      doc.fillColor('#64748B').fontSize(8).font('Roboto-Bold').text('TOTAL SPENT', 65, currentY + 10);
+      doc.fillColor('#0F172A').fontSize(16).font('Roboto-Bold').text(`₹${totalAmount.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`, 65, currentY + 22);
 
       // Total Transactions Card
       doc.rect(50 + cardWidth + 21, currentY, cardWidth, cardHeight).fill('#F8FAFC');
       doc.rect(50 + cardWidth + 21, currentY, cardWidth, cardHeight).stroke('#E2E8F0');
-      doc.fillColor('#64748B').fontSize(8).font('Helvetica-Bold').text('TOTAL ENTRIES', 50 + cardWidth + 36, currentY + 10);
-      doc.fillColor('#0F172A').fontSize(16).font('Helvetica-Bold').text(`${totalCount} records`, 50 + cardWidth + 36, currentY + 22);
+      doc.rect(50 + cardWidth + 21, currentY, 4, cardHeight).fill('#475569'); // Dark Slate accent line
+      
+      doc.fillColor('#64748B').fontSize(8).font('Roboto-Bold').text('TOTAL ENTRIES', 50 + cardWidth + 36, currentY + 10);
+      doc.fillColor('#0F172A').fontSize(16).font('Roboto-Bold').text(`${totalCount} records`, 50 + cardWidth + 36, currentY + 22);
 
       currentY += 70;
 
       // --- DAILY BREAKDOWN ---
-      doc.fillColor('#0F172A').fontSize(12).font('Helvetica-Bold').text('Daily Breakdown', 50, currentY);
+      doc.fillColor('#0F172A').fontSize(12).font('Roboto-Bold').text('Daily Breakdown', 50, currentY);
       currentY += 15;
 
       // Draw Daily Totals table
       doc.rect(50, currentY, 495, 18).fill('#E2E8F0');
-      doc.fillColor('#334155').fontSize(8).font('Helvetica-Bold');
+      doc.fillColor('#334155').fontSize(8).font('Roboto-Bold');
       doc.text('Date', 60, currentY + 5);
       doc.text('Total Spent', 250, currentY + 5, { width: 100, align: 'right' });
       doc.text('% of Report Total', 430, currentY + 5, { width: 100, align: 'right' });
@@ -122,9 +133,9 @@ export function generatePDFBuffer(
         
         const pct = totalAmount > 0 ? ((daily.total / totalAmount) * 100).toFixed(1) : '0.0';
 
-        doc.fillColor('#334155').fontSize(8).font('Helvetica');
+        doc.fillColor('#334155').fontSize(8).font('Roboto-Regular');
         doc.text(formatDisplayDate(daily.date), 60, currentY + 4);
-        doc.text(`INR ${daily.total.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`, 250, currentY + 4, { width: 100, align: 'right' });
+        doc.text(`₹${daily.total.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`, 250, currentY + 4, { width: 100, align: 'right' });
         doc.text(`${pct}%`, 430, currentY + 4, { width: 100, align: 'right' });
 
         currentY += 16;
@@ -134,56 +145,62 @@ export function generatePDFBuffer(
       currentY += 25;
 
       // --- DETAILED EXPENSE LIST ---
-      doc.fillColor('#0F172A').fontSize(12).font('Helvetica-Bold').text('Expense Directory', 50, currentY);
+      doc.fillColor('#0F172A').fontSize(12).font('Roboto-Bold').text('Expense Directory', 50, currentY);
       currentY += 15;
 
       // Table Header
-      doc.rect(50, currentY, 495, 18).fill('#0F172A');
-      doc.fillColor('#FFFFFF').fontSize(8).font('Helvetica-Bold');
-      doc.text('Date / Time', 60, currentY + 5);
-      doc.text('Item Name', 160, currentY + 5);
-      doc.text('Category', 280, currentY + 5);
-      doc.text('Note', 360, currentY + 5);
-      doc.text('Amount', 475, currentY + 5, { width: 60, align: 'right' });
-      currentY += 18;
+      doc.rect(50, currentY, 495, 20).fill('#0F172A');
+      doc.fillColor('#FFFFFF').fontSize(8).font('Roboto-Bold');
+      doc.text('Date / Time', 60, currentY + 6);
+      doc.text('Item Name', 160, currentY + 6);
+      doc.text('Category', 280, currentY + 6);
+      doc.text('Note', 360, currentY + 6);
+      doc.text('Amount', 475, currentY + 6, { width: 60, align: 'right' });
+      currentY += 20;
 
       let listCount = 0;
       for (const exp of expenses) {
-        if (currentY > 730) {
+        if (currentY > 740) {
           doc.addPage();
           // Draw table header on new page
-          doc.rect(50, 40, 495, 18).fill('#0F172A');
-          doc.fillColor('#FFFFFF').fontSize(8).font('Helvetica-Bold');
-          doc.text('Date / Time', 60, 45);
-          doc.text('Item Name', 160, 45);
-          doc.text('Category', 280, 45);
-          doc.text('Note', 360, 45);
-          doc.text('Amount', 475, 45, { width: 60, align: 'right' });
-          currentY = 58;
+          doc.rect(50, 40, 495, 20).fill('#0F172A');
+          doc.fillColor('#FFFFFF').fontSize(8).font('Roboto-Bold');
+          doc.text('Date / Time', 60, 46);
+          doc.text('Item Name', 160, 46);
+          doc.text('Category', 280, 46);
+          doc.text('Note', 360, 46);
+          doc.text('Amount', 475, 46, { width: 60, align: 'right' });
+          currentY = 60;
         }
 
         if (listCount % 2 === 1) {
-          doc.rect(50, currentY, 495, 18).fill('#F8FAFC');
+          doc.rect(50, currentY, 495, 26).fill('#F8FAFC');
         }
 
         const dateDisplay = formatDisplayDate(exp.date);
         const timeDisplay = formatDisplayTime(exp.createdAt);
-        const amountDisplay = `INR ${exp.amount.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
+        const isNegative = exp.amount < 0;
+        const absAmt = Math.abs(exp.amount);
+        const amountDisplay = `${isNegative ? '-' : ''}₹${absAmt.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
 
-        doc.fillColor('#334155').fontSize(8).font('Helvetica');
-        
         // Col 1: Date & Time
-        doc.text(`${dateDisplay}\n${timeDisplay}`, 60, currentY + 3, { width: 90 });
+        doc.fillColor('#334155').fontSize(8).font('Roboto-Regular');
+        doc.text(dateDisplay, 60, currentY + 5);
+        doc.fillColor('#94A3B8').fontSize(7).text(timeDisplay, 60, currentY + 14);
+        
         // Col 2: Item Name
-        doc.font('Helvetica-Bold').text(exp.itemName, 160, currentY + 5, { width: 110, height: 10, ellipsis: true });
+        doc.fillColor('#0F172A').font('Roboto-Bold').text(exp.itemName, 160, currentY + 9, { width: 110, height: 10, ellipsis: true });
+        
         // Col 3: Category
-        doc.font('Helvetica').text(exp.category || 'Uncategorized', 280, currentY + 5, { width: 70, height: 10, ellipsis: true });
+        doc.fillColor('#64748B').font('Roboto-Regular').text(exp.category || 'Uncategorized', 280, currentY + 9, { width: 70, height: 10, ellipsis: true });
+        
         // Col 4: Note
-        doc.text(exp.note || '-', 360, currentY + 5, { width: 110, height: 10, ellipsis: true });
+        doc.text(exp.note || '-', 360, currentY + 9, { width: 110, height: 10, ellipsis: true });
+        
         // Col 5: Amount
-        doc.font('Helvetica-Bold').text(amountDisplay, 475, currentY + 5, { width: 60, align: 'right' });
+        doc.fillColor(isNegative ? '#10B981' : '#0F172A').font('Roboto-Bold').text(amountDisplay, 475, currentY + 9, { width: 60, align: 'right' });
 
-        currentY += 18;
+        currentY += 26;
         listCount++;
       }
 
@@ -194,7 +211,7 @@ export function generatePDFBuffer(
         doc.rect(50, 785, 495, 1).fill('#E2E8F0');
         doc.fillColor('#94A3B8')
            .fontSize(7)
-           .font('Helvetica')
+           .font('Roboto-Regular')
            .text(`Page ${i + 1} of ${range.count}`, 50, 792, { align: 'center', width: 495 });
       }
 
