@@ -17,7 +17,7 @@ export default function ExpenseTopTabs() {
   ];
 
   return (
-    <div className="flex border-b border-border bg-card sticky top-0 z-35 justify-center w-full">
+    <div className="flex border-b border-border bg-card sticky top-0 z-50 justify-center w-full">
       <div className="flex w-full max-w-md justify-between px-4 h-12">
         {tabs.map((tab) => {
           const Icon = tab.icon;
@@ -29,8 +29,8 @@ export default function ExpenseTopTabs() {
               href={tab.href}
               className={cn(
                 "flex items-center gap-1.5 px-3 h-full border-b-2 text-xs font-bold transition-all relative font-sans",
-                isActive 
-                  ? "border-primary text-primary" 
+                isActive
+                  ? "border-primary text-primary"
                   : "border-transparent text-muted-foreground hover:text-foreground"
               )}
             >

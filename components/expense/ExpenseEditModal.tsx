@@ -88,10 +88,10 @@ export default function ExpenseEditModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-md w-[92%] bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 text-slate-800 dark:text-slate-100 rounded-3xl p-6 shadow-2xl">
+      <DialogContent className="max-w-md w-[92%] bg-card border border-border text-card-foreground rounded-3xl p-6 shadow-2xl">
         <DialogHeader className="text-left space-y-1">
-          <DialogTitle className="text-lg font-bold text-slate-900 dark:text-white font-sans">Edit Expense</DialogTitle>
-          <DialogDescription className="text-slate-500 dark:text-slate-400 text-xs">
+          <DialogTitle className="text-lg font-bold text-foreground font-sans">Edit Expense</DialogTitle>
+          <DialogDescription className="text-muted-foreground text-xs">
             Modify details for this expense record below.
           </DialogDescription>
         </DialogHeader>
@@ -99,54 +99,54 @@ export default function ExpenseEditModal({
         <form onSubmit={handleSubmit} className="space-y-4 mt-3">
           {/* Item Name */}
           <div className="space-y-1.5">
-            <Label htmlFor="edit-item-name" className="text-xs font-semibold text-slate-500 dark:text-slate-400">Item Name</Label>
+            <Label htmlFor="edit-item-name" className="text-xs font-semibold text-muted-foreground">Item Name</Label>
             <Input
               id="edit-item-name"
               type="text"
               value={itemName}
               onChange={(e) => setItemName(e.target.value)}
-              className="bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-850 text-slate-800 dark:text-slate-200 text-sm rounded-xl h-11"
+              className="bg-background border-input text-foreground text-sm rounded-xl h-11"
               required
             />
           </div>
 
           {/* Amount */}
           <div className="space-y-1.5">
-            <Label htmlFor="edit-amount" className="text-xs font-semibold text-slate-500 dark:text-slate-400">Amount (INR)</Label>
+            <Label htmlFor="edit-amount" className="text-xs font-semibold text-muted-foreground">Amount (INR)</Label>
             <Input
               id="edit-amount"
               type="number"
               step="any"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
-              className="bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-850 text-slate-800 dark:text-slate-200 text-sm rounded-xl h-11"
+              className="bg-background border-input text-foreground text-sm rounded-xl h-11"
               required
             />
           </div>
 
           {/* Date */}
           <div className="space-y-1.5">
-            <Label htmlFor="edit-date" className="text-xs font-semibold text-slate-500 dark:text-slate-400">Date</Label>
+            <Label htmlFor="edit-date" className="text-xs font-semibold text-muted-foreground">Date</Label>
             <Input
               id="edit-date"
               type="date"
               value={date}
               onChange={(e) => setDate(e.target.value)}
-              className="bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-850 text-slate-800 dark:text-slate-200 text-sm rounded-xl h-11"
+              className="bg-background border-input text-foreground text-sm rounded-xl h-11"
               required
             />
           </div>
 
           {/* Note */}
           <div className="space-y-1.5">
-            <Label htmlFor="edit-note" className="text-xs font-semibold text-slate-500 dark:text-slate-400">Note (Optional)</Label>
+            <Label htmlFor="edit-note" className="text-xs font-semibold text-muted-foreground">Note (Optional)</Label>
             <Input
               id="edit-note"
               type="text"
               value={note}
               onChange={(e) => setNote(e.target.value)}
               placeholder="e.g. at market, for party"
-              className="bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-850 text-slate-800 dark:text-slate-200 text-sm rounded-xl h-11"
+              className="bg-background border-input text-foreground text-sm rounded-xl h-11"
             />
           </div>
 
@@ -155,14 +155,14 @@ export default function ExpenseEditModal({
               type="button"
               variant="outline"
               onClick={onClose}
-              className="w-1/2 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-500 hover:text-slate-900 dark:hover:text-white rounded-xl cursor-pointer"
+              className="w-1/2 bg-background border border-border text-muted-foreground hover:text-foreground rounded-xl cursor-pointer"
             >
               Cancel
             </Button>
             <Button
               type="submit"
               disabled={isSubmitting}
-              className="w-1/2 bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-bold rounded-xl border-0 cursor-pointer"
+              className="w-1/2 bg-primary hover:bg-primary/90 text-primary-foreground font-bold rounded-xl border-0 cursor-pointer"
             >
               {isSubmitting ? (
                 <>

@@ -173,7 +173,7 @@ export default function ExpenseEntryBox() {
     <div className="flex flex-col gap-4 font-sans text-foreground">
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         {/* Date Selector Row */}
-        <div className="bg-card border border-border rounded-xl p-4 flex items-center justify-between gap-4 shadow-sm">
+        <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-2 text-primary">
             <Calendar className="w-4 h-4" />
             <Label htmlFor="date-picker" className="text-xs font-bold text-foreground cursor-pointer">Selected Date</Label>

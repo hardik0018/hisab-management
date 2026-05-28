@@ -45,12 +45,12 @@ export default function ClearAllData() {
   };
 
   return (
-    <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl p-5 space-y-4 shadow-sm">
+    <div className="bg-card border border-border rounded-3xl p-5 space-y-4 shadow-sm">
       <div className="flex gap-3">
-        <AlertTriangle className="w-5 h-5 text-rose-500 shrink-0 mt-0.5" />
+        <AlertTriangle className="w-5 h-5 text-destructive shrink-0 mt-0.5" />
         <div className="space-y-1">
-          <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200">Danger Zone</h3>
-          <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+          <h3 className="text-sm font-bold text-foreground">Danger Zone</h3>
+          <p className="text-xs text-muted-foreground leading-relaxed">
             Permanently clear all expense entries and reset large amount limits.
           </p>
         </div>
@@ -59,7 +59,7 @@ export default function ClearAllData() {
       <Button
         type="button"
         onClick={() => setIsOpen(true)}
-        className="w-full h-11 bg-rose-50 dark:bg-rose-500/10 hover:bg-rose-650 dark:hover:bg-rose-600 text-rose-600 dark:text-rose-450 hover:text-white border border-rose-100 dark:border-rose-500/20 rounded-2xl font-bold transition-all cursor-pointer"
+        className="w-full h-11 bg-destructive/10 dark:bg-destructive/15 text-destructive border border-destructive/20 hover:bg-destructive hover:text-destructive-foreground rounded-2xl font-bold transition-all cursor-pointer"
       >
         <Trash2 className="w-4 h-4 mr-2" />
         Clear All Data
@@ -67,21 +67,21 @@ export default function ClearAllData() {
 
       {/* Confirmation Modal */}
       <Dialog open={isOpen} onOpenChange={(open) => !open && setIsOpen(false)}>
-        <DialogContent className="max-w-md w-[92%] bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 text-slate-850 dark:text-slate-100 rounded-3xl p-6 shadow-2xl">
+        <DialogContent className="max-w-md w-[92%] bg-card border border-border text-card-foreground rounded-3xl p-6 shadow-2xl">
           <DialogHeader className="text-left space-y-2">
-            <div className="flex items-center gap-2 text-rose-500">
+            <div className="flex items-center gap-2 text-destructive">
               <ShieldAlert className="w-6 h-6 animate-bounce" />
-              <DialogTitle className="text-lg font-bold text-slate-900 dark:text-white font-sans">Are you absolutely sure?</DialogTitle>
+              <DialogTitle className="text-lg font-bold text-foreground font-sans">Are you absolutely sure?</DialogTitle>
             </div>
-            <DialogDescription className="text-slate-500 dark:text-slate-400 text-xs leading-relaxed">
-              This action is <span className="font-bold text-rose-600 dark:text-rose-400">permanent</span> and will erase all your expense documents from the database. Backup your files first!
+            <DialogDescription className="text-muted-foreground text-xs leading-relaxed">
+              This action is <span className="font-bold text-destructive">permanent</span> and will erase all your expense documents from the database. Backup your files first!
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 mt-3">
             <div className="space-y-2">
-              <Label htmlFor="delete-confirm" className="text-xs font-semibold text-slate-500 dark:text-slate-400 leading-relaxed">
-                To confirm, type <span className="font-mono text-slate-800 dark:text-slate-200 font-bold bg-slate-100 dark:bg-slate-950 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-850">DELETE</span> below:
+              <Label htmlFor="delete-confirm" className="text-xs font-semibold text-muted-foreground leading-relaxed">
+                To confirm, type <span className="font-mono text-foreground font-bold bg-muted px-1.5 py-0.5 rounded border border-border">DELETE</span> below:
               </Label>
               <Input
                 id="delete-confirm"
@@ -89,7 +89,7 @@ export default function ClearAllData() {
                 value={confirmText}
                 onChange={(e) => setConfirmText(e.target.value)}
                 placeholder="DELETE"
-                className="bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-850 text-slate-800 dark:text-slate-200 text-sm rounded-xl h-11 text-center font-mono tracking-widest font-black uppercase"
+                className="bg-background border-input text-foreground text-sm rounded-xl h-11 text-center font-mono tracking-widest font-black uppercase"
               />
             </div>
           </div>
@@ -100,7 +100,7 @@ export default function ClearAllData() {
               variant="outline"
               disabled={isClearing}
               onClick={() => setIsOpen(false)}
-              className="w-1/2 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-500 hover:text-slate-800 dark:hover:text-white rounded-xl cursor-pointer"
+              className="w-1/2 bg-background border border-border text-muted-foreground hover:text-foreground rounded-xl cursor-pointer"
             >
               Cancel
             </Button>
@@ -108,7 +108,7 @@ export default function ClearAllData() {
               type="button"
               disabled={confirmText !== 'DELETE' || isClearing}
               onClick={handleClear}
-              className="w-1/2 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl border-0 transition-all cursor-pointer"
+              className="w-1/2 bg-destructive hover:bg-destructive/90 text-white font-bold rounded-xl border-0 transition-all cursor-pointer"
             >
               {isClearing ? (
                 <>
