@@ -28,7 +28,7 @@ export default function HistoryClient({ initialExpenses, searchParams }: History
   const [isPending, startTransition] = useTransition();
 
   const [expenses, setExpenses] = useState<Expense[]>(initialExpenses);
-  
+
   // Search & Filter State
   const [search, setSearch] = useState<string>(searchParams.search || '');
   const [dateFilter, setDateFilter] = useState<string>(searchParams.date || '');
@@ -72,11 +72,11 @@ export default function HistoryClient({ initialExpenses, searchParams }: History
 
   const handleSearchChange = (val: string) => {
     setSearch(val);
-    
+
     if (debounceTimeoutRef.current) {
       clearTimeout(debounceTimeoutRef.current);
     }
-    
+
     debounceTimeoutRef.current = setTimeout(() => {
       updateUrl(val, dateFilter, monthFilter);
     }, 400); // 400ms debounce to avoid overwhelming the server while typing
@@ -168,7 +168,7 @@ export default function HistoryClient({ initialExpenses, searchParams }: History
           setExpenses((prev) => [expense, ...prev].sort((a, b) => {
             const dateCompare = b.date.localeCompare(a.date);
             if (dateCompare !== 0) return dateCompare;
-            
+
             const aTime = a.createdAt instanceof Date ? a.createdAt.getTime() : new Date(a.createdAt).getTime();
             const bTime = b.createdAt instanceof Date ? b.createdAt.getTime() : new Date(b.createdAt).getTime();
             return bTime - aTime;
@@ -180,10 +180,10 @@ export default function HistoryClient({ initialExpenses, searchParams }: History
   };
 
   const isFilterActive = search || dateFilter || monthFilter;
-  const filteredTotal = expenses.reduce((sum, e) => sum + e.amount, 0);  return (
+  const filteredTotal = expenses.reduce((sum, e) => sum + e.amount, 0); return (
     <PageWrapper>
       <ExpenseTopTabs />
-      <div className="max-w-md mx-auto p-4 space-y-4 pb-32">
+      <div className="max-w-7xl mx-auto p-4 space-y-4 ">
         <div className="space-y-1">
           <h2 className="text-2xl font-black text-foreground">Expense History</h2>
           <p className="text-xs text-muted-foreground font-medium">View and manage collaborative outflows in this space.</p>

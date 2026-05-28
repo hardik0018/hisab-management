@@ -13,7 +13,7 @@ export default async function ExpensesPage() {
   return (
     <PageWrapper>
       <ExpenseTopTabs />
-      <div className="max-w-md mx-auto p-4 space-y-5 pb-32">
+      <div className="max-w-7xl mx-auto p-4 space-y-5">
         <div className="space-y-1">
           <h2 className="text-2xl font-black text-foreground">Add Expenses</h2>
           <p className="text-xs text-muted-foreground font-medium">Record daily outflows using bulk plain text entries.</p>

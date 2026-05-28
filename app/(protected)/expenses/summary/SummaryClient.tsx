@@ -7,8 +7,8 @@ import ExpenseTopTabs from '@/components/expense/ExpenseTopTabs';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { 
-  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer 
+import {
+  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from 'recharts';
 import { CalendarDays, TrendingDown, Search, ArrowRight, ArrowLeft, X } from 'lucide-react';
 import { formatDisplayDate } from '@/lib/date-utils';
@@ -47,7 +47,7 @@ export default function SummaryClient({
   const [filteredTotal, setFilteredTotal] = useState<number>(initialFilteredTotal);
   const [dailyTotals, setDailyTotals] = useState<DailyTotal[]>(initialDailyTotals);
   const [todayTotal, setTodayTotal] = useState<number>(initialTodayTotal);
-  
+
   const [search, setSearch] = useState<string>(searchParams.search || '');
   const [isMountedState, setIsMountedState] = useState(false);
   const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -149,7 +149,7 @@ export default function SummaryClient({
   return (
     <PageWrapper>
       <ExpenseTopTabs />
-      <div className="max-w-md mx-auto p-4 space-y-5 pb-32">
+      <div className="max-w-7xl mx-auto p-4 space-y-5">
         <div className="space-y-1">
           <h2 className="text-2xl font-black text-foreground">Analysis & Summary</h2>
           <p className="text-xs text-muted-foreground font-medium">Evaluate spending metrics and trends in this space.</p>
@@ -255,27 +255,27 @@ export default function SummaryClient({
                 <AreaChart data={chartData} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}>
                   <defs>
                     <linearGradient id="colorAmount" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3}/>
-                      <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0}/>
+                      <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
-                  <XAxis 
-                    dataKey="name" 
-                    stroke="hsl(var(--muted-foreground))" 
+                  <XAxis
+                    dataKey="name"
+                    stroke="hsl(var(--muted-foreground))"
                     fontSize={9}
                     tickLine={false}
                     axisLine={false}
                   />
-                  <YAxis 
-                    stroke="hsl(var(--muted-foreground))" 
+                  <YAxis
+                    stroke="hsl(var(--muted-foreground))"
                     fontSize={9}
                     tickLine={false}
                     axisLine={false}
                   />
-                  <Tooltip 
-                    contentStyle={{ 
-                      backgroundColor: 'hsl(var(--popover))', 
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: 'hsl(var(--popover))',
                       borderColor: 'hsl(var(--border))',
                       borderRadius: '12px',
                       fontSize: '11px',
@@ -283,13 +283,13 @@ export default function SummaryClient({
                     }}
                     itemStyle={{ color: 'hsl(var(--primary))' }}
                   />
-                  <Area 
-                    type="monotone" 
-                    dataKey="amount" 
-                    stroke="hsl(var(--primary))" 
+                  <Area
+                    type="monotone"
+                    dataKey="amount"
+                    stroke="hsl(var(--primary))"
                     strokeWidth={2}
-                    fillOpacity={1} 
-                    fill="url(#colorAmount)" 
+                    fillOpacity={1}
+                    fill="url(#colorAmount)"
                   />
                 </AreaChart>
               </ResponsiveContainer>
