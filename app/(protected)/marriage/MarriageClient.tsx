@@ -129,12 +129,14 @@ export default function MarriageClient({ initialRecords }: MarriageClientProps) 
       <div className="p-4 space-y-8 max-w-7xl mx-auto pb-32">
         {/* Header */}
         <div className="space-y-6">
-           <div className="flex justify-between items-end">
+           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
              <div className="space-y-1">
-                <h1 className="text-4xl font-black text-slate-900 tracking-tight">Marriage</h1>
-                <p className="text-slate-500 font-medium">Manage social gifting and vayvhar.</p>
+                <h1 className="text-4xl font-black text-slate-900 tracking-tight">
+                  Marriage <span className="text-rose-600 italic">Vayvhar</span>
+                </h1>
+                <p className="text-slate-500 font-medium">Manage social gifting and relationship tokens.</p>
              </div>
-             <Button onClick={() => { resetForm(); setShowDialog(true); }} className="rounded-2xl h-12 px-6 shadow-xl shadow-rose-200 bg-rose-600 hover:bg-rose-700 font-bold text-white">
+             <Button onClick={() => { resetForm(); setShowDialog(true); }} className="rounded-2xl h-12 px-6 shadow-xl shadow-rose-100 bg-rose-600 hover:bg-rose-700 font-bold text-white w-full sm:w-auto transition-transform active:scale-95">
                 <Heart className="mr-2 h-5 w-5 fill-current" /> Add Vayvhar
              </Button>
            </div>
@@ -167,10 +169,10 @@ export default function MarriageClient({ initialRecords }: MarriageClientProps) 
              <div className="relative group">
                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 group-focus-within:text-rose-600 transition-colors" />
                  <Input 
-                  placeholder="Filter families..." 
+                  placeholder="Search by family name or city location..." 
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-12 h-14 rounded-2xl border-none bg-white shadow-lg focus-visible:ring-rose-200"
+                  className="pl-12 h-14 rounded-2xl border-2 border-slate-100 bg-white shadow-sm focus-visible:ring-4 focus-visible:ring-rose-50 focus-visible:border-rose-600 transition-all font-medium"
                  />
               </div>
               <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 px-4">Family Aggregates</h3>
@@ -212,10 +214,10 @@ export default function MarriageClient({ initialRecords }: MarriageClientProps) 
                                        <p className="text-lg sm:text-2xl font-black text-rose-600">₹{record.amount.toLocaleString()}</p>
                                     </div>
                                     <div className="flex gap-1 transition-all scale-90 sm:scale-95 group-hover:scale-100 flex-shrink-0">
-                                       <button onClick={() => handleEdit(record)} className="p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-slate-50 text-slate-400 hover:bg-rose-50 hover:text-rose-600 transition-colors">
+                                       <button onClick={() => handleEdit(record)} className="p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-slate-50 text-slate-400 hover:bg-rose-50 hover:text-rose-600 transition-colors focus:outline-none focus:ring-0 focus-visible:ring-0">
                                           <Edit className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                                        </button>
-                                       <button onClick={() => setRecordToDelete(record.marriage_id)} className="p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-slate-50 text-slate-400 hover:bg-rose-50 hover:text-rose-600 transition-colors">
+                                       <button onClick={() => setRecordToDelete(record.marriage_id)} className="p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-slate-50 text-slate-400 hover:bg-rose-50 hover:text-rose-600 transition-colors focus:outline-none focus:ring-0 focus-visible:ring-0">
                                           <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                                        </button>
                                     </div>
@@ -231,79 +233,80 @@ export default function MarriageClient({ initialRecords }: MarriageClientProps) 
 
         {/* Dialogs */}
         <Dialog open={showDialog} onOpenChange={setShowDialog}>
-           <DialogContent className="max-w-md rounded-[2.5rem] p-0 overflow-hidden bg-white border-none shadow-2xl">
-              <div className="bg-rose-600 p-8 text-white relative">
-                 <div className="absolute top-4 right-4 opacity-10">
-                    <Heart className="h-20 w-20 fill-current" />
-                 </div>
-                 <DialogTitle className="text-3xl font-black mb-1 text-white">{editingRecord ? 'Edit Entry' : 'New Vayvhar'}</DialogTitle>
-                 <p className="text-rose-100 text-sm font-medium">Capture relationship tokens & gifts.</p>
-              </div>
-              <form onSubmit={handleSubmit} className="p-8 space-y-6">
-                 <div className="space-y-4">
-                    <div className="space-y-2">
-                       <Label className="text-[10px] font-black tracking-widest uppercase text-slate-400 ml-1">Family / Person Name</Label>
-                       <Input 
-                        placeholder="e.g. Mehta Family"
-                        value={formData.name}
-                        onChange={(e) => setFormData({...formData, name: e.target.value})}
-                        className="h-12 rounded-xl bg-slate-50 border-none px-4"
-                        required
-                       />
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                       <div className="space-y-2">
-                          <Label className="text-[10px] font-black tracking-widest uppercase text-slate-400 ml-1">City / Location</Label>
-                          <Input 
-                           placeholder="e.g. Mumbai"
-                           value={formData.city}
-                           onChange={(e) => setFormData({...formData, city: e.target.value})}
-                           className="h-12 rounded-xl bg-slate-50 border-none px-4"
-                          />
-                       </div>
-                       <div className="space-y-2">
-                          <Label className="text-[10px] font-black tracking-widest uppercase text-slate-400 ml-1">Amount (₹)</Label>
-                          <Input 
-                            type="number"
-                            placeholder="0.00"
-                            value={formData.amount}
-                            onChange={(e) => setFormData({...formData, amount: e.target.value})}
-                            className="h-12 rounded-xl bg-slate-50 border-none px-4 font-black text-lg"
-                            required
-                          />
-                       </div>
-                    </div>
-                    <div className="space-y-2">
-                       <Label className="text-[10px] font-black tracking-widest uppercase text-slate-400 ml-1">Date of Event</Label>
-                       <Input 
-                         type="date"
-                         value={formData.date}
-                         onChange={(e) => setFormData({...formData, date: e.target.value})}
-                         className="h-12 rounded-xl bg-slate-50 border-none px-4 font-bold"
+            <DialogContent className="max-w-md w-[92vw] sm:w-full rounded-[2rem] sm:rounded-[2.5rem] p-0 overflow-hidden bg-white border-none shadow-2xl">
+               <div className="bg-rose-600 p-6 sm:p-8 text-white relative">
+                  <div className="absolute top-4 right-4 opacity-10">
+                     <Heart className="h-16 w-16 sm:h-20 sm:w-20 fill-current" />
+                  </div>
+                  <DialogTitle className="text-2xl sm:text-3xl font-black mb-1 text-white">{editingRecord ? 'Edit Entry' : 'New Vayvhar'}</DialogTitle>
+                  <p className="text-rose-100 text-xs sm:text-sm font-medium">Capture relationship tokens & gifts.</p>
+               </div>
+               <form onSubmit={handleSubmit} className="p-6 sm:p-8 space-y-6">
+                  <div className="space-y-4">
+                     <div className="space-y-1.5">
+                        <Label className="text-[10px] font-black tracking-widest uppercase text-slate-400 ml-1">Family / Person Name</Label>
+                        <Input 
+                         placeholder="e.g. Mehta Family"
+                         value={formData.name}
+                         onChange={(e) => setFormData({...formData, name: e.target.value})}
+                         className="h-12 rounded-xl bg-slate-50 border-2 border-transparent focus-visible:border-rose-600 focus-visible:ring-4 focus-visible:ring-rose-50 transition-all font-bold px-4"
                          required
-                       />
-                    </div>
-                    <div className="space-y-2 pt-2">
-                       <label className="flex items-center gap-3 cursor-pointer p-3 bg-slate-50 hover:bg-slate-100/70 border border-slate-100 rounded-xl transition-all select-none">
-                          <input 
-                            type="checkbox"
-                            checked={formData.logAsExpense}
-                            onChange={(e) => setFormData({...formData, logAsExpense: e.target.checked})}
-                            className="h-4 w-4 rounded border-slate-300 text-rose-600 focus:ring-rose-500 cursor-pointer"
-                          />
-                          <div className="flex flex-col">
-                             <span className="text-xs font-bold text-slate-700">Log to Daily Expenses</span>
-                             <span className="text-[10px] text-slate-400 font-semibold leading-none mt-0.5">Automatically sync this transaction with daily marriage expenses.</span>
-                          </div>
-                       </label>
-                    </div>
-                 </div>
-                 <Button className="w-full h-14 rounded-2xl bg-rose-600 font-black text-lg shadow-xl shadow-rose-100 text-white">
-                    {editingRecord ? 'Update Record' : 'Record Vayvhar'}
-                 </Button>
-              </form>
-           </DialogContent>
-        </Dialog>
+                        />
+                     </div>
+                     <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-1.5">
+                           <Label className="text-[10px] font-black tracking-widest uppercase text-slate-400 ml-1">City / Location</Label>
+                           <Input 
+                            placeholder="e.g. Mumbai"
+                            value={formData.city}
+                            onChange={(e) => setFormData({...formData, city: e.target.value})}
+                            className="h-12 rounded-xl bg-slate-50 border-2 border-transparent focus-visible:border-rose-600 focus-visible:ring-4 focus-visible:ring-rose-50 transition-all font-medium px-4"
+                           />
+                        </div>
+                        <div className="space-y-1.5">
+                           <Label className="text-[10px] font-black tracking-widest uppercase text-slate-400 ml-1">Amount (₹)</Label>
+                           <Input 
+                             type="number"
+                             placeholder="0.00"
+                             value={formData.amount}
+                             onChange={(e) => setFormData({...formData, amount: e.target.value})}
+                             className="h-12 rounded-xl bg-slate-50 border-2 border-transparent focus-visible:border-rose-600 focus-visible:ring-4 focus-visible:ring-rose-50 transition-all font-black text-lg px-4"
+                             required
+                             min="1"
+                           />
+                        </div>
+                     </div>
+                     <div className="space-y-1.5">
+                        <Label className="text-[10px] font-black tracking-widest uppercase text-slate-400 ml-1">Date of Event</Label>
+                        <Input 
+                          type="date"
+                          value={formData.date}
+                          onChange={(e) => setFormData({...formData, date: e.target.value})}
+                          className="h-12 rounded-xl bg-slate-50 border-2 border-transparent focus-visible:border-rose-600 focus-visible:ring-4 focus-visible:ring-rose-50 transition-all font-bold px-4"
+                          required
+                        />
+                     </div>
+                     <div className="space-y-2 pt-1">
+                        <label className="flex items-center gap-3 cursor-pointer p-3 bg-slate-50 hover:bg-slate-100/70 border border-slate-100 rounded-xl transition-all select-none">
+                           <input 
+                             type="checkbox"
+                             checked={formData.logAsExpense}
+                             onChange={(e) => setFormData({...formData, logAsExpense: e.target.checked})}
+                             className="h-4 w-4 rounded border-slate-300 text-rose-600 focus:ring-rose-500 cursor-pointer"
+                           />
+                           <div className="flex flex-col">
+                              <span className="text-xs font-bold text-slate-700">Sync with Daily Expenses</span>
+                              <span className="text-[10px] text-slate-400 font-semibold leading-tight mt-0.5">Automatically log this gifting as a daily wedding expense.</span>
+                           </div>
+                        </label>
+                     </div>
+                  </div>
+                  <Button className="w-full h-14 rounded-2xl bg-rose-600 hover:bg-rose-700 font-black text-lg shadow-xl shadow-rose-100 text-white transition-transform active:scale-98">
+                     {editingRecord ? 'Update Record' : 'Record Vayvhar'}
+                  </Button>
+               </form>
+            </DialogContent>
+         </Dialog>
 
         <ConfirmDialog
           open={!!recordToDelete}

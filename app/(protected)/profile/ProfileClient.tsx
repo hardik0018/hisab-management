@@ -197,42 +197,42 @@ export default function ProfileClient({ initialCollaborationData }: ProfileClien
         <div className="space-y-4">
            <SectionLabel label="Your Space" />
            <motion.div whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}>
-             <Card className="border-none shadow-xl bg-white rounded-[2rem] overflow-hidden group cursor-pointer" onClick={() => setShowCollabDialog(true)}>
-                <CardContent className="p-6">
-                   <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-5">
-                         <div className="w-14 h-14 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center group-hover:bg-indigo-600 group-hover:text-white transition-all duration-300 shadow-sm shadow-indigo-100">
-                            <Users className="h-7 w-7" />
+              <Card className="border-none shadow-xl bg-white rounded-[2rem] overflow-hidden group cursor-pointer" onClick={() => setShowCollabDialog(true)}>
+                 <CardContent className="p-5 sm:p-6">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                       <div className="flex items-center gap-4">
+                          <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center group-hover:bg-indigo-600 group-hover:text-white transition-all duration-300 shadow-sm shadow-indigo-100 shrink-0">
+                             <Users className="h-6 w-6 sm:h-7 sm:w-7" />
+                          </div>
+                          <div className="text-left min-w-0">
+                             <p className="font-black text-slate-900 leading-tight text-base sm:text-lg">Manage Collaborators</p>
+                              <p className="text-[10px] sm:text-xs text-slate-500 font-bold mt-1 uppercase tracking-tighter opacity-70 truncate">
+                                 {collaborators.length > 1 
+                                   ? `Sharing with ${collaborators.length - 1} people` 
+                                   : "Invite partners to track together"}
+                                 {receivedRequests.length > 0 && ` • ${receivedRequests.length} pending`}
+                              </p>
+                          </div>
+                       </div>
+                       <div className="flex items-center justify-between sm:justify-end gap-4 w-full sm:w-auto border-t border-slate-50 sm:border-none pt-3 sm:pt-0">
+                         <div className="flex -space-x-2.5">
+                            {collaborators.slice(0, 3).map((c, i) => (
+                               <Avatar key={i} className="h-8 w-8 sm:h-10 sm:w-10 border-2 sm:border-4 border-white shadow-md">
+                                  <AvatarImage src={c.image} />
+                                  <AvatarFallback className="text-[9px] sm:text-[10px] bg-slate-100 font-black">{c.name?.charAt(0)}</AvatarFallback>
+                               </Avatar>
+                            ))}
+                            {collaborators.length > 3 && (
+                               <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-full bg-slate-50 border-2 sm:border-4 border-white flex items-center justify-center text-[9px] sm:text-[10px] font-black text-slate-400 shadow-md">
+                                  +{collaborators.length - 3}
+                               </div>
+                            )}
                          </div>
-                         <div className="text-left">
-                            <p className="font-black text-slate-900 leading-tight text-lg">Manage Collaborators</p>
-                             <p className="text-xs text-slate-500 font-bold mt-1 uppercase tracking-tighter opacity-70">
-                                {collaborators.length > 1 
-                                  ? `Sharing with ${collaborators.length - 1} people` 
-                                  : "Invite partners to track together"}
-                                {receivedRequests.length > 0 && ` • ${receivedRequests.length} pending`}
-                             </p>
-                         </div>
-                      </div>
-                      <div className="flex items-center gap-4">
-                        <div className="flex -space-x-3">
-                           {collaborators.slice(0, 3).map((c, i) => (
-                              <Avatar key={i} className="h-10 w-10 border-4 border-white shadow-md">
-                                 <AvatarImage src={c.image} />
-                                 <AvatarFallback className="text-[10px] bg-slate-100 font-black">{c.name?.charAt(0)}</AvatarFallback>
-                              </Avatar>
-                           ))}
-                           {collaborators.length > 3 && (
-                              <div className="h-10 w-10 rounded-full bg-slate-50 border-4 border-white flex items-center justify-center text-[10px] font-black text-slate-400 shadow-md">
-                                 +{collaborators.length - 3}
-                              </div>
-                           )}
-                        </div>
-                        <ChevronRight className="h-6 w-6 text-slate-300 group-hover:translate-x-1 transition-transform group-hover:text-primary" />
-                      </div>
-                   </div>
-                </CardContent>
-             </Card>
+                         <ChevronRight className="h-5 w-5 sm:h-6 sm:w-6 text-slate-300 group-hover:translate-x-1 transition-transform group-hover:text-primary shrink-0" />
+                       </div>
+                    </div>
+                 </CardContent>
+              </Card>
            </motion.div>
         </div>
 
@@ -256,17 +256,17 @@ export default function ProfileClient({ initialCollaborationData }: ProfileClien
         </motion.div>
 
         <Dialog open={showCollabDialog} onOpenChange={setShowCollabDialog}>
-           <DialogContent className="max-w-md rounded-[2.5rem] border-none shadow-2xl p-0 overflow-hidden bg-white">
-              <div className="bg-slate-900 p-10 text-white relative">
+           <DialogContent className="max-w-md w-[92vw] sm:w-full rounded-[2rem] sm:rounded-[2.5rem] border-none shadow-2xl p-0 overflow-hidden bg-white">
+              <div className="bg-slate-900 p-6 sm:p-10 text-white relative">
                  <div className="absolute top-6 right-6 text-white/10">
-                    <Users className="h-24 w-24 rotate-6" />
+                    <Users className="h-20 w-20 sm:h-24 sm:w-24 rotate-6" />
                  </div>
-                 <DialogTitle className="text-3xl font-black mb-2 tracking-tight text-white">Collaborate</DialogTitle>
-                 <p className="text-slate-400 text-sm font-medium leading-relaxed max-w-[280px]">
+                 <DialogTitle className="text-2xl sm:text-3xl font-black mb-2 tracking-tight text-white">Collaborate</DialogTitle>
+                 <p className="text-slate-400 text-xs sm:text-sm font-medium leading-relaxed max-w-[280px]">
                     Share this financial space with partners or family members.
                  </p>
               </div>
-              <div className="p-8 space-y-8">
+              <div className="p-6 sm:p-8 space-y-6 sm:space-y-8">
                  <div className="space-y-3">
                     <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 ml-1">New Invitation</Label>
                     <form onSubmit={handleInvite} className="flex gap-2">
@@ -274,11 +274,11 @@ export default function ProfileClient({ initialCollaborationData }: ProfileClien
                         placeholder="email@example.com"
                         value={inviteEmail}
                         onChange={(e) => setInviteEmail(e.target.value)}
-                        className="rounded-2xl h-14 bg-slate-50 border-none px-5 focus-visible:ring-primary font-medium"
+                        className="h-12 rounded-xl bg-slate-50 border-2 border-transparent focus-visible:border-slate-950 focus-visible:ring-4 focus-visible:ring-slate-100 transition-all font-medium px-4"
                         required
                         type="email"
                        />
-                       <Button disabled={isInviting} size="icon" className="h-14 w-14 rounded-2xl bg-slate-900 shadow-xl shadow-slate-200 flex-shrink-0 text-white">
+                       <Button disabled={isInviting} size="icon" className="h-12 w-12 rounded-xl bg-slate-900 shadow-xl shadow-slate-200 flex-shrink-0 text-white transition-transform active:scale-95">
                           <UserPlus className="h-5 w-5" />
                        </Button>
                     </form>
@@ -336,14 +336,14 @@ export default function ProfileClient({ initialCollaborationData }: ProfileClien
                              key={c.user_id} 
                              className="flex items-center justify-between p-4 rounded-3xl bg-slate-50 border border-slate-100 group"
                            >
-                              <div className="flex items-center gap-4">
-                                 <Avatar className="h-10 w-10 ring-2 ring-white shadow-sm">
+                              <div className="flex items-center gap-3 sm:gap-4 min-w-0 mr-2">
+                                 <Avatar className="h-9 w-9 sm:h-10 sm:w-10 ring-2 ring-white shadow-sm shrink-0">
                                     <AvatarImage src={c.image} />
                                     <AvatarFallback className="bg-slate-200 text-xs font-black">{c.name?.charAt(0)}</AvatarFallback>
                                  </Avatar>
-                                 <div>
-                                    <p className="text-sm font-black text-slate-900 leading-none">{c.name}</p>
-                                    <p className="text-[10px] text-slate-400 font-bold mt-1.5">{c.email}</p>
+                                 <div className="min-w-0">
+                                    <p className="text-xs sm:text-sm font-black text-slate-900 leading-none truncate">{c.name}</p>
+                                    <p className="text-[9px] sm:text-[10px] text-slate-400 font-bold mt-1.5 truncate max-w-[120px] xs:max-w-[160px] sm:max-w-none">{c.email}</p>
                                  </div>
                               </div>
                                <div className="flex items-center gap-2">
