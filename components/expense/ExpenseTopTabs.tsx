@@ -28,7 +28,7 @@ export default function ExpenseTopTabs() {
               key={tab.href}
               href={tab.href}
               className={cn(
-                "flex items-center gap-1.5 px-3 h-full border-b-2 text-xs font-bold transition-all relative font-sans",
+                "flex items-center gap-1 sm:gap-1.5 px-1.5 sm:px-3 h-full border-b-2 text-xs font-bold transition-all relative font-sans",
                 isActive
                   ? "border-primary text-primary"
                   : "border-transparent text-muted-foreground hover:text-foreground"

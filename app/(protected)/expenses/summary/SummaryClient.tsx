@@ -7,9 +7,19 @@ import ExpenseTopTabs from '@/components/expense/ExpenseTopTabs';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import {
-  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
-} from 'recharts';
+import dynamic from 'next/dynamic';
+
+const SummaryChart = dynamic(() => import('@/components/expense/SummaryChart'), {
+  ssr: false,
+  loading: () => (
+    <div className="h-[180px] w-full flex items-center justify-center bg-slate-50 dark:bg-slate-900/50 animate-pulse rounded-2xl">
+      <div className="flex flex-col items-center gap-2">
+        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary" />
+        <span className="text-xs text-muted-foreground font-medium">Loading Analytics...</span>
+      </div>
+    </div>
+  ),
+});
 import { CalendarDays, TrendingDown, Search, ArrowRight, ArrowLeft, X } from 'lucide-react';
 import { formatDisplayDate } from '@/lib/date-utils';
 
@@ -251,48 +261,7 @@ export default function SummaryClient({
             </div>
           ) : (
             <div className="h-[180px] w-full pr-2">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={chartData} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}>
-                  <defs>
-                    <linearGradient id="colorAmount" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
-                  <XAxis
-                    dataKey="name"
-                    stroke="hsl(var(--muted-foreground))"
-                    fontSize={9}
-                    tickLine={false}
-                    axisLine={false}
-                  />
-                  <YAxis
-                    stroke="hsl(var(--muted-foreground))"
-                    fontSize={9}
-                    tickLine={false}
-                    axisLine={false}
-                  />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: 'hsl(var(--popover))',
-                      borderColor: 'hsl(var(--border))',
-                      borderRadius: '12px',
-                      fontSize: '11px',
-                      color: 'hsl(var(--popover-foreground))'
-                    }}
-                    itemStyle={{ color: 'hsl(var(--primary))' }}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="amount"
-                    stroke="hsl(var(--primary))"
-                    strokeWidth={2}
-                    fillOpacity={1}
-                    fill="url(#colorAmount)"
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
+              <SummaryChart data={chartData} />
             </div>
           )}
         </div>

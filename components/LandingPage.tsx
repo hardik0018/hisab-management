@@ -24,7 +24,6 @@ import {
   LayoutDashboard
 } from "lucide-react";
 import Link from "next/link";
-import { BarChart, Bar, ResponsiveContainer, Cell } from 'recharts';
 
 const Headline = ({ children, className = "" }: { children: React.ReactNode, className?: string }) => (
   <h2 className={`text-4xl lg:text-6xl font-black tracking-tighter leading-[0.95] ${className}`}>
@@ -171,7 +170,7 @@ const LandingPage = () => {
 
             <motion.h1 
                initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
-               className="text-6xl lg:text-[7rem] font-[1000] tracking-[-0.05em] leading-[0.9] mb-10 text-slate-900"
+               className="text-4xl sm:text-5xl md:text-6xl lg:text-[7rem] font-[1000] tracking-[-0.05em] leading-[0.9] mb-10 text-slate-900"
             >
               MANAGE YOUR<br /> <span className="text-blue-600 italic">HISAB</span> & <span className="text-rose-500 italic">VAYVHAR</span>
             </motion.h1>
@@ -247,14 +246,22 @@ const LandingPage = () => {
                       <div className="grid grid-cols-12 gap-8">
                          <div className="col-span-12 lg:col-span-7 bg-white rounded-[2rem] p-8 border border-slate-100 shadow-sm">
                             <p className="text-[10px] font-black uppercase text-slate-400 mb-6">Spending Overview</p>
-                            <div className="h-40 w-full">
-                               <ResponsiveContainer width="100%" height="100%">
-                                  <BarChart data={chartData}>
-                                     <Bar dataKey="amount" radius={[4, 4, 4, 4]}>
-                                        {chartData.map((e, i) => <Cell key={i} fill={i === 4 ? '#2563EB' : '#F1F5F9'} />)}
-                                     </Bar>
-                                  </BarChart>
-                               </ResponsiveContainer>
+                             <div className="h-40 w-full flex items-end justify-between gap-2.5 pt-2">
+                               {chartData.map((e, i) => {
+                                 const maxVal = Math.max(...chartData.map(d => d.amount));
+                                 const percent = (e.amount / maxVal) * 100;
+                                 return (
+                                   <div key={i} className="flex flex-col items-center gap-2 flex-1 group" style={{ contentVisibility: 'auto' }}>
+                                     <div className="relative w-full flex flex-col justify-end h-28">
+                                       <div 
+                                         style={{ height: `${percent}%` }}
+                                         className={`w-full rounded-t-lg transition-all duration-500 group-hover:opacity-85 ${i === 4 ? 'bg-blue-600 shadow-[0_4px_12px_rgba(37,99,235,0.35)]' : 'bg-slate-100'}`}
+                                       />
+                                     </div>
+                                     <span className="text-[10px] font-black text-slate-400">{e.name}</span>
+                                   </div>
+                                 );
+                               })}
                             </div>
                          </div>
                          <div className="col-span-12 lg:col-span-5 space-y-4">
@@ -316,24 +323,24 @@ const LandingPage = () => {
                     <table className="w-full text-left">
                        <thead>
                           <tr className="border-b border-white/5 uppercase text-[9px] font-black tracking-[0.4em] text-white/30">
-                             <th className="py-10 pl-12 font-black">Counterparty Name</th>
-                             <th className="py-10 font-black">Transaction Category</th>
-                             <th className="py-10 font-black">History</th>
-                             <th className="py-10 text-right pr-12 font-black">Amount (INR)</th>
+                             <th className="py-6 sm:py-10 pl-4 sm:pl-12 font-black">Counterparty Name</th>
+                             <th className="py-6 sm:py-10 font-black">Transaction Category</th>
+                             <th className="py-6 sm:py-10 font-black">History</th>
+                             <th className="py-6 sm:py-10 text-right pr-4 sm:pr-12 font-black">Amount (INR)</th>
                        </tr>
                        </thead>
                        <tbody className="divide-y divide-white/5">
                           {dummyRecords.concat(dummyRecords).map((r, i) => (
                              <tr key={i} className="hover:bg-white/[0.02] transition-colors group">
-                                <td className="py-8 pl-12">
+                                <td className="py-4 sm:py-8 pl-4 sm:pl-12">
                                    <div className="flex items-center gap-4">
                                       <div className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center font-black text-xs text-blue-400">{r.name.charAt(0)}</div>
                                       <p className="font-black text-lg italic">{r.name}</p>
                                    </div>
                                 </td>
-                                <td className="py-8"><span className="px-4 py-1.5 rounded-full bg-white/5 border border-white/5 text-[10px] font-black uppercase tracking-widest text-white/40">{r.tag}</span></td>
-                                <td className="py-8 text-[11px] font-black uppercase text-white/20 tracking-widest">{r.date}</td>
-                                <td className={`py-8 text-right pr-12 text-2xl font-black italic tracking-tighter ${r.type === 'credit' ? 'text-green-500' : 'text-rose-600'}`}>
+                                <td className="py-4 sm:py-8"><span className="px-4 py-1.5 rounded-full bg-white/5 border border-white/5 text-[10px] font-black uppercase tracking-widest text-white/40">{r.tag}</span></td>
+                                <td className="py-4 sm:py-8 text-[11px] font-black uppercase text-white/20 tracking-widest">{r.date}</td>
+                                <td className={`py-4 sm:py-8 text-right pr-4 sm:pr-12 text-2xl font-black italic tracking-tighter ${r.type === 'credit' ? 'text-green-500' : 'text-rose-600'}`}>
                                    {r.type === 'credit' ? '+' : '-'}₹{r.amount.toLocaleString()}
                                 </td>
                              </tr>

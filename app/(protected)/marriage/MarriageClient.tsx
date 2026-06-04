@@ -214,11 +214,11 @@ export default function MarriageClient({ initialRecords }: MarriageClientProps) 
                                        <p className="text-lg sm:text-2xl font-black text-rose-600">₹{record.amount.toLocaleString()}</p>
                                     </div>
                                     <div className="flex gap-1 transition-all scale-90 sm:scale-95 group-hover:scale-100 flex-shrink-0">
-                                       <button onClick={() => handleEdit(record)} className="p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-slate-50 text-slate-400 hover:bg-rose-50 hover:text-rose-600 transition-colors focus:outline-none focus:ring-0 focus-visible:ring-0">
-                                          <Edit className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                                       <button onClick={() => handleEdit(record)} className="p-2.5 sm:p-2 rounded-xl bg-slate-50 text-slate-400 hover:bg-rose-50 hover:text-rose-600 transition-colors focus:outline-none focus:ring-0 focus-visible:ring-0 flex items-center justify-center">
+                                          <Edit className="h-4 w-4 sm:h-4 sm:w-4" />
                                        </button>
-                                       <button onClick={() => setRecordToDelete(record.marriage_id)} className="p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-slate-50 text-slate-400 hover:bg-rose-50 hover:text-rose-600 transition-colors focus:outline-none focus:ring-0 focus-visible:ring-0">
-                                          <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                                       <button onClick={() => setRecordToDelete(record.marriage_id)} className="p-2.5 sm:p-2 rounded-xl bg-slate-50 text-slate-400 hover:bg-rose-50 hover:text-rose-600 transition-colors focus:outline-none focus:ring-0 focus-visible:ring-0 flex items-center justify-center">
+                                          <Trash2 className="h-4 w-4 sm:h-4 sm:w-4" />
                                        </button>
                                     </div>
                                  </div>

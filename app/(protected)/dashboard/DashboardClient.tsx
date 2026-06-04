@@ -7,7 +7,19 @@ import {
   Wallet,
   Users,
 } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import dynamic from 'next/dynamic';
+
+const DashboardChart = dynamic(() => import('@/components/dashboard/DashboardChart'), {
+  ssr: false,
+  loading: () => (
+    <div className="w-full h-full flex items-center justify-center bg-slate-50 dark:bg-slate-900/50 animate-pulse rounded-2xl">
+      <div className="flex flex-col items-center gap-2">
+        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary" />
+        <span className="text-xs text-muted-foreground font-medium">Loading Overview...</span>
+      </div>
+    </div>
+  ),
+});
 import PageWrapper from '@/components/PageWrapper';
 import { motion } from 'framer-motion';
 import { DashboardStats, User } from '@/types';
@@ -65,7 +77,7 @@ export default function DashboardClient({ initialStats, initialCollaborators }: 
         </div>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-2">
           <StatCard label="Balance" value={stats?.balance || 0} icon={Wallet} color="blue" />
           <StatCard label="Credit" value={stats?.totalCredit || 0} icon={TrendingUp} color="green" />
           <StatCard label="Social" value={stats?.totalMarriage || 0} icon={Users} color="indigo" />
@@ -79,32 +91,7 @@ export default function DashboardClient({ initialStats, initialCollaborators }: 
               <p className="text-[10px] sm:text-sm text-slate-500 font-medium mt-1">Financial distribution this period</p>
             </div>
             <CardContent className="p-2 sm:p-8 h-[250px] sm:h-[350px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F1F5F9" />
-                  <XAxis
-                    dataKey="name"
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fill: '#64748B', fontSize: 10, fontWeight: 700 }}
-                    dy={5}
-                  />
-                  <YAxis
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fill: '#64748B', fontSize: 10, fontWeight: 700 }}
-                  />
-                  <Tooltip
-                    cursor={{ fill: '#F8FAFC' }}
-                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', fontSize: '12px' }}
-                  />
-                  <Bar dataKey="value" radius={[6, 6, 0, 0]} barSize={40}>
-                    {chartData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
+              <DashboardChart data={chartData} />
             </CardContent>
           </Card>
         </div>
@@ -130,14 +117,14 @@ function StatCard({ label, value, icon: Icon, color }: StatCardProps) {
 
   return (
     <motion.div className="group">
-      <Card className="border-none shadow-lg hover:shadow-xl transition-all duration-300 rounded-xl sm:rounded-[2rem] bg-white overflow-hidden px-2 py-2.5 sm:p-6 ring-1 ring-slate-100 h-full">
-        <div className="flex items-center gap-2 sm:gap-5 h-full">
-          <div className={`w-6 h-6 rounded-xl sm:rounded-3xl ${colors[color]} ring-2 sm:ring-4 flex items-center justify-center flex-shrink-0 transition-transform group-hover:scale-110`}>
-            <Icon className="h-4 w-4" />
+      <Card className="border-none shadow-lg hover:shadow-xl transition-all duration-300 rounded-xl sm:rounded-[2rem] bg-white overflow-hidden p-4 sm:p-6 ring-1 ring-slate-100 h-full">
+        <div className="flex items-center gap-3 sm:gap-5 h-full">
+          <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-3xl ${colors[color]} ring-2 sm:ring-4 flex items-center justify-center flex-shrink-0 transition-transform group-hover:scale-110`}>
+            <Icon className="h-5 w-5 sm:h-6 sm:w-6" />
           </div>
           <div className="min-w-0">
-            <p className="text-[8px] sm:text-sm font-bold text-slate-500 uppercase tracking-widest leading-none mb-1 truncate">{label}</p>
-            <h3 className="text-sm sm:text-3xl font-black text-slate-900 leading-tight">₹{(value || 0).toLocaleString()}</h3>
+            <p className="text-[10px] sm:text-sm font-bold text-slate-500 uppercase tracking-widest leading-none mb-1 truncate">{label}</p>
+            <h3 className="text-xl sm:text-3xl font-black text-slate-900 leading-tight">₹{(value || 0).toLocaleString()}</h3>
           </div>
         </div>
       </Card>

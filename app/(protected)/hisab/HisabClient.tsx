@@ -531,7 +531,7 @@ export default function HisabClient({ initialRecords }: HisabClientProps) {
                                         </div>
                                         
                                         {/* Action buttons on hover */}
-                                        <div className="flex gap-1 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+                                        <div className="flex gap-1 md:opacity-0 md:group-hover:opacity-100 transition-opacity flex-shrink-0">
                                             <button
                                                 onClick={() => {
                                                     setFormData({
@@ -547,17 +547,17 @@ export default function HisabClient({ initialRecords }: HisabClientProps) {
                                                     setShowLedgerModal(false);
                                                     setShowAddDialog(true);
                                                 }}
-                                                className="p-1.5 rounded-lg bg-slate-50 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 border border-slate-100 transition-all focus:outline-none focus:ring-0 focus-visible:ring-0"
+                                                className="p-2.5 sm:p-2 rounded-xl bg-slate-50 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 border border-slate-100 transition-all focus:outline-none focus:ring-0 focus-visible:ring-0 flex items-center justify-center"
                                                 title="Edit transaction"
                                             >
-                                                <MoreVertical className="h-3.5 w-3.5" />
+                                                <MoreVertical className="h-4 w-4 sm:h-3.5 sm:w-3.5" />
                                             </button>
                                             <button
                                                 onClick={() => setDeleteConfirm(r.hisab_id)}
-                                                className="p-1.5 rounded-lg bg-slate-50 text-slate-400 hover:text-red-600 hover:bg-red-50 border border-slate-100 transition-all focus:outline-none focus:ring-0 focus-visible:ring-0"
+                                                className="p-2.5 sm:p-2 rounded-xl bg-slate-50 text-slate-400 hover:text-red-600 hover:bg-red-50 border border-slate-100 transition-all focus:outline-none focus:ring-0 focus-visible:ring-0 flex items-center justify-center"
                                                 title="Delete transaction"
                                             >
-                                                <Trash2 className="h-3.5 w-3.5" />
+                                                <Trash2 className="h-4 w-4 sm:h-3.5 sm:w-3.5" />
                                             </button>
                                          </div>
                                       </div>
