@@ -51,6 +51,7 @@ interface PersonSummary {
   debit: number; // money given / lent
   credit: number; // money taken / borrowed
   latest: string | Date;
+  ignored?: boolean;
 }
 
 export default function HisabClient({ initialRecords }: HisabClientProps) {
@@ -64,6 +65,7 @@ export default function HisabClient({ initialRecords }: HisabClientProps) {
   const [selectedPerson, setSelectedPerson] = useState<{ name: string; mobile: string } | null>(null);
   const [showLedgerModal, setShowLedgerModal] = useState(false);
   const [showSettled, setShowSettled] = useState(false);
+  const [showIgnored, setShowIgnored] = useState(false);
 
   const [formData, setFormData] = useState<FormData>({
     name: '',
@@ -172,20 +174,34 @@ export default function HisabClient({ initialRecords }: HisabClientProps) {
   const peopleGroups = records
     .reduce((acc: Record<string, PersonSummary>, r) => {
       const key = `${r.name}_${r.mobile || ''}`;
-      if (!acc[key]) acc[key] = { name: r.name, mobile: r.mobile, debit: 0, credit: 0, latest: r.date };
+      if (!acc[key]) {
+        acc[key] = { 
+          name: r.name, 
+          mobile: r.mobile, 
+          debit: 0, 
+          credit: 0, 
+          latest: r.date,
+          ignored: r.ignored 
+        };
+      }
       acc[key][r.type] += r.amount;
+      if (r.ignored !== undefined) {
+        acc[key].ignored = r.ignored;
+      }
       return acc;
     }, {});
 
   // Calculate Net totals
   // You Will Get: Sum of (debit - credit) where debit > credit (they owe you)
   const youWillGet = Object.values(peopleGroups).reduce((sum, p) => {
+    if (p.ignored) return sum;
     const diff = p.debit - p.credit;
     return diff > 0 ? sum + diff : sum;
   }, 0);
 
   // You Will Give: Sum of (credit - debit) where credit > debit (you owe them)
   const youWillGive = Object.values(peopleGroups).reduce((sum, p) => {
+    if (p.ignored) return sum;
     const diff = p.credit - p.debit;
     return diff > 0 ? sum + diff : sum;
   }, 0);
@@ -198,9 +214,14 @@ export default function HisabClient({ initialRecords }: HisabClientProps) {
     (p.mobile && String(p.mobile).includes(search))
   );
 
-  // Group into Active Outstanding (non-zero balance) and Settled (zero balance)
-  const activePeople = searchedPeople.filter(p => p.debit !== p.credit);
-  const settledPeople = searchedPeople.filter(p => p.debit === p.credit);
+  // Group into Active Outstanding (non-zero balance), Settled (zero balance), and Ignored
+  const activePeople = searchedPeople.filter(p => p.debit !== p.credit && !p.ignored);
+  const settledPeople = searchedPeople.filter(p => p.debit === p.credit && !p.ignored);
+  const ignoredPeople = searchedPeople.filter(p => p.ignored);
+
+  const isPersonIgnored = selectedPerson 
+    ? !!peopleGroups[`${selectedPerson.name}_${selectedPerson.mobile || ''}`]?.ignored 
+    : false;
 
   return (
     <PageWrapper>
@@ -424,19 +445,90 @@ export default function HisabClient({ initialRecords }: HisabClientProps) {
                    </AnimatePresence>
                  </div>
                )}
+
+               {/* Collapsible Ignored Accounts Section */}
+               {ignoredPeople.length > 0 && (
+                 <div className="mt-8 border-t border-slate-100 pt-6">
+                   <button
+                     onClick={() => setShowIgnored(!showIgnored)}
+                     className="flex items-center justify-between w-full px-5 py-4 bg-slate-50 hover:bg-slate-100/80 rounded-2xl transition-all border border-slate-100"
+                   >
+                     <span className="text-xs font-black uppercase tracking-wider text-slate-500 flex items-center gap-2">
+                       <AlertCircle className="h-4 w-4 text-amber-500" />
+                       Ignored Accounts ({ignoredPeople.length})
+                     </span>
+                     <div className="flex items-center gap-1.5 text-xs font-bold text-slate-400">
+                       <span>{showIgnored ? 'Collapse' : 'Expand'}</span>
+                       {showIgnored ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                     </div>
+                   </button>
+                   
+                   <AnimatePresence initial={false}>
+                     {showIgnored && (
+                       <motion.div
+                         initial={{ opacity: 0, height: 0 }}
+                         animate={{ opacity: 1, height: 'auto' }}
+                         exit={{ opacity: 0, height: 0 }}
+                         transition={{ duration: 0.3, ease: 'easeInOut' }}
+                         className="overflow-hidden"
+                       >
+                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-4 pb-4 px-1">
+                           {ignoredPeople.map((p, idx) => {
+                             const bal = p.debit - p.credit;
+                             const absBal = Math.abs(bal);
+                             return (
+                               <Card
+                                 key={idx}
+                                 onClick={() => {
+                                   setSelectedPerson({ name: p.name, mobile: p.mobile });
+                                   setShowLedgerModal(true);
+                                 }}
+                                 className="border-none shadow-sm hover:shadow-md rounded-[2rem] overflow-hidden transition-all cursor-pointer bg-white/70 hover:bg-white group border border-slate-200 hover:border-indigo-100 opacity-80 hover:opacity-100"
+                               >
+                                 <CardContent className="p-4 flex items-center justify-between">
+                                   <div className="flex items-center gap-3 min-w-0">
+                                     <div className="w-10 h-10 font-bold rounded-xl bg-slate-100 text-slate-500 flex items-center justify-center shrink-0">
+                                       {p.name.charAt(0).toUpperCase()}
+                                     </div>
+                                     <div className="min-w-0">
+                                       <p className="font-bold text-slate-700 text-sm leading-tight mb-0.5 truncate">{p.name}</p>
+                                       <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-tight">
+                                         {p.mobile || 'No mobile'}
+                                       </p>
+                                     </div>
+                                   </div>
+                                   <div className="text-right shrink-0">
+                                     <p className="font-bold text-slate-500 text-sm leading-none mb-1">
+                                       ₹{absBal.toLocaleString()}
+                                     </p>
+                                     <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[8px] font-black bg-amber-50 text-amber-700 uppercase tracking-widest">
+                                       Ignored
+                                     </span>
+                                   </div>
+                                 </CardContent>
+                               </Card>
+                             );
+                           })}
+                         </div>
+                       </motion.div>
+                     )}
+                   </AnimatePresence>
+                 </div>
+               )}
         </div>
 
         {/* Ledger Details Dialog (Individual Person's Ledger) */}
         <Dialog open={showLedgerModal} onOpenChange={setShowLedgerModal}>
             <DialogContent className="max-w-2xl h-[100dvh] sm:h-[85vh] w-full flex flex-col p-0 overflow-hidden bg-slate-50 border-none shadow-2xl rounded-none sm:rounded-[2.5rem]">
-               
-               {/* Banner Header - Dynamic Color Coding & Responsive Stacking */}
+                           {/* Banner Header - Dynamic Color Coding & Responsive Stacking */}
                <div className={`p-5 sm:p-8 text-white flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shrink-0 relative overflow-hidden bg-gradient-to-r transition-all duration-300 ${
-                 netBalance > 0 
-                   ? 'from-rose-600 to-indigo-700' 
-                   : netBalance < 0 
-                     ? 'from-emerald-600 to-indigo-700' 
-                     : 'from-slate-600 to-slate-700'
+                 isPersonIgnored
+                   ? 'from-amber-500 to-amber-600'
+                   : netBalance > 0 
+                     ? 'from-rose-600 to-indigo-700' 
+                     : netBalance < 0 
+                       ? 'from-emerald-600 to-indigo-700' 
+                       : 'from-slate-600 to-slate-700'
                }`}>
                   <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -mr-10 -mt-10" />
                   
@@ -445,9 +537,9 @@ export default function HisabClient({ initialRecords }: HisabClientProps) {
                      <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-white/10 flex items-center justify-center backdrop-blur-sm shadow-xl hover:bg-white/20 transition-all cursor-pointer" onClick={() => setShowLedgerModal(false)}>
                         <ArrowLeft className="h-5 w-5 sm:h-6 sm:w-6" />
                      </div>
-                     <div>
-                        <DialogTitle className="text-xl sm:text-2xl font-black leading-none mb-1 text-white">{selectedPerson?.name}</DialogTitle>
-                        <p className="text-white/80 text-[10px] font-bold uppercase tracking-widest flex items-center gap-1">
+                     <div className="min-w-0">
+                        <DialogTitle className="text-xl sm:text-2xl font-black leading-none mb-1 text-white truncate">{selectedPerson?.name}</DialogTitle>
+                        <p className="text-white/80 text-[10px] font-bold uppercase tracking-widest flex items-center gap-1 mb-1.5">
                            {selectedPerson?.mobile ? (
                              <>
                                <Phone className="h-2.5 w-2.5" /> {selectedPerson.mobile}
@@ -456,20 +548,42 @@ export default function HisabClient({ initialRecords }: HisabClientProps) {
                              'No mobile linked'
                            )}
                         </p>
+                        <button
+                           onClick={async () => {
+                             if (!selectedPerson) return;
+                             try {
+                               await secureFetch('/api/hisab/ignore', {
+                                 method: 'POST',
+                                 body: JSON.stringify({
+                                   name: selectedPerson.name,
+                                   mobile: selectedPerson.mobile || '',
+                                   ignored: !isPersonIgnored
+                                 })
+                               });
+                               toast.success(isPersonIgnored ? 'Person unignored' : 'Person ignored');
+                               fetchRecords();
+                             } catch (err) {
+                               toast.error('Failed to update ignored status');
+                             }
+                           }}
+                           className="inline-flex items-center gap-1 px-3 py-1 text-[9px] font-black uppercase tracking-wider bg-white/25 hover:bg-white/35 text-white rounded-full transition-all active:scale-95 border border-white/10 shadow-sm"
+                        >
+                           {isPersonIgnored ? 'Unignore Person' : 'Ignore Person'}
+                        </button>
                      </div>
                   </div>
-
+ 
                   {/* Right Side: Ledger summary status - stacks on mobile */}
                   <div className="text-left sm:text-right relative z-10 w-full sm:w-auto pt-2.5 sm:pt-0 border-t border-white/10 sm:border-none">
                      <p className="text-[9px] font-black uppercase tracking-widest text-white/70 leading-none mb-1.5">Net Status</p>
                      <div className="flex items-baseline gap-1.5 sm:justify-end">
                         <p className="text-2xl sm:text-3xl font-black">₹{Math.abs(netBalance).toLocaleString()}</p>
                         <span className="text-[9px] font-black uppercase tracking-wider bg-white/10 px-2 py-0.5 rounded-full">
-                           {netBalance > 0 
+                           {isPersonIgnored ? 'Ignored' : (netBalance > 0 
                              ? 'You Give' 
                              : netBalance < 0 
                                ? 'You Get' 
-                               : 'Settled'}
+                               : 'Settled')}
                         </span>
                      </div>
                   </div>

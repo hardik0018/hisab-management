@@ -22,6 +22,7 @@ export interface HisabRecord {
   created_at: Date | string;
   balance?: number; // Calculated field
   log_as_expense?: boolean;
+  ignored?: boolean;
 }
 
 export interface MarriageRecord {

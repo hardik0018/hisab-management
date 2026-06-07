@@ -47,24 +47,34 @@ export async function POST(request: NextRequest) {
     const db = await getDb();
     const hisabId = `hsb_${uuidv4().split('-')[0]}`;
     const spaceId = user.space_id || user.user_id;
+    const personMobile = mobile ? String(mobile) : '';
+
+    // Check if this person is currently ignored
+    const existingIgnored = await db.collection('hisab').findOne({
+      space_id: spaceId,
+      name,
+      mobile: personMobile,
+      ignored: true
+    });
 
     const record: HisabRecord = {
       hisab_id: hisabId,
       user_id: user.user_id,
       space_id: spaceId,
       name,
-      mobile: mobile ? String(mobile) : '',
+      mobile: personMobile,
       type,
       amount: parseFloat(amount),
       description: description || '',
       date: date ? new Date(date) : new Date(),
       created_at: new Date(),
       log_as_expense: !!logAsExpense,
+      ignored: !!existingIgnored,
     };
 
     await db.collection('hisab').insertOne(record);
 
-    if (logAsExpense) {
+    if (logAsExpense && !record.ignored) {
       const expenseAmount = type === 'credit' ? -parseFloat(amount) : parseFloat(amount);
       const dateObj = date ? new Date(date) : new Date();
       const year = dateObj.getFullYear();

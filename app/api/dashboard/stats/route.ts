@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
     const db = await getDb();
     const spaceId = user.space_id || user.user_id;
 
-    const hisabQuery = { space_id: spaceId };
+    const hisabQuery = { space_id: spaceId, ignored: { $ne: true } };
     const marriageQuery = { space_id: spaceId };
     const hisab = await db.collection('hisab').find(hisabQuery).toArray();
     const marriage = await db.collection('marriage_hisab').find(marriageQuery).toArray();

@@ -63,7 +63,7 @@ export async function getDashboardStats(): Promise<DashboardStats | null> {
         recentHisab
     ] = await Promise.all([
         db.collection('hisab').aggregate([
-             { $match: { space_id: spaceId } },
+             { $match: { space_id: spaceId, ignored: { $ne: true } } },
              { $group: { 
                  _id: null, 
                  debit: { $sum: { $cond: [{ $eq: ["$type", "debit"] }, "$amount", 0] } }, 
@@ -75,7 +75,7 @@ export async function getDashboardStats(): Promise<DashboardStats | null> {
             { $group: { _id: null, total: { $sum: "$amount" } } }
         ]).toArray(),
         db.collection('hisab')
-            .find({ space_id: spaceId }, { projection: { _id: 0 } })
+            .find({ space_id: spaceId, ignored: { $ne: true } }, { projection: { _id: 0 } })
             .sort({ date: -1, created_at: -1 }) // Tie-break with created_at if needed
             .limit(5)
             .toArray()

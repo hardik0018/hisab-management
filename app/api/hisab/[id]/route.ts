@@ -35,6 +35,7 @@ export async function PUT(
     if (body.description !== undefined) updateData.description = body.description;
     if (body.date) updateData.date = new Date(body.date);
     if (body.logAsExpense !== undefined) updateData.log_as_expense = !!body.logAsExpense;
+    if (body.ignored !== undefined) updateData.ignored = !!body.ignored;
 
     const result = await db.collection('hisab').updateOne(
       { hisab_id: recordId, space_id: spaceId },
@@ -45,7 +46,8 @@ export async function PUT(
       return Response.json({ error: 'Record not found' }, { status: 404 });
     }
 
-    const isLoggedAsExpenseNow = body.logAsExpense !== undefined ? !!body.logAsExpense : !!existingRecord.log_as_expense;
+    const isIgnoredNow = body.ignored !== undefined ? !!body.ignored : !!existingRecord.ignored;
+    const isLoggedAsExpenseNow = (body.logAsExpense !== undefined ? !!body.logAsExpense : !!existingRecord.log_as_expense) && !isIgnoredNow;
 
     if (isLoggedAsExpenseNow) {
       const linkedExpense = await db.collection('expenses').findOne({
