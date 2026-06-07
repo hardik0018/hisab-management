@@ -14,21 +14,39 @@ export async function GET(request: NextRequest) {
     const db = await getDb();
     const spaceId = user.space_id || user.user_id;
 
-    const hisabQuery = { space_id: spaceId, ignored: { $ne: true } };
-    const marriageQuery = { space_id: spaceId };
-    const hisab = await db.collection('hisab').find(hisabQuery).toArray();
-    const marriage = await db.collection('marriage_hisab').find(marriageQuery).toArray();
+    // Use parallel MongoDB aggregation pipelines instead of fetching all records into JS
+    const [hisabAgg, marriageAgg, recentHisab] = await Promise.all([
+      db.collection('hisab').aggregate([
+        { $match: { space_id: spaceId, ignored: { $ne: true } } },
+        {
+          $group: {
+            _id: null,
+            totalDebit: { $sum: { $cond: [{ $eq: ['$type', 'debit'] }, '$amount', 0] } },
+            totalCredit: { $sum: { $cond: [{ $eq: ['$type', 'credit'] }, '$amount', 0] } },
+          },
+        },
+      ]).toArray(),
+      db.collection('marriage_hisab').aggregate([
+        { $match: { space_id: spaceId } },
+        { $group: { _id: null, total: { $sum: '$amount' } } },
+      ]).toArray(),
+      db.collection('hisab')
+        .find({ space_id: spaceId, ignored: { $ne: true } }, { projection: { _id: 0 } })
+        .sort({ date: -1, created_at: -1 })
+        .limit(5)
+        .toArray(),
+    ]);
 
-    const totalDebit = hisab.filter(h => h.type === 'debit').reduce((sum, h) => sum + (h.amount || 0), 0);
-    const totalCredit = hisab.filter(h => h.type === 'credit').reduce((sum, h) => sum + (h.amount || 0), 0);
-    const totalMarriage = marriage.reduce((sum, m) => sum + (m.amount || 0), 0);
+    const totalDebit = hisabAgg[0]?.totalDebit || 0;
+    const totalCredit = hisabAgg[0]?.totalCredit || 0;
+    const totalMarriage = marriageAgg[0]?.total || 0;
 
     const stats: DashboardStats = {
       totalDebit,
       totalCredit,
       totalMarriage,
       balance: totalCredit - totalDebit,
-      recentHisab: (hisab as any).sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 5),
+      recentHisab: recentHisab as any,
     };
 
     return Response.json(stats);

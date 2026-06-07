@@ -123,14 +123,10 @@ export default function HisabClient({ initialRecords }: HisabClientProps) {
       await secureFetch(`/api/hisab/${deleteConfirm}`, { method: 'DELETE' });
       toast.success('Deleted successfully');
       fetchRecords();
-      // If we are currently viewing the ledger modal and we delete a record, let's refresh.
-      // If no records remain for this person, we might want to close the modal.
-      setTimeout(() => {
-        fetchRecords();
-      }, 300);
     } catch (err) {} 
     finally { setDeleteConfirm(null); }
   };
+
 
   // Filter records matching general search or selected person ledger
   const filteredRecords = records.filter(r => {

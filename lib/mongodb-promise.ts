@@ -3,7 +3,10 @@ import { MongoClient } from 'mongodb';
 const uri = process.env.MONGO_URL;
 const options = {
   maxPoolSize: 10,
-  minPoolSize: 5,
+  minPoolSize: 2,
+  serverSelectionTimeoutMS: 10000, // fail fast if MongoDB is unreachable
+  connectTimeoutMS: 10000,         // fail fast on initial connection
+  socketTimeoutMS: 45000,          // generous timeout for slow queries
 };
 
 let client: MongoClient;

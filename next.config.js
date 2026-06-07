@@ -2,7 +2,14 @@
 const nextConfig = {
   output: 'standalone',
   images: {
-    unoptimized: true,
+    // Re-enabled optimization: Next.js will now serve WebP/AVIF at correct sizes
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'lh3.googleusercontent.com', // Google profile images
+        pathname: '/**',
+      },
+    ],
   },
   serverExternalPackages: ['mongodb', 'pdfkit'],
   async headers() {

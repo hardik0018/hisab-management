@@ -147,7 +147,13 @@ export async function getExpenses(options: {
   if (options.date) {
     query.date = options.date;
   } else if (options.month) {
-    query.date = { $regex: `^${options.month}` };
+    // Use range query instead of $regex — ranges work with indexes, regex does not
+    const [year, mon] = options.month.split('-').map(Number);
+    const paddedMon = String(mon).padStart(2, '0');
+    const nextMon = mon === 12 ? 1 : mon + 1;
+    const nextYear = mon === 12 ? year + 1 : year;
+    const paddedNextMon = String(nextMon).padStart(2, '0');
+    query.date = { $gte: `${year}-${paddedMon}-01`, $lt: `${nextYear}-${paddedNextMon}-01` };
   } else if (options.startDate || options.endDate) {
     query.date = {};
     if (options.startDate) {
@@ -230,64 +236,67 @@ export async function getMonthlySummary(monthStr?: string, search?: string): Pro
 
   const db = await getDb();
   const spaceId = user.space_id || user.user_id;
-
-  const monthQuery: any = {
-    space_id: spaceId,
-    date: { $regex: `^${month}` }
-  };
-
-  const monthlyExpenses = await db
-    .collection('expenses')
-    .find(monthQuery)
-    .toArray();
-
-  let monthlyTotal = 0;
-  const dailyTotalsMap: { [date: string]: number } = {};
-
-  for (const exp of monthlyExpenses) {
-    monthlyTotal += exp.amount;
-    const d = exp.date;
-    dailyTotalsMap[d] = (dailyTotalsMap[d] || 0) + exp.amount;
-  }
-
-  const dailyTotals = Object.entries(dailyTotalsMap)
-    .map(([date, total]) => ({ date, total }))
-    .sort((a, b) => a.date.localeCompare(b.date));
-
-  let filteredTotal = monthlyTotal;
-
-  if (search) {
-    const filteredQuery: any = {
-      space_id: spaceId,
-      date: { $regex: `^${month}` }
-    };
-
-    const searchRegex = { $regex: search, $options: 'i' };
-    filteredQuery.$or = [
-      { itemName: searchRegex },
-      { note: searchRegex }
-    ];
-
-    const filteredExpenses = await db
-      .collection('expenses')
-      .find(filteredQuery)
-      .toArray();
-
-    filteredTotal = filteredExpenses.reduce((sum, exp) => sum + exp.amount, 0);
-  }
-
   const today = getTodayKolkata();
-  const todayExpenses = await db
-    .collection('expenses')
-    .find({ space_id: spaceId, date: today })
-    .toArray();
-  const todayTotal = todayExpenses.reduce((s: number, e: any) => s + e.amount, 0);
+
+  // Build range bounds for the month (avoids slow $regex scan)
+  const [year, mon] = month.split('-').map(Number);
+  const paddedMon = String(mon).padStart(2, '0');
+  const nextMon = mon === 12 ? 1 : mon + 1;
+  const nextYear = mon === 12 ? year + 1 : year;
+  const paddedNextMon = String(nextMon).padStart(2, '0');
+  const monthStart = `${year}-${paddedMon}-01`;
+  const monthEnd = `${nextYear}-${paddedNextMon}-01`;
+
+  // Single aggregation for monthly totals + daily breakdown
+  // Replaces 2-3 separate .find().toArray() calls
+  const [monthlyAgg, todayAgg] = await Promise.all([
+    db.collection('expenses').aggregate([
+      {
+        $match: {
+          space_id: spaceId,
+          date: { $gte: monthStart, $lt: monthEnd },
+        },
+      },
+      {
+        $group: {
+          _id: '$date',
+          dailyTotal: { $sum: '$amount' },
+        },
+      },
+      { $sort: { _id: 1 } },
+    ]).toArray(),
+    db.collection('expenses').aggregate([
+      { $match: { space_id: spaceId, date: today } },
+      { $group: { _id: null, total: { $sum: '$amount' } } },
+    ]).toArray(),
+  ]);
+
+  const dailyTotals = monthlyAgg.map((d) => ({ date: d._id as string, total: d.dailyTotal as number }));
+  const monthlyTotal = dailyTotals.reduce((sum, d) => sum + d.total, 0);
+  const todayTotal = todayAgg[0]?.total || 0;
+
+  // Filtered total: only needed when a search term is provided
+  let filteredTotal = monthlyTotal;
+  if (search) {
+    const searchRegex = { $regex: search, $options: 'i' };
+    const filteredAgg = await db.collection('expenses').aggregate([
+      {
+        $match: {
+          space_id: spaceId,
+          date: { $gte: monthStart, $lt: monthEnd },
+          $or: [{ itemName: searchRegex }, { note: searchRegex }],
+        },
+      },
+      { $group: { _id: null, total: { $sum: '$amount' } } },
+    ]).toArray();
+    filteredTotal = filteredAgg[0]?.total || 0;
+  }
 
   return {
     month,
     monthlyTotal,
     filteredTotal,
     dailyTotals,
-    todayTotal
+    todayTotal,
   };
 }

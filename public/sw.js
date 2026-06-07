@@ -1,46 +1,58 @@
-const CACHE_NAME = 'hisab-expense-v2';
-const ASSETS_TO_CACHE = [
+// Bump CACHE_VERSION on every deploy to purge stale caches automatically
+const CACHE_VERSION = 'v3';
+const STATIC_CACHE = `hisab-static-${CACHE_VERSION}`;
+const NAV_CACHE = `hisab-nav-${CACHE_VERSION}`;
+
+// Pre-cache only the smallest critical assets
+const PRECACHE_ASSETS = [
   '/manifest.json',
-  '/logo.png'
+  '/logo.png',
 ];
 
-// Install Event
+// File extensions that are safe for Cache-First (they have content hashes in filenames)
+const HASHED_STATIC_EXTENSIONS = ['.js', '.css', '.woff', '.woff2', '.ttf', '.otf'];
+
+function isHashedStatic(url) {
+  const { pathname } = new URL(url);
+  return HASHED_STATIC_EXTENSIONS.some((ext) => pathname.endsWith(ext))
+    && (pathname.startsWith('/_next/static/') || pathname.startsWith('/fonts/'));
+}
+
+// ---------------------------------------------------------------------------
+// Install — pre-cache critical assets and activate immediately
+// ---------------------------------------------------------------------------
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then((cache) => {
-        console.log('[SW] Pre-caching static assets');
-        return cache.addAll(ASSETS_TO_CACHE);
-      })
+    caches.open(STATIC_CACHE)
+      .then((cache) => cache.addAll(PRECACHE_ASSETS))
       .then(() => self.skipWaiting())
   );
 });
 
-// Activate Event
+// ---------------------------------------------------------------------------
+// Activate — delete all caches that don't match current version
+// ---------------------------------------------------------------------------
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames.map((cache) => {
-          if (cache !== CACHE_NAME) {
-            console.log('[SW] Clearing old cache', cache);
-            return caches.delete(cache);
-          }
+    caches.keys().then((keys) =>
+      Promise.all(
+        keys.map((key) => {
+          const isOld = !key.endsWith(CACHE_VERSION);
+          if (isOld) return caches.delete(key);
         })
-      );
-    }).then(() => self.clients.claim())
+      )
+    ).then(() => self.clients.claim())
   );
 });
 
-// Fetch Event
+// ---------------------------------------------------------------------------
+// Fetch — three routing strategies
+// ---------------------------------------------------------------------------
 self.addEventListener('fetch', (event) => {
-  const request = event.request;
+  const { request } = event;
   const url = new URL(request.url);
 
-  // Bypass caching for:
-  // - Non-GET requests (e.g. POST)
-  // - API routes (/api/*)
-  // - Browser extensions/schemes (e.g. chrome-extension://, file://)
+  // Skip: non-GET, API calls, non-http schemes
   if (
     request.method !== 'GET' ||
     url.pathname.startsWith('/api') ||
@@ -49,76 +61,60 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // 1. Navigation strategy (HTML documents)
-  // Use Network-First: Always fetch the latest version online to avoid stale chunk references.
-  // Fall back to cache if offline.
-  if (request.mode === 'navigate') {
+  // Strategy 1: Cache-First for hashed static assets (JS, CSS, fonts)
+  // Safe because these files have content hashes — if the hash changes, it's a new URL
+  if (isHashedStatic(request.url)) {
     event.respondWith(
-      fetch(request)
-        .then((networkResponse) => {
-          if (networkResponse && networkResponse.status === 200) {
-            const responseToCache = networkResponse.clone();
-            caches.open(CACHE_NAME).then((cache) => {
-              cache.put(request, responseToCache);
-            });
+      caches.match(request).then((cached) => {
+        if (cached) return cached;
+        return fetch(request).then((response) => {
+          if (response && response.status === 200) {
+            const clone = response.clone();
+            caches.open(STATIC_CACHE).then((cache) => cache.put(request, clone));
           }
-          return networkResponse;
-        })
-        .catch((error) => {
-          console.error('[SW] Navigation fetch failed, checking cache:', error);
-          return caches.match(request).then((cachedResponse) => {
-            if (cachedResponse) {
-              return cachedResponse;
-            }
-            // Rethrow the network error so the browser shows its standard offline UI instead of ERR_FAILED
-            throw error;
-          });
-        })
+          return response;
+        });
+      })
     );
     return;
   }
 
-  // 2. Static Assets strategy (JS, CSS, images, fonts)
-  // Use Stale-While-Revalidate: Serve from cache immediately and update in background.
-  event.respondWith(
-    caches.match(request).then((cachedResponse) => {
-      if (cachedResponse) {
-        // Fetch background update and update cache silently
-        fetch(request)
-          .then((networkResponse) => {
-            if (networkResponse && networkResponse.status === 200) {
-              const responseToCache = networkResponse.clone();
-              caches.open(CACHE_NAME).then((cache) => {
-                cache.put(request, responseToCache);
-              });
-            }
-          })
-          .catch(() => {
-            // Ignore background fetch errors for stale items
-          });
-        return cachedResponse;
-      }
-
-      // Cache miss: fetch from network
-      return fetch(request)
-        .then((networkResponse) => {
-          if (
-            networkResponse &&
-            networkResponse.status === 200 &&
-            (networkResponse.type === 'basic' || networkResponse.type === 'cors')
-          ) {
-            const responseToCache = networkResponse.clone();
-            caches.open(CACHE_NAME).then((cache) => {
-              cache.put(request, responseToCache);
-            });
+  // Strategy 2: Network-First for navigation (HTML pages)
+  // Always try to get the latest version; fall back to cache if offline
+  if (request.mode === 'navigate') {
+    event.respondWith(
+      fetch(request)
+        .then((response) => {
+          if (response && response.status === 200) {
+            const clone = response.clone();
+            caches.open(NAV_CACHE).then((cache) => cache.put(request, clone));
           }
-          return networkResponse;
+          return response;
         })
-        .catch((error) => {
-          console.error('[SW] Static asset fetch failed:', error);
-          // Rethrow to avoid returning undefined (which triggers ERR_FAILED)
-          throw error;
-        });
+        .catch(() =>
+          caches.match(request).then((cached) => {
+            if (cached) return cached;
+            // Last resort: return cached home page for offline SPA-style fallback
+            return caches.match('/') || Promise.reject(new Error('Offline'));
+          })
+        )
+    );
+    return;
+  }
+
+  // Strategy 3: Stale-While-Revalidate for other assets (images, icons, etc.)
+  event.respondWith(
+    caches.match(request).then((cached) => {
+      const networkFetch = fetch(request).then((response) => {
+        if (response && response.status === 200 &&
+            (response.type === 'basic' || response.type === 'cors')) {
+          const clone = response.clone();
+          caches.open(STATIC_CACHE).then((cache) => cache.put(request, clone));
+        }
+        return response;
+      }).catch(() => { /* ignore background fetch errors */ });
+
+      return cached || networkFetch;
     })
   );
 });
