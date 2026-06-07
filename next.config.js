@@ -1,6 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: 'standalone',
+  allowedDevOrigins: ['hope-apicultural-cleta.ngrok-free.dev'],
   images: {
     // Re-enabled optimization: Next.js will now serve WebP/AVIF at correct sizes
     remotePatterns: [

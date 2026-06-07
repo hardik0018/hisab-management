@@ -2,7 +2,7 @@
 
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { LayoutDashboard, Receipt, HandCoins, Heart, UserCircle, LucideIcon } from 'lucide-react';
+import { LayoutDashboard, Receipt, HandCoins, Heart, UserCircle, MapPin, LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
 
@@ -17,6 +17,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Expenses', icon: Receipt, path: '/expenses' },
   { label: 'Hisab', icon: HandCoins, path: '/hisab' },
   { label: 'Social', icon: Heart, path: '/marriage' },
+  { label: 'Tracker', icon: MapPin, path: '/tracker' },
   { label: 'Account', icon: UserCircle, path: '/profile' },
 ];
 
