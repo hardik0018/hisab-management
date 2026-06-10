@@ -4,7 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
-import { Plus, History, BarChart3, Settings2 } from 'lucide-react';
+import { Plus, History, Repeat, BarChart3, Settings2 } from 'lucide-react';
 
 export default function ExpenseTopTabs() {
   const pathname = usePathname();
@@ -12,6 +12,7 @@ export default function ExpenseTopTabs() {
   const tabs = [
     { label: 'Add', href: '/expenses', icon: Plus },
     { label: 'History', href: '/expenses/history', icon: History },
+    { label: 'Recurring', href: '/expenses/recurring', icon: Repeat },
     { label: 'Analysis', href: '/expenses/summary', icon: BarChart3 },
     { label: 'Settings', href: '/expenses/settings', icon: Settings2 },
   ];

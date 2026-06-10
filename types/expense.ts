@@ -13,7 +13,23 @@ export interface Expense {
   createdAt: Date | string;
   updatedAt: Date | string;
   associatedId?: string;
-  associatedType?: 'hisab' | 'marriage';
+  associatedType?: 'hisab' | 'marriage' | 'recurring';
+}
+
+export interface RecurringExpense {
+  _id?: string;
+  space_id: string;
+  user_id: string;
+  itemName: string;
+  amount: number;
+  note?: string;
+  category?: string; // defaults to "Uncategorized"
+  dayOfMonth: number; // 1-31
+  isActive: boolean;
+  startDate: string; // "YYYY-MM"
+  lastGeneratedMonth: string; // "YYYY-MM"
+  createdAt: Date | string;
+  updatedAt: Date | string;
 }
 
 export interface Settings {

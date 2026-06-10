@@ -10,6 +10,8 @@ import {
 } from '@/types';
 import { getSystemSettings } from '@/models/Settings';
 import { Collection, Document } from 'mongodb';
+import { checkAndGenerateRecurringExpenses } from './recurring-engine';
+import { RecurringExpense } from '@/types';
 
 /**
  * Fetches all hisab records for the authenticated user's space.
@@ -140,8 +142,15 @@ export async function getExpenses(options: {
   const user = await getAuthenticatedUser();
   if (!user) return null;
 
-  const db = await getDb();
   const spaceId = user.space_id || user.user_id;
+
+  try {
+    await checkAndGenerateRecurringExpenses(spaceId, user.user_id);
+  } catch (err) {
+    console.error('[AUTO_GENERATE_RECURRING_EXPENSES_ERROR]', err);
+  }
+
+  const db = await getDb();
   const query: any = { space_id: spaceId };
 
   if (options.date) {
@@ -228,6 +237,14 @@ export async function getMonthlySummary(monthStr?: string, search?: string): Pro
   const user = await getAuthenticatedUser();
   if (!user) return null;
 
+  const spaceId = user.space_id || user.user_id;
+
+  try {
+    await checkAndGenerateRecurringExpenses(spaceId, user.user_id);
+  } catch (err) {
+    console.error('[AUTO_GENERATE_RECURRING_EXPENSES_SUMMARY_ERROR]', err);
+  }
+
   let month = monthStr || '';
   if (!month) {
     const todayStr = getTodayKolkata();
@@ -235,7 +252,6 @@ export async function getMonthlySummary(monthStr?: string, search?: string): Pro
   }
 
   const db = await getDb();
-  const spaceId = user.space_id || user.user_id;
   const today = getTodayKolkata();
 
   // Build range bounds for the month (avoids slow $regex scan)
@@ -325,5 +341,29 @@ export async function getTrackerLatestState(): Promise<import('@/types').Tracker
     console.error('[DATA_FETCHING/TRACKER_LATEST]', err);
     return null;
   }
+}
+
+/**
+ * Fetches all recurring expense templates for the authenticated user's space.
+ */
+export async function getRecurringExpenses(): Promise<RecurringExpense[] | null> {
+  const user = await getAuthenticatedUser();
+  if (!user) return null;
+
+  const db = await getDb();
+  const spaceId = user.space_id || user.user_id;
+
+  const templates = await db
+    .collection('recurring_expenses')
+    .find({ space_id: spaceId })
+    .sort({ createdAt: -1 })
+    .toArray();
+
+  return templates.map(t => ({
+    ...t,
+    _id: t._id.toString(),
+    createdAt: t.createdAt instanceof Date ? t.createdAt.toISOString() : t.createdAt,
+    updatedAt: t.updatedAt instanceof Date ? t.updatedAt.toISOString() : t.updatedAt,
+  })) as unknown as RecurringExpense[];
 }
 

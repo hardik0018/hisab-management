@@ -3,7 +3,7 @@
 import React from 'react';
 import { Expense } from '@/types';
 import { formatDisplayTime } from '@/lib/date-utils';
-import { Edit2, Trash2, Link } from 'lucide-react';
+import { Edit2, Trash2, Link, Repeat } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface ExpenseCardProps {
@@ -25,7 +25,7 @@ export default function ExpenseCard({
     return isNegative ? `-${formatted}` : formatted;
   };
 
-  const isLinked = !!expense.associatedType;
+  const isLinked = expense.associatedType === 'hisab' || expense.associatedType === 'marriage';
 
   const handleDisabledActionClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -54,6 +54,11 @@ export default function ExpenseCard({
           {expense.associatedType === 'marriage' && (
             <span className="shrink-0 text-[8px] bg-destructive/5 dark:bg-destructive/10 text-destructive border border-destructive/25 px-1.5 py-0.5 rounded font-black uppercase tracking-wider flex items-center gap-0.5">
               <Link className="w-2 h-2" /> Marriage
+            </span>
+          )}
+          {expense.associatedType === 'recurring' && (
+            <span className="shrink-0 text-[8px] bg-teal-500/10 text-teal-600 dark:text-teal-400 border border-teal-500/20 px-1.5 py-0.5 rounded font-black uppercase tracking-wider flex items-center gap-0.5">
+              <Repeat className="w-2 h-2" /> Auto
             </span>
           )}
         </div>
