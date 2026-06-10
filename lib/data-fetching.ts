@@ -318,32 +318,6 @@ export async function getMonthlySummary(monthStr?: string, search?: string): Pro
 }
 
 /**
- * Fetches the current tracker latest state for SSR initial load.
- * Does NOT require authentication — tracker is a public read-only view.
- * Used only in the tracker page Server Component.
- */
-export async function getTrackerLatestState(): Promise<import('@/types').TrackerLatest | null> {
-  try {
-    const db = await getDb();
-    const doc = await db
-      .collection('tracker_latest')
-      .findOne({ trackerId: 'main' }, { projection: { _id: 0 } });
-    if (!doc) return null;
-    const serialized = {
-      ...doc,
-      lastUpdatedAt:
-        doc.lastUpdatedAt instanceof Date
-          ? doc.lastUpdatedAt.toISOString()
-          : doc.lastUpdatedAt ?? null,
-    };
-    return serialized as unknown as import('@/types').TrackerLatest;
-  } catch (err) {
-    console.error('[DATA_FETCHING/TRACKER_LATEST]', err);
-    return null;
-  }
-}
-
-/**
  * Fetches all recurring expense templates for the authenticated user's space.
  */
 export async function getRecurringExpenses(): Promise<RecurringExpense[] | null> {

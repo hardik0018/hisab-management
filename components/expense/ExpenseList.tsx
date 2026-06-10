@@ -58,7 +58,7 @@ export default function ExpenseList({
         return (
           <div key={dateStr} className="space-y-3">
             {/* Group Header: Date and Daily Total */}
-            <div className="flex justify-between items-center px-1 sticky top-12 bg-background py-2 z-10 border-b border-border">
+            <div className="flex justify-between items-center px-1 sticky top-[68px] bg-background py-2 z-10 border-b border-border">
               <div className="flex items-center gap-1">
                 <ChevronRight className="w-4 h-4 text-primary shrink-0" />
                 <span className="text-xs font-black text-foreground tracking-wide">

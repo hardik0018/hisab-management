@@ -10,15 +10,15 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { toast } from 'sonner';
 import { secureFetch } from '@/lib/api-utils';
 import { RecurringExpense } from '@/types';
-import { 
-  Plus, 
-  Trash2, 
-  Edit2, 
-  Loader2, 
-  Calendar, 
-  Repeat, 
-  Play, 
-  CheckCircle2, 
+import {
+  Plus,
+  Trash2,
+  Edit2,
+  Loader2,
+  Calendar,
+  Repeat,
+  Play,
+  CheckCircle2,
   AlertCircle,
   Clock
 } from 'lucide-react';
@@ -34,7 +34,7 @@ export default function RecurringClient({ initialTemplates }: RecurringClientPro
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [templateToDelete, setTemplateToDelete] = useState<RecurringExpense | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
+
   // Form state
   const [modalMode, setModalMode] = useState<'add' | 'edit'>('add');
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -90,13 +90,13 @@ export default function RecurringClient({ initialTemplates }: RecurringClientPro
     const previousState = t.isActive;
     // Optimistic update
     setTemplates(prev => prev.map(item => item._id === t._id ? { ...item, isActive: !item.isActive } : item));
-    
+
     try {
       const res = await secureFetch(`/api/expenses/recurring/${t._id}`, {
         method: 'PATCH',
         body: JSON.stringify({ isActive: !previousState })
       });
-      
+
       if (res && res.success) {
         toast.success(`Recurring template is now ${!previousState ? 'Active' : 'Inactive'}`);
       } else {
@@ -187,7 +187,7 @@ export default function RecurringClient({ initialTemplates }: RecurringClientPro
 
   const handleDeleteConfirm = async () => {
     if (!templateToDelete) return;
-    
+
     setIsSubmitting(true);
     try {
       const res = await secureFetch(`/api/expenses/recurring/${templateToDelete._id}`, {
@@ -215,26 +215,14 @@ export default function RecurringClient({ initialTemplates }: RecurringClientPro
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="space-y-1">
             <h2 className="text-2xl font-black text-foreground">Recurring Expenses</h2>
-            <p className="text-xs text-muted-foreground font-medium">Manage monthly templates like recharges, SIPs, or premiums that log automatically.</p>
           </div>
-          <Button 
+          <Button
             onClick={handleOpenAdd}
             className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold rounded-xl cursor-pointer shadow-sm transition-all"
           >
             <Plus className="w-4 h-4 mr-2" />
             Add Recurring
           </Button>
-        </div>
-
-        {/* Info Box */}
-        <div className="bg-primary/5 border border-primary/20 rounded-2xl p-4 flex gap-3 text-primary">
-          <Clock className="w-5 h-5 shrink-0 mt-0.5" />
-          <div className="space-y-1">
-            <h4 className="text-xs font-bold uppercase tracking-wider">How it works</h4>
-            <p className="text-xs text-muted-foreground leading-relaxed">
-              Whenever any family member opens the dashboard or expense logs, the system checks if any active recurring items are due for the current month. If they are, it atomic-safely logs them into the daily expense logs.
-            </p>
-          </div>
         </div>
 
         {/* Templates List */}
@@ -254,7 +242,7 @@ export default function RecurringClient({ initialTemplates }: RecurringClientPro
             </Button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
             <AnimatePresence mode="popLayout">
               {templates.map((t) => (
                 <motion.div
@@ -263,63 +251,67 @@ export default function RecurringClient({ initialTemplates }: RecurringClientPro
                   initial={{ opacity: 0, y: 15 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.95 }}
-                  className={`group bg-card border rounded-[2rem] p-5 shadow-sm hover:shadow-md transition-all duration-300 flex flex-col justify-between gap-4 ${
-                    t.isActive ? 'border-border' : 'border-dashed border-border/60 opacity-70'
-                  }`}
+                  className={`group bg-card border rounded-2xl p-4 shadow-sm hover:shadow-md transition-all duration-300 flex justify-between items-center gap-3 ${t.isActive ? 'border-border' : 'border-dashed border-border/60 opacity-70'
+                    }`}
                 >
-                  <div className="flex justify-between items-start gap-4">
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <h3 className="font-black text-base text-foreground line-clamp-1">{t.itemName}</h3>
-                        <span className="text-[9px] bg-primary/10 text-primary border border-primary/20 px-2 py-0.5 rounded-full font-bold">
-                          {t.category}
-                        </span>
-                      </div>
-                      
-                      {t.note && (
-                        <p className="text-xs text-muted-foreground font-medium line-clamp-1">{t.note}</p>
-                      )}
-
-                      <div className="flex flex-col gap-1 mt-3 text-[11px] text-muted-foreground/80 font-medium">
-                        <div className="flex items-center gap-1.5">
-                          <Calendar className="w-3.5 h-3.5 text-primary shrink-0" />
-                          <span>Runs on the <strong className="text-foreground">{t.dayOfMonth}</strong> of every month</span>
-                        </div>
-                        <div className="flex items-center gap-1.5">
-                          <Play className="w-3.5 h-3.5 text-teal-500 shrink-0" />
-                          <span>Started: <strong className="text-foreground">{formatMonth(t.startDate)}</strong></span>
-                        </div>
-                        <div className="flex items-center gap-1.5">
-                          <CheckCircle2 className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
-                          <span>Last generated: <strong className="text-foreground">{formatMonth(t.lastGeneratedMonth)}</strong></span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="flex flex-col items-end gap-1.5 shrink-0">
-                      <span className="font-black text-xl text-foreground">₹{t.amount}</span>
-                      
+                  <div className="flex flex-col gap-1 min-w-0 pr-2 flex-1">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="font-bold text-foreground text-sm truncate">{t.itemName}</span>
+                      <span className="shrink-0 text-[8px] bg-primary/10 text-primary border border-primary/20 px-1.5 py-0.5 rounded font-black uppercase tracking-wider">
+                        {t.category}
+                      </span>
                       {/* Active Status Badge Button */}
                       <button
                         onClick={() => handleToggleActive(t)}
-                        className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded border transition-all cursor-pointer ${
-                          t.isActive 
+                        className={`shrink-0 text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded border transition-all cursor-pointer ${t.isActive
                             ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/25'
                             : 'bg-muted text-muted-foreground border-border hover:bg-muted/80'
-                        }`}
+                          }`}
                         title="Click to toggle status"
                       >
                         {t.isActive ? 'Active' : 'Inactive'}
                       </button>
                     </div>
+
+                    {t.note && (
+                      <span className="text-xs text-muted-foreground font-medium truncate max-w-[240px]">
+                        {t.note}
+                      </span>
+                    )}
+
+                    {/* Schedule Info Horizontal Badges */}
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-1.5 text-[10px] text-muted-foreground/80 font-medium">
+                      <span className="flex items-center gap-0.5 whitespace-nowrap">
+                        <Calendar className="w-3 h-3 text-primary shrink-0" />
+                        Day {t.dayOfMonth}
+                      </span>
+                      <span className="text-muted-foreground/30 select-none">•</span>
+                      <span className="flex items-center gap-0.5 whitespace-nowrap">
+                        <Play className="w-3 h-3 text-teal-500 shrink-0" />
+                        {formatMonth(t.startDate)}
+                      </span>
+                      {t.lastGeneratedMonth && (
+                        <>
+                          <span className="text-muted-foreground/30 select-none">•</span>
+                          <span className="flex items-center gap-0.5 whitespace-nowrap">
+                            <CheckCircle2 className="w-3 h-3 text-indigo-500 shrink-0" />
+                            Last: {formatMonth(t.lastGeneratedMonth)}
+                          </span>
+                        </>
+                      )}
+                      <span className="text-muted-foreground/30 select-none">•</span>
+                      <span className="text-[9px] opacity-70 whitespace-nowrap font-mono">
+                        {t.createdAt ? new Date(t.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : 'N/A'}
+                      </span>
+                    </div>
                   </div>
 
-                  {/* Actions Row */}
-                  <div className="border-t border-border/50 pt-3 flex justify-between items-center mt-1">
-                    <span className="text-[10px] text-muted-foreground/50 font-mono">
-                      Added: {t.createdAt ? new Date(t.createdAt).toLocaleDateString() : 'N/A'}
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className="font-black text-base font-sans text-foreground">
+                      ₹{t.amount}
                     </span>
-                    <div className="flex items-center gap-2">
+
+                    <div className="flex items-center">
                       <Button
                         size="icon"
                         variant="ghost"
@@ -495,7 +487,7 @@ export default function RecurringClient({ initialTemplates }: RecurringClientPro
               </div>
               <DialogTitle className="text-base font-bold text-foreground font-sans">Delete Recurring Template</DialogTitle>
               <DialogDescription className="text-muted-foreground text-xs leading-relaxed">
-                Are you sure you want to delete <strong className="text-foreground">"{templateToDelete?.itemName}"</strong>? 
+                Are you sure you want to delete <strong className="text-foreground">"{templateToDelete?.itemName}"</strong>?
                 This only stops future auto-generations. Already generated expenses in daily hisab history will not be deleted.
               </DialogDescription>
             </DialogHeader>
