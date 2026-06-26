@@ -89,17 +89,19 @@ export default function HisabClient({ initialRecords }: HisabClientProps) {
     setIsSubmitting(true);
     try {
       if (editId) {
-        await secureFetch(`/api/hisab/${editId}`, {
+        const response = await secureFetch<{ record: HisabRecord }>(`/api/hisab/${editId}`, {
           method: 'PUT',
           body: JSON.stringify({ ...formData, amount: parseFloat(formData.amount) }),
         });
         toast.success('Updated successfully');
+        setRecords(prev => prev.map(r => r.hisab_id === editId ? response.record : r));
       } else {
-        await secureFetch('/api/hisab', {
+        const response = await secureFetch<{ record: HisabRecord }>('/api/hisab', {
           method: 'POST',
           body: JSON.stringify({ ...formData, amount: parseFloat(formData.amount) }),
         });
         toast.success('Recorded successfully');
+        setRecords(prev => [response.record, ...prev]);
       }
       setFormData({ 
         name: selectedPerson?.name || '', 
@@ -112,7 +114,6 @@ export default function HisabClient({ initialRecords }: HisabClientProps) {
       });
       setEditId(null);
       setShowAddDialog(false);
-      fetchRecords();
     } catch (err) {} 
     finally { setIsSubmitting(false); }
   };
@@ -122,7 +123,7 @@ export default function HisabClient({ initialRecords }: HisabClientProps) {
     try {
       await secureFetch(`/api/hisab/${deleteConfirm}`, { method: 'DELETE' });
       toast.success('Deleted successfully');
-      fetchRecords();
+      setRecords(prev => prev.filter(r => r.hisab_id !== deleteConfirm));
     } catch (err) {} 
     finally { setDeleteConfirm(null); }
   };
@@ -557,7 +558,12 @@ export default function HisabClient({ initialRecords }: HisabClientProps) {
                                  })
                                });
                                toast.success(isPersonIgnored ? 'Person unignored' : 'Person ignored');
-                               fetchRecords();
+                               setRecords(prev => prev.map(r => {
+                                 if (r.name === selectedPerson.name && (r.mobile || '') === (selectedPerson.mobile || '')) {
+                                   return { ...r, ignored: !isPersonIgnored };
+                                 }
+                                 return r;
+                               }));
                              } catch (err) {
                                toast.error('Failed to update ignored status');
                              }

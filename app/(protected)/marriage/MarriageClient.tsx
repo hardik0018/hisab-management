@@ -72,15 +72,20 @@ export default function MarriageClient({ initialRecords }: MarriageClientProps) 
       
       const method = editingRecord ? 'PUT' : 'POST';
       
-      await secureFetch(url, {
+      const response = await secureFetch<{ record: MarriageRecord }>(url, {
         method,
         body: JSON.stringify(formData),
       });
       
+      if (editingRecord) {
+        setRecords(prev => prev.map(r => r.marriage_id === editingRecord.marriage_id ? response.record : r));
+      } else {
+        setRecords(prev => [response.record, ...prev]);
+      }
+      
       toast.success(editingRecord ? 'Record updated!' : 'Vayvhar added!');
       setShowDialog(false);
       resetForm();
-      fetchRecords();
     } catch (err) {}
   };
 
@@ -89,7 +94,7 @@ export default function MarriageClient({ initialRecords }: MarriageClientProps) 
     try {
       await secureFetch(`/api/marriage/${recordToDelete}`, { method: 'DELETE' });
       toast.success('Record deleted!');
-      fetchRecords();
+      setRecords(prev => prev.filter(r => r.marriage_id !== recordToDelete));
     } catch (err) {} 
     finally { setRecordToDelete(null); }
   };

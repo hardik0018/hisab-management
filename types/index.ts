@@ -59,6 +59,7 @@ export interface CollaborationData {
 
 export interface DashboardStats {
   totalExpense?: number;
+  totalIncome?: number;
   totalDebit: number;
   totalCredit: number;
   totalMarriage: number;

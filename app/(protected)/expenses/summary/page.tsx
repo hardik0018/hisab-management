@@ -36,6 +36,7 @@ export default async function SummaryPage({ searchParams }: PageProps) {
     <SummaryClient
       initialMonth={summary.month}
       initialMonthlyTotal={summary.monthlyTotal}
+      initialMonthlyIncome={summary.monthlyIncome}
       initialFilteredTotal={summary.filteredTotal}
       initialDailyTotals={summary.dailyTotals}
       initialTodayTotal={summary.todayTotal}

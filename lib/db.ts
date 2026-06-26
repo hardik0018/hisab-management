@@ -11,6 +11,7 @@ if (!dbName) {
 export async function connectToDatabase(): Promise<{ client: MongoClient; db: Db }> {
   const client = await clientPromise;
   const db = client.db(dbName);
+  console.log(client,db)
   return { client, db };
 }
 

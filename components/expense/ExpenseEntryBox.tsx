@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import { Calendar, PenLine, Trash2, ArrowRight, Loader2 } from 'lucide-react';
 import PreviewDialog from './PreviewDialog';
 import { ParseResult } from '@/types';
+import { parseExpenses } from '@/lib/expense-parser';
 
 const DRAFT_KEY = 'hisab_expense_draft';
 
@@ -17,9 +18,14 @@ interface DraftData {
   lastEditedAt: number;
 }
 
-export default function ExpenseEntryBox() {
+interface ExpenseEntryBoxProps {
+  largeAmountLimit?: number;
+}
+
+export default function ExpenseEntryBox({ largeAmountLimit = 10000 }: ExpenseEntryBoxProps) {
   const [text, setText] = useState<string>('');
   const [date, setDate] = useState<string>('');
+  const [entryType, setEntryType] = useState<'expense' | 'income'>('expense');
   const [isParsing, setIsParsing] = useState<boolean>(false);
   const [isSaving, setIsSaving] = useState<boolean>(false);
 
@@ -85,17 +91,7 @@ export default function ExpenseEntryBox() {
 
     setIsParsing(true);
     try {
-      const res = await fetch('/api/expenses/parse', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text, datePickerDate: date })
-      });
-
-      if (!res.ok) {
-        throw new Error('Parsing failed');
-      }
-
-      const { result } = await res.json();
+      const result = parseExpenses(text, date, largeAmountLimit);
       setParseResult(result);
 
       if (result.validExpenses.length === 0) {
@@ -126,7 +122,8 @@ export default function ExpenseEntryBox() {
     try {
       const normalizedExpenses = expensesToSave.map(exp => ({
         ...exp,
-        date: targetDate
+        date: targetDate,
+        type: entryType
       }));
 
       const res = await fetch('/api/expenses', {
@@ -172,6 +169,26 @@ export default function ExpenseEntryBox() {
   return (
     <div className="flex flex-col gap-4 font-sans text-foreground">
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        {/* Entry Type Toggle */}
+        <div className="flex bg-muted p-1 rounded-xl gap-1">
+          <Button
+            type="button"
+            variant="ghost"
+            className={`flex-1 rounded-lg h-9 text-xs font-bold ${entryType === 'expense' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+            onClick={() => setEntryType('expense')}
+          >
+            Add Expense
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            className={`flex-1 rounded-lg h-9 text-xs font-bold ${entryType === 'income' ? 'bg-green-100 text-green-700 shadow-sm hover:bg-green-100 hover:text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'text-muted-foreground hover:text-foreground'}`}
+            onClick={() => setEntryType('income')}
+          >
+            Add Income
+          </Button>
+        </div>
+
         {/* Date Selector Row */}
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-2 text-primary">
@@ -192,7 +209,7 @@ export default function ExpenseEntryBox() {
           <div className="flex justify-between items-center px-1">
             <Label className="text-xs font-bold text-muted-foreground flex items-center gap-1">
               <PenLine className="w-3.5 h-3.5 text-primary" />
-              Multiline Expense Text
+              Multiline {entryType === 'income' ? 'Income' : 'Expense'} Text
             </Label>
             <span className="text-[10px] text-muted-foreground font-mono">
               {text.split('\n').filter(Boolean).length} lines

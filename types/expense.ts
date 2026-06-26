@@ -10,6 +10,7 @@ export interface Expense {
   note: string;
   category: string; // defaults to "Uncategorized"
   currency: string; // defaults to "INR"
+  type?: 'expense' | 'income'; // defaults to 'expense'
   createdAt: Date | string;
   updatedAt: Date | string;
   associatedId?: string;
@@ -53,6 +54,7 @@ export interface ParsedExpense {
   amount: number;
   note: string;
   isLarge: boolean;
+  type?: 'expense' | 'income';
 }
 
 export interface InvalidLine {

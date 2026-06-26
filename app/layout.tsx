@@ -36,7 +36,6 @@ export const viewport = {
 
 export default async function RootLayout({ children }: { children: ReactNode }) {
   const session = await auth();
-
   return (
     <html lang="en" suppressHydrationWarning>
       <head>

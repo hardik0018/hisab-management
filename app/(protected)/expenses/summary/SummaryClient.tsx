@@ -31,6 +31,7 @@ interface DailyTotal {
 interface SummaryClientProps {
   initialMonth: string;
   initialMonthlyTotal: number;
+  initialMonthlyIncome: number;
   initialFilteredTotal: number;
   initialDailyTotals: DailyTotal[];
   initialTodayTotal: number;
@@ -43,6 +44,7 @@ interface SummaryClientProps {
 export default function SummaryClient({
   initialMonth,
   initialMonthlyTotal,
+  initialMonthlyIncome,
   initialFilteredTotal,
   initialDailyTotals,
   initialTodayTotal,
@@ -54,6 +56,7 @@ export default function SummaryClient({
 
   const [month, setMonth] = useState<string>(initialMonth);
   const [monthlyTotal, setMonthlyTotal] = useState<number>(initialMonthlyTotal);
+  const [monthlyIncome, setMonthlyIncome] = useState<number>(initialMonthlyIncome);
   const [filteredTotal, setFilteredTotal] = useState<number>(initialFilteredTotal);
   const [dailyTotals, setDailyTotals] = useState<DailyTotal[]>(initialDailyTotals);
   const [todayTotal, setTodayTotal] = useState<number>(initialTodayTotal);
@@ -70,10 +73,11 @@ export default function SummaryClient({
   useEffect(() => {
     setMonth(initialMonth);
     setMonthlyTotal(initialMonthlyTotal);
+    setMonthlyIncome(initialMonthlyIncome);
     setFilteredTotal(initialFilteredTotal);
     setDailyTotals(initialDailyTotals);
     setTodayTotal(initialTodayTotal);
-  }, [initialMonth, initialMonthlyTotal, initialFilteredTotal, initialDailyTotals, initialTodayTotal]);
+  }, [initialMonth, initialMonthlyTotal, initialMonthlyIncome, initialFilteredTotal, initialDailyTotals, initialTodayTotal]);
 
   useEffect(() => {
     return () => {
@@ -192,7 +196,7 @@ export default function SummaryClient({
         </div>
 
         {/* Totals Cards Matrix */}
-        <div className="grid grid-cols-2 gap-3.5">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
           <div className="bg-card border border-border rounded-3xl p-5 flex flex-col gap-1 shadow-sm">
             <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Today's Total</span>
             <span className="text-lg font-black text-foreground">₹{formatCurrency(todayTotal)}</span>
@@ -205,10 +209,28 @@ export default function SummaryClient({
             <div className="absolute right-0 bottom-0 translate-x-1 translate-y-1 opacity-5 text-primary">
               <TrendingDown className="w-20 h-20" />
             </div>
-            <span className="text-[10px] font-bold text-primary uppercase tracking-wider">Month Total</span>
+            <span className="text-[10px] font-bold text-primary uppercase tracking-wider">Month Expense</span>
             <span className="text-lg font-black text-primary font-sans">₹{formatCurrency(monthlyTotal)}</span>
             <span className="text-[9px] text-primary/80 mt-1 truncate">
               Full period aggregates
+            </span>
+          </div>
+
+          <div className="bg-green-500/5 dark:bg-green-500/10 border border-green-500/20 rounded-3xl p-5 flex flex-col gap-1 relative overflow-hidden">
+            <span className="text-[10px] font-bold text-green-600 dark:text-green-400 uppercase tracking-wider">Month Income</span>
+            <span className="text-lg font-black text-green-600 dark:text-green-400 font-sans">₹{formatCurrency(monthlyIncome)}</span>
+            <span className="text-[9px] text-green-600/80 mt-1 truncate">
+              Full period aggregates
+            </span>
+          </div>
+
+          <div className="bg-card border border-border rounded-3xl p-5 flex flex-col gap-1 shadow-sm">
+            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Net Savings</span>
+            <span className={`text-lg font-black font-sans ${monthlyIncome - monthlyTotal >= 0 ? 'text-emerald-600' : 'text-destructive'}`}>
+              ₹{formatCurrency(monthlyIncome - monthlyTotal)}
+            </span>
+            <span className="text-[9px] text-muted-foreground mt-1 truncate">
+              Income - Expense
             </span>
           </div>
         </div>

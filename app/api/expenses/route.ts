@@ -40,6 +40,7 @@ export async function POST(request: NextRequest) {
         note: exp.note || '',
         category: exp.category || 'Uncategorized',
         currency: 'INR',
+        type: exp.type === 'income' ? 'income' : 'expense',
       };
 
       const validationResult = validateExpense(expenseDoc);

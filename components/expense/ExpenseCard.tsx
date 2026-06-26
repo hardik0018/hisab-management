@@ -61,6 +61,11 @@ export default function ExpenseCard({
               <Repeat className="w-2 h-2" /> Auto
             </span>
           )}
+          {expense.type === 'income' && (
+            <span className="shrink-0 text-[8px] bg-green-500/10 text-green-600 dark:text-green-400 border border-green-500/20 px-1.5 py-0.5 rounded font-black uppercase tracking-wider flex items-center gap-0.5">
+              Income
+            </span>
+          )}
         </div>
 
         {expense.note && (
@@ -75,8 +80,8 @@ export default function ExpenseCard({
       </div>
 
       <div className="flex items-center gap-3 shrink-0">
-        <span className={`font-black text-base font-sans ${expense.amount < 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-foreground'}`}>
-          {formatAmount(expense.amount)}
+        <span className={`font-black text-base font-sans ${expense.amount < 0 || expense.type === 'income' ? 'text-emerald-600 dark:text-emerald-400' : 'text-foreground'}`}>
+          {expense.type === 'income' ? '+' : ''}{formatAmount(expense.amount)}
         </span>
 
         {/* Edit and Delete Buttons */}

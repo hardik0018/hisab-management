@@ -62,7 +62,8 @@ export async function getDashboardStats(): Promise<DashboardStats | null> {
     const [
         hisabAgg,
         marriageAgg,
-        recentHisab
+        recentHisab,
+        expenseAgg
     ] = await Promise.all([
         db.collection('hisab').aggregate([
              { $match: { space_id: spaceId, ignored: { $ne: true } } },
@@ -80,15 +81,26 @@ export async function getDashboardStats(): Promise<DashboardStats | null> {
             .find({ space_id: spaceId, ignored: { $ne: true } }, { projection: { _id: 0 } })
             .sort({ date: -1, created_at: -1 }) // Tie-break with created_at if needed
             .limit(5)
-            .toArray()
+            .toArray(),
+        db.collection('expenses').aggregate([
+            { $match: { space_id: spaceId } },
+            { $group: {
+                _id: null,
+                totalExpense: { $sum: { $cond: [{ $ne: ["$type", "income"] }, "$amount", 0] } },
+                totalIncome: { $sum: { $cond: [{ $eq: ["$type", "income"] }, "$amount", 0] } }
+            } }
+        ]).toArray()
     ]);
 
     const totalDebit = hisabAgg[0]?.debit || 0;
     const totalCredit = hisabAgg[0]?.credit || 0;
     const totalMarriage = marriageAgg[0]?.total || 0;
+    const totalExpense = expenseAgg[0]?.totalExpense || 0;
+    const totalIncome = expenseAgg[0]?.totalIncome || 0;
 
     return {
-      totalExpense: 0,
+      totalExpense,
+      totalIncome,
       totalDebit,
       totalCredit,
       totalMarriage,
@@ -230,6 +242,7 @@ export function getTodayKolkata(): string {
 export async function getMonthlySummary(monthStr?: string, search?: string): Promise<{
   month: string;
   monthlyTotal: number;
+  monthlyIncome: number;
   filteredTotal: number;
   dailyTotals: { date: string; total: number }[];
   todayTotal: number;
@@ -265,12 +278,13 @@ export async function getMonthlySummary(monthStr?: string, search?: string): Pro
 
   // Single aggregation for monthly totals + daily breakdown
   // Replaces 2-3 separate .find().toArray() calls
-  const [monthlyAgg, todayAgg] = await Promise.all([
+  const [monthlyAgg, todayAgg, incomeAgg] = await Promise.all([
     db.collection('expenses').aggregate([
       {
         $match: {
           space_id: spaceId,
           date: { $gte: monthStart, $lt: monthEnd },
+          type: { $ne: 'income' }
         },
       },
       {
@@ -282,7 +296,11 @@ export async function getMonthlySummary(monthStr?: string, search?: string): Pro
       { $sort: { _id: 1 } },
     ]).toArray(),
     db.collection('expenses').aggregate([
-      { $match: { space_id: spaceId, date: today } },
+      { $match: { space_id: spaceId, date: today, type: { $ne: 'income' } } },
+      { $group: { _id: null, total: { $sum: '$amount' } } },
+    ]).toArray(),
+    db.collection('expenses').aggregate([
+      { $match: { space_id: spaceId, date: { $gte: monthStart, $lt: monthEnd }, type: 'income' } },
       { $group: { _id: null, total: { $sum: '$amount' } } },
     ]).toArray(),
   ]);
@@ -290,6 +308,7 @@ export async function getMonthlySummary(monthStr?: string, search?: string): Pro
   const dailyTotals = monthlyAgg.map((d) => ({ date: d._id as string, total: d.dailyTotal as number }));
   const monthlyTotal = dailyTotals.reduce((sum, d) => sum + d.total, 0);
   const todayTotal = todayAgg[0]?.total || 0;
+  const monthlyIncome = incomeAgg[0]?.total || 0;
 
   // Filtered total: only needed when a search term is provided
   let filteredTotal = monthlyTotal;
@@ -300,6 +319,7 @@ export async function getMonthlySummary(monthStr?: string, search?: string): Pro
         $match: {
           space_id: spaceId,
           date: { $gte: monthStart, $lt: monthEnd },
+          type: { $ne: 'income' },
           $or: [{ itemName: searchRegex }, { note: searchRegex }],
         },
       },
@@ -311,6 +331,7 @@ export async function getMonthlySummary(monthStr?: string, search?: string): Pro
   return {
     month,
     monthlyTotal,
+    monthlyIncome,
     filteredTotal,
     dailyTotals,
     todayTotal,

@@ -20,7 +20,7 @@ export default async function ExpensesPage() {
         </div>
 
         <BackupReminder settings={settings} />
-        <ExpenseEntryBox />
+        <ExpenseEntryBox largeAmountLimit={settings.largeAmountLimit} />
       </div>
     </PageWrapper>
   );
