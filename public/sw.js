@@ -1,5 +1,5 @@
 // Bump CACHE_VERSION on every deploy to purge stale caches automatically
-const CACHE_VERSION = 'v3';
+const CACHE_VERSION = 'v4';
 const STATIC_CACHE = `hisab-static-${CACHE_VERSION}`;
 const NAV_CACHE = `hisab-nav-${CACHE_VERSION}`;
 
@@ -52,10 +52,12 @@ self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
-  // Skip: non-GET, API calls, non-http schemes
+  // Skip: non-GET, API calls, RSC payloads, non-http schemes
   if (
     request.method !== 'GET' ||
     url.pathname.startsWith('/api') ||
+    request.headers.get('RSC') === '1' ||
+    url.searchParams.has('_rsc') ||
     !request.url.startsWith('http')
   ) {
     return;

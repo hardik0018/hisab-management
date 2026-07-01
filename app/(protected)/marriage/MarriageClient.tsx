@@ -129,6 +129,21 @@ export default function MarriageClient({ initialRecords }: MarriageClientProps) 
 
   const totalAmount = filteredRecords.reduce((sum, r) => sum + r.amount, 0);
 
+  // Group records by year
+  const groupedRecords: { [year: string]: MarriageRecord[] } = {};
+  filteredRecords.forEach(record => {
+    const dateObj = new Date(record.date);
+    const year = isNaN(dateObj.getTime()) ? 'Unknown' : dateObj.getFullYear().toString();
+    if (!groupedRecords[year]) groupedRecords[year] = [];
+    groupedRecords[year].push(record);
+  });
+
+  const sortedYears = Object.keys(groupedRecords).sort((a, b) => {
+    if (a === 'Unknown') return 1;
+    if (b === 'Unknown') return -1;
+    return parseInt(b) - parseInt(a);
+  });
+
   return (
     <PageWrapper>
       <div className="p-4 space-y-8 max-w-7xl mx-auto pb-32">
@@ -180,56 +195,78 @@ export default function MarriageClient({ initialRecords }: MarriageClientProps) 
                   className="pl-12 h-14 rounded-2xl border-2 border-slate-100 bg-white shadow-sm focus-visible:ring-4 focus-visible:ring-rose-50 focus-visible:border-rose-600 transition-all font-medium"
                  />
               </div>
-              <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 px-4">Family Aggregates</h3>
+              
               {loading ? (
-                 [1,2,3].map(i => <Skeleton key={i} className="h-24 rounded-3xl" />)
+                 <div className="space-y-4 mt-8">
+                   {[1,2,3].map(i => <Skeleton key={i} className="h-24 rounded-3xl" />)}
+                 </div>
               ) : (
                  <AnimatePresence mode="popLayout">
-                    {filteredRecords.map((record, idx) => (
-                        <motion.div
-                           key={record.marriage_id}
-                           layout
-                           initial={{ opacity: 0, x: 20 }}
-                           animate={{ opacity: 1, x: 0 }}
-                           exit={{ opacity: 0, scale: 0.95 }}
-                           transition={{ delay: idx * 0.05 }}
-                        >
-                           <Card className="group border-none shadow-lg hover:shadow-xl rounded-2xl sm:rounded-3xl bg-white overflow-hidden p-3 sm:p-5 hover:-translate-y-0.5 transition-all">
-                              <div className="flex items-center justify-between gap-2">
-                                 <div className="flex items-center gap-3 sm:gap-5 flex-1 min-w-0">
-                                   
-                                       <div className="w-12 h-12 font-bold rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center">
-                                         {record.name.charAt(0).toUpperCase()}
-                                      </div>
-                                   
-                                    <div className="min-w-0">
-                                       <h3 className="font-bold text-slate-900 leading-tight text-sm sm:text-lg truncate">{record.name}</h3>
-                                       <div className="flex items-center gap-2 mt-0.5 sm:mt-1">
-                                          <div className="flex items-center gap-1 text-[8px] sm:text-[10px] text-slate-600 font-bold uppercase truncate">
-                                             <MapPin className="h-2 w-2 sm:h-2.5 sm:w-2.5" />
-                                             <span className="truncate max-w-[60px] sm:max-w-none">{record.city || 'No City'}</span>
-                                             <span className="mx-1">-</span>
-                                             <Calendar className="h-2 w-2 sm:h-2.5 sm:w-2.5" /> {new Date(record.date).toLocaleDateString()}
-                                          </div>
-                                       </div>
-                                    </div>
-                                 </div>
-                                 <div className="flex items-center gap-3 sm:gap-4">
-                                    <div className="text-right flex-shrink-0">
-                                       <p className="text-lg sm:text-2xl font-black text-rose-600">₹{record.amount.toLocaleString()}</p>
-                                    </div>
-                                    <div className="flex gap-1 transition-all scale-90 sm:scale-95 group-hover:scale-100 flex-shrink-0">
-                                       <button onClick={() => handleEdit(record)} className="p-2.5 sm:p-2 rounded-xl bg-slate-50 text-slate-400 hover:bg-rose-50 hover:text-rose-600 transition-colors focus:outline-none focus:ring-0 focus-visible:ring-0 flex items-center justify-center">
-                                          <Edit className="h-4 w-4 sm:h-4 sm:w-4" />
-                                       </button>
-                                       <button onClick={() => setRecordToDelete(record.marriage_id)} className="p-2.5 sm:p-2 rounded-xl bg-slate-50 text-slate-400 hover:bg-rose-50 hover:text-rose-600 transition-colors focus:outline-none focus:ring-0 focus-visible:ring-0 flex items-center justify-center">
-                                          <Trash2 className="h-4 w-4 sm:h-4 sm:w-4" />
-                                       </button>
-                                    </div>
-                                 </div>
-                              </div>
-                           </Card>
-                        </motion.div>
+                    {sortedYears.map((year) => (
+                      <motion.div 
+                        key={year} 
+                        layout 
+                        initial={{ opacity: 0, y: 20 }} 
+                        animate={{ opacity: 1, y: 0 }} 
+                        exit={{ opacity: 0, scale: 0.95 }} 
+                        className="mb-8 pt-4"
+                      >
+                         <div className="flex items-center gap-3 mb-4 ml-1">
+                           <div className="px-4 py-1.5 bg-rose-50 text-rose-600 font-black rounded-xl text-xs sm:text-sm uppercase tracking-widest flex items-center gap-2 shadow-sm">
+                              <Calendar className="h-3.5 w-3.5" /> {year} Year
+                           </div>
+                           <div className="h-px bg-slate-200 flex-1 ml-2" />
+                         </div>
+                         
+                         <div className="space-y-3 sm:space-y-4">
+                           {groupedRecords[year].map((record, idx) => (
+                               <motion.div
+                                  key={record.marriage_id}
+                                  layout
+                                  initial={{ opacity: 0, x: 20 }}
+                                  animate={{ opacity: 1, x: 0 }}
+                                  exit={{ opacity: 0, scale: 0.95 }}
+                                  transition={{ delay: idx * 0.05 }}
+                               >
+                                  <Card className="group border-none shadow-lg hover:shadow-xl rounded-2xl sm:rounded-3xl bg-white overflow-hidden p-3 sm:p-5 hover:-translate-y-0.5 transition-all">
+                                     <div className="flex items-center justify-between gap-2">
+                                        <div className="flex items-center gap-3 sm:gap-5 flex-1 min-w-0">
+                                          
+                                              <div className="w-12 h-12 font-bold rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center">
+                                                {record.name.charAt(0).toUpperCase()}
+                                             </div>
+                                          
+                                           <div className="min-w-0">
+                                              <h3 className="font-bold text-slate-900 leading-tight text-sm sm:text-lg truncate">{record.name}</h3>
+                                              <div className="flex items-center gap-2 mt-0.5 sm:mt-1">
+                                                 <div className="flex items-center gap-1 text-[8px] sm:text-[10px] text-slate-600 font-bold uppercase truncate">
+                                                    <MapPin className="h-2 w-2 sm:h-2.5 sm:w-2.5" />
+                                                    <span className="truncate max-w-[60px] sm:max-w-none">{record.city || 'No City'}</span>
+                                                    <span className="mx-1">-</span>
+                                                    <Calendar className="h-2 w-2 sm:h-2.5 sm:w-2.5" /> {new Date(record.date).toLocaleDateString()}
+                                                 </div>
+                                              </div>
+                                           </div>
+                                        </div>
+                                        <div className="flex items-center gap-3 sm:gap-4">
+                                           <div className="text-right flex-shrink-0">
+                                              <p className="text-lg sm:text-2xl font-black text-rose-600">₹{record.amount.toLocaleString()}</p>
+                                           </div>
+                                           <div className="flex gap-1 transition-all scale-90 sm:scale-95 group-hover:scale-100 flex-shrink-0">
+                                              <button onClick={() => handleEdit(record)} className="p-2.5 sm:p-2 rounded-xl bg-slate-50 text-slate-400 hover:bg-rose-50 hover:text-rose-600 transition-colors focus:outline-none focus:ring-0 focus-visible:ring-0 flex items-center justify-center">
+                                                 <Edit className="h-4 w-4 sm:h-4 sm:w-4" />
+                                              </button>
+                                              <button onClick={() => setRecordToDelete(record.marriage_id)} className="p-2.5 sm:p-2 rounded-xl bg-slate-50 text-slate-400 hover:bg-rose-50 hover:text-rose-600 transition-colors focus:outline-none focus:ring-0 focus-visible:ring-0 flex items-center justify-center">
+                                                 <Trash2 className="h-4 w-4 sm:h-4 sm:w-4" />
+                                              </button>
+                                           </div>
+                                        </div>
+                                     </div>
+                                  </Card>
+                               </motion.div>
+                           ))}
+                         </div>
+                      </motion.div>
                     ))}
                  </AnimatePresence>
               )}

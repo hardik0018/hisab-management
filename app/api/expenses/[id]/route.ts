@@ -6,6 +6,7 @@ import { ObjectId } from 'mongodb';
 import { getAuthenticatedUser } from '@/lib/auth';
 import { validateExpense } from '@/models/Expense';
 import { Expense } from '@/types';
+import { revalidatePath } from 'next/cache';
 
 export async function PATCH(
   request: NextRequest,
@@ -78,6 +79,9 @@ export async function PATCH(
       ...setObj,
     };
 
+    revalidatePath('/expenses', 'layout');
+    revalidatePath('/dashboard', 'layout');
+
     return Response.json({ expense: result });
   } catch (error) {
     console.error('[API_EXPENSE_PATCH_ERROR]', error);
@@ -121,6 +125,9 @@ export async function DELETE(
         { status: 404 }
       );
     }
+
+    revalidatePath('/expenses', 'layout');
+    revalidatePath('/dashboard', 'layout');
 
     return Response.json({ success: true });
   } catch (error) {

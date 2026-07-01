@@ -4,6 +4,7 @@ import { getAuthenticatedUser } from '@/lib/auth';
 import { v4 as uuidv4 } from 'uuid';
 import { NextRequest } from 'next/server';
 import { MarriageRecord } from '@/types';
+import { revalidatePath } from 'next/cache';
 
 export async function GET(request: NextRequest) {
   try {
@@ -88,6 +89,10 @@ export async function POST(request: NextRequest) {
 
       await db.collection('expenses').insertOne(expenseDoc);
     }
+
+    revalidatePath('/marriage', 'layout');
+    revalidatePath('/dashboard', 'layout');
+    revalidatePath('/expenses', 'layout');
 
     return Response.json({ record }, { status: 201 });
   } catch (error) {

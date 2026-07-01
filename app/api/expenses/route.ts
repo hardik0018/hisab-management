@@ -5,6 +5,7 @@ import { getDb } from '@/lib/db';
 import { validateExpense } from '@/models/Expense';
 import { getAuthenticatedUser } from '@/lib/auth';
 import { Expense } from '@/types';
+import { revalidatePath } from 'next/cache';
 
 export async function POST(request: NextRequest) {
   try {
@@ -63,6 +64,9 @@ export async function POST(request: NextRequest) {
     }
 
     const result = await db.collection('expenses').insertMany(validExpensesToInsert as any);
+
+    revalidatePath('/expenses', 'layout');
+    revalidatePath('/dashboard', 'layout');
 
     return Response.json(
       { success: true, count: result.insertedCount },

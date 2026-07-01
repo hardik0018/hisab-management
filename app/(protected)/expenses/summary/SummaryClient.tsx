@@ -20,12 +20,20 @@ const SummaryChart = dynamic(() => import('@/components/expense/SummaryChart'), 
     </div>
   ),
 });
-import { CalendarDays, TrendingDown, Search, ArrowRight, ArrowLeft, X } from 'lucide-react';
+import { CalendarDays, TrendingDown, Search, ArrowRight, ArrowLeft, X, Users, User } from 'lucide-react';
 import { formatDisplayDate } from '@/lib/date-utils';
 
 interface DailyTotal {
   date: string;
   total: number;
+}
+
+interface MemberBalance {
+  user_id: string;
+  name: string;
+  income: number;
+  expense: number;
+  balance: number;
 }
 
 interface SummaryClientProps {
@@ -35,6 +43,7 @@ interface SummaryClientProps {
   initialFilteredTotal: number;
   initialDailyTotals: DailyTotal[];
   initialTodayTotal: number;
+  initialMemberBalances?: MemberBalance[];
   searchParams: {
     month?: string;
     search?: string;
@@ -48,6 +57,7 @@ export default function SummaryClient({
   initialFilteredTotal,
   initialDailyTotals,
   initialTodayTotal,
+  initialMemberBalances,
   searchParams
 }: SummaryClientProps) {
   const router = useRouter();
@@ -60,6 +70,7 @@ export default function SummaryClient({
   const [filteredTotal, setFilteredTotal] = useState<number>(initialFilteredTotal);
   const [dailyTotals, setDailyTotals] = useState<DailyTotal[]>(initialDailyTotals);
   const [todayTotal, setTodayTotal] = useState<number>(initialTodayTotal);
+  const [memberBalances, setMemberBalances] = useState<MemberBalance[]>(initialMemberBalances || []);
 
   const [search, setSearch] = useState<string>(searchParams.search || '');
   const [isMountedState, setIsMountedState] = useState(false);
@@ -77,7 +88,8 @@ export default function SummaryClient({
     setFilteredTotal(initialFilteredTotal);
     setDailyTotals(initialDailyTotals);
     setTodayTotal(initialTodayTotal);
-  }, [initialMonth, initialMonthlyTotal, initialMonthlyIncome, initialFilteredTotal, initialDailyTotals, initialTodayTotal]);
+    if (initialMemberBalances) setMemberBalances(initialMemberBalances);
+  }, [initialMonth, initialMonthlyTotal, initialMonthlyIncome, initialFilteredTotal, initialDailyTotals, initialTodayTotal, initialMemberBalances]);
 
   useEffect(() => {
     return () => {
@@ -234,6 +246,42 @@ export default function SummaryClient({
             </span>
           </div>
         </div>
+
+        {/* Collaborator Balances */}
+        {memberBalances.length > 0 && (
+          <div className="bg-card border border-border rounded-3xl p-5 space-y-4 shadow-sm">
+            <div className="flex items-center gap-2 text-primary">
+              <Users className="w-4 h-4" />
+              <h3 className="text-xs font-bold text-card-foreground uppercase tracking-wider">Collaborator Balances</h3>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+              {memberBalances.map((mb) => (
+                <div key={mb.user_id} className="bg-muted/30 border border-border rounded-2xl p-4 flex flex-col gap-2">
+                  <div className="flex items-center gap-2">
+                    <div className="bg-primary/10 p-1.5 rounded-full text-primary">
+                      <User className="w-4 h-4" />
+                    </div>
+                    <span className="font-bold text-sm text-foreground truncate">{mb.name}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-xs mt-1">
+                    <span className="text-muted-foreground font-medium">Income:</span>
+                    <span className="font-bold text-green-600 dark:text-green-400">₹{formatCurrency(mb.income)}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="text-muted-foreground font-medium">Expense:</span>
+                    <span className="font-bold text-destructive">₹{formatCurrency(mb.expense)}</span>
+                  </div>
+                  <div className="pt-2 mt-1 border-t border-border flex justify-between items-center">
+                    <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Net Balance</span>
+                    <span className={`font-black text-sm ${mb.balance >= 0 ? 'text-emerald-600' : 'text-destructive'}`}>
+                      ₹{formatCurrency(mb.balance)}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Search / Filter inside summary */}
         <div className="space-y-3">

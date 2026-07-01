@@ -246,6 +246,7 @@ export async function getMonthlySummary(monthStr?: string, search?: string): Pro
   filteredTotal: number;
   dailyTotals: { date: string; total: number }[];
   todayTotal: number;
+  memberBalances: { user_id: string; name: string; income: number; expense: number; balance: number }[];
 } | null> {
   const user = await getAuthenticatedUser();
   if (!user) return null;
@@ -276,9 +277,8 @@ export async function getMonthlySummary(monthStr?: string, search?: string): Pro
   const monthStart = `${year}-${paddedMon}-01`;
   const monthEnd = `${nextYear}-${paddedNextMon}-01`;
 
-  // Single aggregation for monthly totals + daily breakdown
-  // Replaces 2-3 separate .find().toArray() calls
-  const [monthlyAgg, todayAgg, incomeAgg] = await Promise.all([
+  // Single aggregation for monthly totals + daily breakdown + member balances
+  const [monthlyAgg, todayAgg, incomeAgg, userExpenseAgg, userIncomeAgg, spaceUsers] = await Promise.all([
     db.collection('expenses').aggregate([
       {
         $match: {
@@ -303,12 +303,61 @@ export async function getMonthlySummary(monthStr?: string, search?: string): Pro
       { $match: { space_id: spaceId, date: { $gte: monthStart, $lt: monthEnd }, type: 'income' } },
       { $group: { _id: null, total: { $sum: '$amount' } } },
     ]).toArray(),
+    db.collection('expenses').aggregate([
+      { $match: { space_id: spaceId, date: { $gte: monthStart, $lt: monthEnd }, type: { $ne: 'income' } } },
+      { $group: { _id: '$user_id', total: { $sum: '$amount' } } },
+    ]).toArray(),
+    db.collection('expenses').aggregate([
+      { $match: { space_id: spaceId, date: { $gte: monthStart, $lt: monthEnd }, type: 'income' } },
+      { $group: { _id: '$user_id', total: { $sum: '$amount' } } },
+    ]).toArray(),
+    db.collection('users').find({ space_id: spaceId }, { projection: { user_id: 1, name: 1, _id: 0 } }).toArray()
   ]);
 
   const dailyTotals = monthlyAgg.map((d) => ({ date: d._id as string, total: d.dailyTotal as number }));
   const monthlyTotal = dailyTotals.reduce((sum, d) => sum + d.total, 0);
   const todayTotal = todayAgg[0]?.total || 0;
   const monthlyIncome = incomeAgg[0]?.total || 0;
+
+  // Build Member Balances
+  const memberBalancesMap = new Map<string, { user_id: string; name: string; income: number; expense: number; balance: number }>();
+  
+  // Initialize with all users in space
+  spaceUsers.forEach((u: any) => {
+    memberBalancesMap.set(u.user_id, {
+      user_id: u.user_id,
+      name: u.name,
+      income: 0,
+      expense: 0,
+      balance: 0
+    });
+  });
+
+  // Populate incomes
+  userIncomeAgg.forEach((agg: any) => {
+    const userId = agg._id;
+    if (memberBalancesMap.has(userId)) {
+      memberBalancesMap.get(userId)!.income = agg.total;
+    } else {
+      memberBalancesMap.set(userId, { user_id: userId, name: 'Unknown User', income: agg.total, expense: 0, balance: 0 });
+    }
+  });
+
+  // Populate expenses
+  userExpenseAgg.forEach((agg: any) => {
+    const userId = agg._id;
+    if (memberBalancesMap.has(userId)) {
+      memberBalancesMap.get(userId)!.expense = agg.total;
+    } else {
+      memberBalancesMap.set(userId, { user_id: userId, name: 'Unknown User', income: 0, expense: agg.total, balance: 0 });
+    }
+  });
+
+  // Calculate balances
+  const memberBalances = Array.from(memberBalancesMap.values()).map(mb => ({
+    ...mb,
+    balance: mb.income - mb.expense
+  }));
 
   // Filtered total: only needed when a search term is provided
   let filteredTotal = monthlyTotal;
@@ -335,6 +384,7 @@ export async function getMonthlySummary(monthStr?: string, search?: string): Pro
     filteredTotal,
     dailyTotals,
     todayTotal,
+    memberBalances,
   };
 }
 

@@ -1,6 +1,7 @@
 import { getDb } from '@/lib/db';
 import { getAuthenticatedUser } from '@/lib/auth';
 import { NextRequest } from 'next/server';
+import { revalidatePath } from 'next/cache';
 
 export async function PUT(
   request: NextRequest,
@@ -104,6 +105,10 @@ export async function PUT(
       { projection: { _id: 0 } }
     );
 
+    revalidatePath('/marriage', 'layout');
+    revalidatePath('/dashboard', 'layout');
+    revalidatePath('/expenses', 'layout');
+
     return Response.json({ record });
   } catch (error) {
     console.error('API Error:', error);
@@ -140,6 +145,10 @@ export async function DELETE(
     if (result.deletedCount === 0) {
       return Response.json({ error: 'Record not found' }, { status: 404 });
     }
+
+    revalidatePath('/marriage', 'layout');
+    revalidatePath('/dashboard', 'layout');
+    revalidatePath('/expenses', 'layout');
 
     return Response.json({ success: true });
   } catch (error) {

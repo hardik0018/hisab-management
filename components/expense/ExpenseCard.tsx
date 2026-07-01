@@ -41,11 +41,6 @@ export default function ExpenseCard({
       <div className="flex flex-col gap-1 pr-2 min-w-0">
         <div className="flex items-center gap-1 min-w-0 flex-wrap">
           <span className="font-bold text-foreground text-sm truncate">{expense.itemName}</span>
-          {expense.amount >= 10000 && (
-            <span className="shrink-0 text-[8px] bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 px-1.5 py-0.5 rounded font-black uppercase tracking-wider">
-              Large
-            </span>
-          )}
           {expense.associatedType === 'hisab' && (
             <span className="shrink-0 text-[8px] bg-primary/5 dark:bg-primary/10 text-primary border border-primary/20 px-1.5 py-0.5 rounded font-black uppercase tracking-wider flex items-center gap-0.5">
               <Link className="w-2 h-2" /> Hisab

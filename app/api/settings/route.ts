@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic';
 import { NextRequest } from 'next/server';
 import { getSystemSettings, updateSystemSettings } from '@/models/Settings';
 import { getAuthenticatedUser } from '@/lib/auth';
+import { revalidatePath } from 'next/cache';
 
 export async function GET() {
   try {
@@ -40,6 +41,10 @@ export async function PATCH(request: NextRequest) {
 
     const spaceId = user.space_id || user.user_id;
     const settings = await updateSystemSettings(spaceId, updates);
+    
+    revalidatePath('/settings', 'layout');
+    revalidatePath('/dashboard', 'layout');
+
     return Response.json({ settings });
   } catch (error) {
     console.error('[API_SETTINGS_PATCH_ERROR]', error);
