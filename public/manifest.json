@@ -2,7 +2,7 @@
   "name": "Hisab Personal Expense Tracker",
   "short_name": "Hisab Expense",
   "description": "Fast personal expense tracker PWA for parsing bulk text entries, recording daily outflows, and downloading reports.",
-  "start_url": "/dashboard",
+  "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "display_override": ["window-controls-overlay", "standalone"],
