@@ -29,7 +29,7 @@ export async function PATCH(
     }
 
     const body = await request.json();
-    const { itemName, amount, dayOfMonth, startDate, note, category, isActive } = body;
+    const { itemName, amount, dayOfMonth, startDate, note, category, isActive, user_id } = body;
 
     const db = await getDb();
     const spaceId = user.space_id || user.user_id;
@@ -90,6 +90,10 @@ export async function PATCH(
 
     if (isActive !== undefined) {
       updates.isActive = !!isActive;
+    }
+
+    if (user_id !== undefined) {
+      updates.user_id = user_id;
     }
 
     updates.updatedAt = new Date();

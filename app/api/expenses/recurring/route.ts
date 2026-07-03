@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { itemName, amount, dayOfMonth, startDate, note, category, isActive } = body;
+    const { itemName, amount, dayOfMonth, startDate, note, category, isActive, user_id } = body;
 
     // Validation
     if (!itemName || itemName.trim().length < 2) {
@@ -77,7 +77,7 @@ export async function POST(request: NextRequest) {
     const db = await getDb();
     const now = new Date();
     const spaceId = user.space_id || user.user_id;
-    const userId = user.user_id;
+    const userId = user_id || user.user_id;
 
     const lastGenMonth = getPreviousMonth(startDate);
 

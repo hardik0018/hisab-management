@@ -1,7 +1,7 @@
 export const dynamic = 'force-dynamic';
 
 import React from 'react';
-import { getRecurringExpenses } from '@/lib/data-fetching';
+import { getRecurringExpenses, getCollaborationData } from '@/lib/data-fetching';
 import RecurringClient from './RecurringClient';
 import { redirect } from 'next/navigation';
 import { getAuthenticatedUser } from '@/lib/auth';
@@ -13,7 +13,18 @@ export default async function RecurringExpensesPage() {
     redirect('/login');
   }
 
-  const initialTemplates = await getRecurringExpenses();
+  const [initialTemplates, collabData] = await Promise.all([
+    getRecurringExpenses(),
+    getCollaborationData()
+  ]);
 
-  return <RecurringClient initialTemplates={initialTemplates || []} />;
+  const collaborators = collabData?.collaborators || [];
+
+  return (
+    <RecurringClient 
+      initialTemplates={initialTemplates || []} 
+      collaborators={collaborators}
+      currentUserId={user.user_id}
+    />
+  );
 }

@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import { secureFetch } from '@/lib/api-utils';
-import { RecurringExpense } from '@/types';
+import { RecurringExpense, User } from '@/types';
 import {
   Plus,
   Trash2,
@@ -26,9 +26,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 interface RecurringClientProps {
   initialTemplates: RecurringExpense[];
+  collaborators: User[];
+  currentUserId: string;
 }
 
-export default function RecurringClient({ initialTemplates }: RecurringClientProps) {
+export default function RecurringClient({ initialTemplates, collaborators, currentUserId }: RecurringClientProps) {
   const [templates, setTemplates] = useState<RecurringExpense[]>(initialTemplates);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
@@ -48,6 +50,7 @@ export default function RecurringClient({ initialTemplates }: RecurringClientPro
   const [category, setCategory] = useState('Uncategorized');
   const [note, setNote] = useState('');
   const [isActive, setIsActive] = useState(true);
+  const [paidByUserId, setPaidByUserId] = useState(currentUserId);
 
   // Helper: format month string (e.g. "2026-06" -> "June 2026")
   const formatMonth = (monthStr: string) => {
@@ -70,6 +73,7 @@ export default function RecurringClient({ initialTemplates }: RecurringClientPro
     setCategory('Uncategorized');
     setNote('');
     setIsActive(true);
+    setPaidByUserId(currentUserId);
     setIsModalOpen(true);
   };
 
@@ -83,6 +87,7 @@ export default function RecurringClient({ initialTemplates }: RecurringClientPro
     setCategory(t.category || 'Uncategorized');
     setNote(t.note || '');
     setIsActive(t.isActive);
+    setPaidByUserId(t.user_id || currentUserId);
     setIsModalOpen(true);
   };
 
@@ -143,7 +148,8 @@ export default function RecurringClient({ initialTemplates }: RecurringClientPro
             startDate,
             category: category.trim(),
             note: note.trim(),
-            isActive
+            isActive,
+            user_id: paidByUserId
           })
         });
 
@@ -162,7 +168,8 @@ export default function RecurringClient({ initialTemplates }: RecurringClientPro
             startDate,
             category: category.trim(),
             note: note.trim(),
-            isActive
+            isActive,
+            user_id: paidByUserId
           })
         });
 
@@ -303,6 +310,14 @@ export default function RecurringClient({ initialTemplates }: RecurringClientPro
                       <span className="text-[9px] opacity-70 whitespace-nowrap font-mono">
                         {t.createdAt ? new Date(t.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : 'N/A'}
                       </span>
+                      {t.user_id !== currentUserId && (
+                        <>
+                          <span className="text-muted-foreground/30 select-none">•</span>
+                          <span className="text-[10px] font-medium whitespace-nowrap">
+                            Paid by: <span className="font-bold">{collaborators.find(c => c.user_id === t.user_id)?.name || 'Unknown'}</span>
+                          </span>
+                        </>
+                      )}
                     </div>
                   </div>
 
@@ -434,6 +449,25 @@ export default function RecurringClient({ initialTemplates }: RecurringClientPro
                   className="bg-background border-input text-foreground text-sm rounded-xl h-11"
                 />
               </div>
+
+              {/* Paid By */}
+              {collaborators.length > 0 && (
+                <div className="space-y-1.5">
+                  <Label htmlFor="paid-by" className="text-xs font-semibold text-muted-foreground">Paid By</Label>
+                  <select
+                    id="paid-by"
+                    value={paidByUserId}
+                    onChange={(e) => setPaidByUserId(e.target.value)}
+                    className="w-full h-11 px-3 rounded-xl bg-background border border-input text-sm text-foreground focus-visible:ring-primary outline-none"
+                  >
+                    {collaborators.map((c) => (
+                      <option key={c.user_id} value={c.user_id}>
+                        {c.name} {c.user_id === currentUserId && '(You)'}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
               {/* Active Toggle Switch */}
               <div className="flex items-center justify-between p-3 bg-muted/50 rounded-xl border border-border mt-2">

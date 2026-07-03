@@ -14,7 +14,7 @@ export interface Expense {
   createdAt: Date | string;
   updatedAt: Date | string;
   associatedId?: string;
-  associatedType?: 'hisab' | 'marriage' | 'recurring';
+  associatedType?: 'hisab' | 'marriage' | 'recurring' | 'transfer';
 }
 
 export interface RecurringExpense {
