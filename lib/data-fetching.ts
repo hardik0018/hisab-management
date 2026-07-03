@@ -86,7 +86,7 @@ export async function getDashboardStats(): Promise<DashboardStats | null> {
             { $match: { space_id: spaceId } },
             { $group: {
                 _id: null,
-                totalExpense: { $sum: { $cond: [{ $ne: ["$type", "income"] }, "$amount", 0] } },
+                totalExpense: { $sum: { $cond: [{ $nin: ["$type", ["income", "transfer_in", "transfer_out"]] }, "$amount", 0] } },
                 totalIncome: { $sum: { $cond: [{ $eq: ["$type", "income"] }, "$amount", 0] } }
             } }
         ]).toArray()
@@ -163,7 +163,7 @@ export async function getExpenses(options: {
   }
 
   const db = await getDb();
-  const query: any = { space_id: spaceId };
+  const query: any = { space_id: spaceId, type: { $ne: 'transfer_in' } };
 
   if (options.date) {
     query.date = options.date;
@@ -284,7 +284,7 @@ export async function getMonthlySummary(monthStr?: string, search?: string): Pro
         $match: {
           space_id: spaceId,
           date: { $gte: monthStart, $lt: monthEnd },
-          type: { $ne: 'income' }
+          type: { $nin: ['income', 'transfer_in', 'transfer_out'] }
         },
       },
       {
@@ -296,7 +296,7 @@ export async function getMonthlySummary(monthStr?: string, search?: string): Pro
       { $sort: { _id: 1 } },
     ]).toArray(),
     db.collection('expenses').aggregate([
-      { $match: { space_id: spaceId, date: today, type: { $ne: 'income' } } },
+      { $match: { space_id: spaceId, date: today, type: { $nin: ['income', 'transfer_in', 'transfer_out'] } } },
       { $group: { _id: null, total: { $sum: '$amount' } } },
     ]).toArray(),
     db.collection('expenses').aggregate([
@@ -304,11 +304,11 @@ export async function getMonthlySummary(monthStr?: string, search?: string): Pro
       { $group: { _id: null, total: { $sum: '$amount' } } },
     ]).toArray(),
     db.collection('expenses').aggregate([
-      { $match: { space_id: spaceId, date: { $gte: monthStart, $lt: monthEnd }, type: { $ne: 'income' } } },
+      { $match: { space_id: spaceId, date: { $gte: monthStart, $lt: monthEnd }, type: { $nin: ['income', 'transfer_in'] } } },
       { $group: { _id: '$user_id', total: { $sum: '$amount' } } },
     ]).toArray(),
     db.collection('expenses').aggregate([
-      { $match: { space_id: spaceId, date: { $gte: monthStart, $lt: monthEnd }, type: 'income' } },
+      { $match: { space_id: spaceId, date: { $gte: monthStart, $lt: monthEnd }, type: { $in: ['income', 'transfer_in'] } } },
       { $group: { _id: '$user_id', total: { $sum: '$amount' } } },
     ]).toArray(),
     db.collection('users').find({ space_id: spaceId }, { projection: { user_id: 1, name: 1, _id: 0 } }).toArray()
@@ -368,7 +368,7 @@ export async function getMonthlySummary(monthStr?: string, search?: string): Pro
         $match: {
           space_id: spaceId,
           date: { $gte: monthStart, $lt: monthEnd },
-          type: { $ne: 'income' },
+          type: { $nin: ['income', 'transfer_in', 'transfer_out'] },
           $or: [{ itemName: searchRegex }, { note: searchRegex }],
         },
       },

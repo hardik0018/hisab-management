@@ -25,7 +25,7 @@ export default function ExpenseCard({
     return isNegative ? `-${formatted}` : formatted;
   };
 
-  const isLinked = expense.associatedType === 'hisab' || expense.associatedType === 'marriage';
+  const isLinked = (expense.associatedType === 'hisab' || expense.associatedType === 'marriage') && expense.type !== 'transfer_out' && expense.type !== 'transfer_in';
 
   const handleDisabledActionClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -41,7 +41,12 @@ export default function ExpenseCard({
       <div className="flex flex-col gap-1 pr-2 min-w-0">
         <div className="flex items-center gap-1 min-w-0 flex-wrap">
           <span className="font-bold text-foreground text-sm truncate">{expense.itemName}</span>
-          {expense.associatedType === 'hisab' && (
+          {(expense.type === 'transfer_out' || expense.associatedType === 'transfer') && (
+            <span className="shrink-0 text-[8px] bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 px-1.5 py-0.5 rounded font-black uppercase tracking-wider flex items-center gap-0.5">
+              <Link className="w-2 h-2" /> Transfer
+            </span>
+          )}
+          {expense.associatedType === 'hisab' && expense.type !== 'transfer_out' && expense.type !== 'transfer_in' && (
             <span className="shrink-0 text-[8px] bg-primary/5 dark:bg-primary/10 text-primary border border-primary/20 px-1.5 py-0.5 rounded font-black uppercase tracking-wider flex items-center gap-0.5">
               <Link className="w-2 h-2" /> Hisab
             </span>

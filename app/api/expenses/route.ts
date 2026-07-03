@@ -41,8 +41,44 @@ export async function POST(request: NextRequest) {
         note: exp.note || '',
         category: exp.category || 'Uncategorized',
         currency: 'INR',
-        type: exp.type === 'income' ? 'income' : 'expense',
+        type: exp.type as any, // handled below
       };
+
+      if (exp.type === 'transfer') {
+        if (!exp.transfer_to_user_id) {
+          return Response.json(
+            { error: 'Validation Error', message: 'Transfer requires a recipient' },
+            { status: 400 }
+          );
+        }
+        const transferId = new Date().getTime().toString() + Math.random().toString(36).substr(2, 5);
+        
+        const transferOut: Partial<Expense> = {
+          ...expenseDoc,
+          type: 'transfer_out',
+          associatedId: transferId,
+          associatedType: 'transfer', // Not hisab, to avoid confusion and disabled edits
+        };
+        const transferIn: Partial<Expense> = {
+          ...expenseDoc,
+          user_id: exp.transfer_to_user_id,
+          type: 'transfer_in',
+          associatedId: transferId,
+          associatedType: 'transfer',
+        };
+        
+        const outValidation = validateExpense(transferOut);
+        const inValidation = validateExpense(transferIn);
+        if (!outValidation.isValid || !inValidation.isValid) {
+          return Response.json({ error: 'Validation Error', message: 'Invalid transfer data' }, { status: 400 });
+        }
+        
+        validExpensesToInsert.push({ ...transferOut, createdAt: now, updatedAt: now } as Expense);
+        validExpensesToInsert.push({ ...transferIn, createdAt: now, updatedAt: now } as Expense);
+        continue;
+      }
+
+      expenseDoc.type = exp.type === 'income' ? 'income' : 'expense';
 
       const validationResult = validateExpense(expenseDoc);
       if (!validationResult.isValid) {

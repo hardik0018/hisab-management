@@ -5,10 +5,13 @@ import PageWrapper from '@/components/PageWrapper';
 import ExpenseTopTabs from '@/components/expense/ExpenseTopTabs';
 import ExpenseEntryBox from '@/components/expense/ExpenseEntryBox';
 import BackupReminder from '@/components/settings/BackupReminder';
-import { getSettings } from '@/lib/data-fetching';
+import { getSettings, getCollaborationData } from '@/lib/data-fetching';
 
 export default async function ExpensesPage() {
   const settings = await getSettings();
+  const collabData = await getCollaborationData();
+  const collaborators = collabData?.collaborators || [];
+  const currentUserId = collabData?.currentUserId;
 
   return (
     <PageWrapper>
@@ -20,7 +23,11 @@ export default async function ExpensesPage() {
         </div>
 
         <BackupReminder settings={settings} />
-        <ExpenseEntryBox largeAmountLimit={settings.largeAmountLimit} />
+        <ExpenseEntryBox 
+          largeAmountLimit={settings.largeAmountLimit} 
+          collaborators={collaborators}
+          currentUserId={currentUserId}
+        />
       </div>
     </PageWrapper>
   );

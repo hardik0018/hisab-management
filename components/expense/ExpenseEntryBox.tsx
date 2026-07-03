@@ -5,9 +5,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
-import { Calendar, PenLine, Trash2, ArrowRight, Loader2 } from 'lucide-react';
+import { Calendar, PenLine, Trash2, ArrowRight, Loader2, ArrowLeftRight } from 'lucide-react';
 import PreviewDialog from './PreviewDialog';
-import { ParseResult } from '@/types';
+import { ParseResult, User } from '@/types';
 import { parseExpenses } from '@/lib/expense-parser';
 
 const DRAFT_KEY = 'hisab_expense_draft';
@@ -20,18 +20,26 @@ interface DraftData {
 
 interface ExpenseEntryBoxProps {
   largeAmountLimit?: number;
+  collaborators?: User[];
+  currentUserId?: string;
 }
 
-export default function ExpenseEntryBox({ largeAmountLimit = 10000 }: ExpenseEntryBoxProps) {
+export default function ExpenseEntryBox({ largeAmountLimit = 10000, collaborators = [], currentUserId = '' }: ExpenseEntryBoxProps) {
   const [text, setText] = useState<string>('');
   const [date, setDate] = useState<string>('');
-  const [entryType, setEntryType] = useState<'expense' | 'income'>('expense');
+  const [entryType, setEntryType] = useState<'expense' | 'income' | 'transfer'>('expense');
   const [isParsing, setIsParsing] = useState<boolean>(false);
   const [isSaving, setIsSaving] = useState<boolean>(false);
 
   const [parseResult, setParseResult] = useState<ParseResult | null>(null);
   const [isPreviewOpen, setIsPreviewOpen] = useState<boolean>(false);
 
+  // Transfer specific state
+  const [transferAmount, setTransferAmount] = useState<string>('');
+  const [transferNote, setTransferNote] = useState<string>('');
+  const [transferToUser, setTransferToUser] = useState<string>('');
+
+  // Remove otherCollaborators to allow self-transfers
   useEffect(() => {
     const today = new Date().toISOString().split('T')[0];
     try {
@@ -84,6 +92,30 @@ export default function ExpenseEntryBox({ largeAmountLimit = 10000 }: ExpenseEnt
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (entryType === 'transfer') {
+      if (!transferToUser) {
+        toast.error('Please select a recipient for the transfer');
+        return;
+      }
+      if (!transferAmount || isNaN(Number(transferAmount)) || Number(transferAmount) <= 0) {
+        toast.error('Please enter a valid amount');
+        return;
+      }
+      
+      const transferExpense = {
+        date,
+        itemName: 'Internal Transfer',
+        amount: Number(transferAmount),
+        note: transferNote,
+        type: 'transfer',
+        transfer_to_user_id: transferToUser
+      };
+      
+      await saveExpenses([transferExpense], date, []);
+      return;
+    }
+
     if (!text.trim()) {
       toast.error('Please enter some expenses first');
       return;
@@ -145,8 +177,14 @@ export default function ExpenseEntryBox({ largeAmountLimit = 10000 }: ExpenseEnt
         saveDraft(remainingText, targetDate);
         toast.warning(`${invalidLinesLeft.length} invalid lines kept in draft for correction.`);
       } else {
-        setText('');
-        saveDraft('', targetDate);
+        if (entryType === 'transfer') {
+          setTransferAmount('');
+          setTransferNote('');
+          setTransferToUser('');
+        } else {
+          setText('');
+          saveDraft('', targetDate);
+        }
       }
 
       setIsPreviewOpen(false);
@@ -187,6 +225,14 @@ export default function ExpenseEntryBox({ largeAmountLimit = 10000 }: ExpenseEnt
           >
             Add Income
           </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            className={`flex-1 rounded-lg h-9 text-xs font-bold ${entryType === 'transfer' ? 'bg-blue-100 text-blue-700 shadow-sm hover:bg-blue-100 hover:text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' : 'text-muted-foreground hover:text-foreground'}`}
+            onClick={() => setEntryType('transfer')}
+          >
+            Transfer
+          </Button>
         </div>
 
         {/* Date Selector Row */}
@@ -204,25 +250,65 @@ export default function ExpenseEntryBox({ largeAmountLimit = 10000 }: ExpenseEnt
           />
         </div>
 
-        {/* Text Entry Field */}
-        <div className="flex flex-col gap-1.5">
-          <div className="flex justify-between items-center px-1">
-            <Label className="text-xs font-bold text-muted-foreground flex items-center gap-1">
-              <PenLine className="w-3.5 h-3.5 text-primary" />
-              Multiline {entryType === 'income' ? 'Income' : 'Expense'} Text
-            </Label>
-            <span className="text-[10px] text-muted-foreground font-mono">
-              {text.split('\n').filter(Boolean).length} lines
-            </span>
-          </div>
+        {/* Input Area */}
+        {entryType === 'transfer' ? (
+          <div className="flex flex-col gap-4 bg-muted/30 p-4 rounded-xl border border-border">
+            <div className="flex flex-col gap-2">
+              <Label className="text-xs font-bold text-muted-foreground">Transfer To</Label>
+              <select
+                value={transferToUser}
+                onChange={(e) => setTransferToUser(e.target.value)}
+                className="w-full h-11 px-3 rounded-lg bg-background border border-input text-sm text-foreground focus-visible:ring-primary outline-none"
+              >
+                <option value="" disabled>Select collaborator...</option>
+                {collaborators.map(c => (
+                  <option key={c.user_id} value={c.user_id}>{c.user_id === currentUserId ? 'Self (Me)' : c.name}</option>
+                ))}
+              </select>
+            </div>
+            
+            <div className="flex flex-col gap-2">
+              <Label className="text-xs font-bold text-muted-foreground">Amount</Label>
+              <Input
+                type="number"
+                value={transferAmount}
+                onChange={(e) => setTransferAmount(e.target.value)}
+                placeholder="Enter amount..."
+                className="w-full bg-background border-input text-foreground text-sm rounded-lg focus-visible:ring-primary h-11"
+              />
+            </div>
 
-          <textarea
-            value={text}
-            onChange={handleTextChange}
-            placeholder={`Example:\n\nBhugra-40\nWafer Biscuit-30\nMilk-32.50\nPetrol:200 bike refill\nTea = 10\n27-may-26 (sets date for lines below)`}
-            className="w-full min-h-[220px] max-h-[350px] p-4 bg-background border border-input rounded-xl text-sm font-mono text-foreground placeholder-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary resize-y leading-relaxed shadow-sm"
-          />
-        </div>
+            <div className="flex flex-col gap-2">
+              <Label className="text-xs font-bold text-muted-foreground">Note (Optional)</Label>
+              <Input
+                type="text"
+                value={transferNote}
+                onChange={(e) => setTransferNote(e.target.value)}
+                placeholder="What was this for?"
+                className="w-full bg-background border-input text-foreground text-sm rounded-lg focus-visible:ring-primary h-11"
+              />
+            </div>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-1.5">
+            <div className="flex justify-between items-center px-1">
+              <Label className="text-xs font-bold text-muted-foreground flex items-center gap-1">
+                <PenLine className="w-3.5 h-3.5 text-primary" />
+                Multiline {entryType === 'income' ? 'Income' : 'Expense'} Text
+              </Label>
+              <span className="text-[10px] text-muted-foreground font-mono">
+                {text.split('\n').filter(Boolean).length} lines
+              </span>
+            </div>
+
+            <textarea
+              value={text}
+              onChange={handleTextChange}
+              placeholder={`Example:\n\nBhugra-40\nWafer Biscuit-30\nMilk-32.50\nPetrol:200 bike refill\nTea = 10\n27-may-26 (sets date for lines below)`}
+              className="w-full min-h-[220px] max-h-[350px] p-4 bg-background border border-input rounded-xl text-sm font-mono text-foreground placeholder-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary resize-y leading-relaxed shadow-sm"
+            />
+          </div>
+        )}
 
         {/* Action Buttons */}
         <div className="flex gap-3">
@@ -230,7 +316,7 @@ export default function ExpenseEntryBox({ largeAmountLimit = 10000 }: ExpenseEnt
             type="button"
             variant="outline"
             onClick={handleClear}
-            disabled={!text.trim()}
+            disabled={entryType === 'transfer' ? (!transferAmount && !transferNote && !transferToUser) : !text.trim()}
             className="h-12 bg-background border border-input text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-xl flex-1 transition-all cursor-pointer font-bold"
           >
             <Trash2 className="w-4 h-4 mr-2" />
@@ -239,7 +325,7 @@ export default function ExpenseEntryBox({ largeAmountLimit = 10000 }: ExpenseEnt
 
           <Button
             type="submit"
-            disabled={isParsing || isSaving || !text.trim()}
+            disabled={isParsing || isSaving || (entryType === 'transfer' ? (!transferToUser || !transferAmount) : !text.trim())}
             className="h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-bold rounded-xl flex-[2] shadow-sm transition-all border-0 cursor-pointer"
           >
             {isParsing || isSaving ? (

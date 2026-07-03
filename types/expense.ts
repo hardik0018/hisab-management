@@ -10,7 +10,7 @@ export interface Expense {
   note: string;
   category: string; // defaults to "Uncategorized"
   currency: string; // defaults to "INR"
-  type?: 'expense' | 'income'; // defaults to 'expense'
+  type?: 'expense' | 'income' | 'transfer_in' | 'transfer_out'; // defaults to 'expense'
   createdAt: Date | string;
   updatedAt: Date | string;
   associatedId?: string;

@@ -290,9 +290,8 @@ export default function SettingsClient({ initialSettings }: SettingsClientProps)
         </div>
 
         {/* Danger Zone */}
-        <ClearAllData />
-
-      </div>
+        {/* <ClearAllData /> */}
+              </div>
     </PageWrapper>
   );
 }

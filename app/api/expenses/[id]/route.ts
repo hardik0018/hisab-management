@@ -73,6 +73,26 @@ export async function PATCH(
       { $set: setObj }
     );
 
+    // Sync if it's a transfer
+    if ((existing.type === 'transfer_in' || existing.type === 'transfer_out') && existing.associatedId) {
+      await db.collection('expenses').updateOne(
+        { 
+          associatedId: existing.associatedId, 
+          space_id: spaceId, 
+          _id: { $ne: new ObjectId(id) } 
+        },
+        { 
+          $set: {
+            date: setObj.date,
+            itemName: setObj.itemName,
+            amount: setObj.amount,
+            note: setObj.note,
+            updatedAt: setObj.updatedAt
+          } 
+        }
+      );
+    }
+
     const result = {
       _id: id,
       ...existing,
@@ -114,17 +134,32 @@ export async function DELETE(
     const spaceId = user.space_id || user.user_id;
 
     // Delete item constrained by space_id
-    const result = await db.collection('expenses').deleteOne({ 
+    const existing = await db.collection('expenses').findOne({ 
       _id: new ObjectId(id),
       space_id: spaceId
     });
 
-    if (result.deletedCount === 0) {
+    if (!existing) {
       return Response.json(
         { error: 'Not Found', message: 'Expense record not found' },
         { status: 404 }
       );
     }
+
+    // Sync delete if it's a transfer
+    if ((existing.type === 'transfer_in' || existing.type === 'transfer_out') && existing.associatedId) {
+      await db.collection('expenses').deleteMany({
+        associatedId: existing.associatedId,
+        space_id: spaceId
+      });
+    } else {
+      await db.collection('expenses').deleteOne({ 
+        _id: new ObjectId(id),
+        space_id: spaceId
+      });
+    }
+
+
 
     revalidatePath('/expenses', 'layout');
     revalidatePath('/dashboard', 'layout');
