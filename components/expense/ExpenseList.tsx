@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Expense } from '@/types';
+import { Expense, User } from '@/types';
 import ExpenseCard from './ExpenseCard';
 import { formatDisplayDate } from '@/lib/date-utils';
 import { ShoppingBag, ChevronRight } from 'lucide-react';
@@ -10,12 +10,16 @@ interface ExpenseListProps {
   expenses: Expense[];
   onEditClick: (expense: Expense) => void;
   onDeleteClick: (expense: Expense) => void;
+  collaborators: User[];
+  currentUserId: string;
 }
 
 export default function ExpenseList({
   expenses,
   onEditClick,
-  onDeleteClick
+  onDeleteClick,
+  collaborators,
+  currentUserId
 }: ExpenseListProps) {
   if (expenses.length === 0) {
     return (
@@ -78,6 +82,8 @@ export default function ExpenseList({
                   expense={exp}
                   onEditClick={onEditClick}
                   onDeleteClick={onDeleteClick}
+                  collaborators={collaborators}
+                  currentUserId={currentUserId}
                 />
               ))}
             </div>

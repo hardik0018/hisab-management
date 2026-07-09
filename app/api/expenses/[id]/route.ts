@@ -27,7 +27,7 @@ export async function PATCH(
     }
 
     const body = await request.json();
-    const { itemName, amount, note, date } = body;
+    const { itemName, amount, note, date, user_id } = body;
 
     const db = await getDb();
     const spaceId = user.space_id || user.user_id;
@@ -48,7 +48,7 @@ export async function PATCH(
     // Merge updates
     const updatedDoc: Partial<Expense> = {
       space_id: spaceId,
-      user_id: existing.user_id, // keep original creator
+      user_id: user_id !== undefined ? user_id : existing.user_id, // keep original creator if not provided
       date: date !== undefined ? date : existing.date,
       itemName: itemName !== undefined ? itemName : existing.itemName,
       amount: amount !== undefined ? Number(amount) : existing.amount,

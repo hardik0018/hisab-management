@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Expense } from '@/types';
+import { Expense, User } from '@/types';
 import { formatDisplayTime } from '@/lib/date-utils';
 import { Edit2, Trash2, Link, Repeat } from 'lucide-react';
 import { toast } from 'sonner';
@@ -10,12 +10,16 @@ interface ExpenseCardProps {
   expense: Expense;
   onEditClick: (expense: Expense) => void;
   onDeleteClick: (expense: Expense) => void;
+  collaborators: User[];
+  currentUserId: string;
 }
 
 export default function ExpenseCard({
   expense,
   onEditClick,
-  onDeleteClick
+  onDeleteClick,
+  collaborators,
+  currentUserId
 }: ExpenseCardProps) {
   // Rule H: Decimal Amount Support & negative values
   const formatAmount = (amt: number) => {
@@ -74,9 +78,19 @@ export default function ExpenseCard({
           </span>
         )}
 
-        <span className="text-[10px] text-muted-foreground/80 font-mono font-medium">
-          {formatDisplayTime(expense.createdAt)}
-        </span>
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+          <span className="text-[10px] text-muted-foreground/80 font-mono font-medium">
+            {formatDisplayTime(expense.createdAt)}
+          </span>
+          {expense.user_id !== currentUserId && (
+            <>
+              <span className="text-muted-foreground/30 select-none text-[10px]">•</span>
+              <span className="text-[10px] font-medium whitespace-nowrap text-muted-foreground/80">
+                Paid by: <span className="font-bold text-foreground">{collaborators?.find(c => c.user_id === expense.user_id)?.name || 'Unknown'}</span>
+              </span>
+            </>
+          )}
+        </div>
       </div>
 
       <div className="flex items-center gap-3 shrink-0">

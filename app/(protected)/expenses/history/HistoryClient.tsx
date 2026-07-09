@@ -9,7 +9,7 @@ import ExpenseEditModal from '@/components/expense/ExpenseEditModal';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { Expense } from '@/types';
+import { Expense, User } from '@/types';
 import { Search, SlidersHorizontal, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -20,9 +20,11 @@ interface HistoryClientProps {
     date?: string;
     month?: string;
   };
+  collaborators: User[];
+  currentUserId: string;
 }
 
-export default function HistoryClient({ initialExpenses, searchParams }: HistoryClientProps) {
+export default function HistoryClient({ initialExpenses, searchParams, collaborators, currentUserId }: HistoryClientProps) {
   const router = useRouter();
   const pathname = usePathname();
   const [isPending, startTransition] = useTransition();
@@ -279,6 +281,8 @@ export default function HistoryClient({ initialExpenses, searchParams }: History
             expenses={expenses}
             onEditClick={handleEditClick}
             onDeleteClick={handleDeleteClick}
+            collaborators={collaborators}
+            currentUserId={currentUserId}
           />
         )}
       </div>
@@ -289,6 +293,8 @@ export default function HistoryClient({ initialExpenses, searchParams }: History
         onClose={() => setIsEditOpen(false)}
         expense={editingExpense}
         onUpdate={handleUpdate}
+        collaborators={collaborators}
+        currentUserId={currentUserId}
       />
     </PageWrapper>
   );

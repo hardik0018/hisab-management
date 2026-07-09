@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
-import { Expense } from '@/types';
+import { Expense, User } from '@/types';
 import { Loader2 } from 'lucide-react';
 
 interface ExpenseEditModalProps {
@@ -14,18 +14,23 @@ interface ExpenseEditModalProps {
   onClose: () => void;
   expense: Expense | null;
   onUpdate: (updatedExpense: Expense) => void;
+  collaborators: User[];
+  currentUserId: string;
 }
 
 export default function ExpenseEditModal({
   isOpen,
   onClose,
   expense,
-  onUpdate
+  onUpdate,
+  collaborators,
+  currentUserId
 }: ExpenseEditModalProps) {
   const [itemName, setItemName] = useState<string>('');
   const [amount, setAmount] = useState<string>('');
   const [note, setNote] = useState<string>('');
   const [date, setDate] = useState<string>('');
+  const [paidByUserId, setPaidByUserId] = useState<string>(currentUserId);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
   useEffect(() => {
@@ -34,8 +39,9 @@ export default function ExpenseEditModal({
       setAmount(String(expense.amount));
       setNote(expense.note || '');
       setDate(expense.date);
+      setPaidByUserId(expense.user_id || currentUserId);
     }
-  }, [expense]);
+  }, [expense, currentUserId]);
 
   if (!expense) return null;
 
@@ -65,7 +71,8 @@ export default function ExpenseEditModal({
           itemName: itemName.trim(),
           amount: amt,
           note: note.trim(),
-          date
+          date,
+          user_id: paidByUserId
         })
       });
 
@@ -149,6 +156,25 @@ export default function ExpenseEditModal({
               className="bg-background border-input text-foreground text-sm rounded-xl h-11"
             />
           </div>
+
+          {/* Paid By */}
+          {collaborators.length > 0 && (
+            <div className="space-y-1.5">
+              <Label htmlFor="edit-paid-by" className="text-xs font-semibold text-muted-foreground">Paid By</Label>
+              <select
+                id="edit-paid-by"
+                value={paidByUserId}
+                onChange={(e) => setPaidByUserId(e.target.value)}
+                className="w-full h-11 px-3 rounded-xl bg-background border border-input text-sm text-foreground focus-visible:ring-primary outline-none"
+              >
+                {collaborators.map((c) => (
+                  <option key={c.user_id} value={c.user_id}>
+                    {c.name} {c.user_id === currentUserId && '(You)'}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           <DialogFooter className="flex-row gap-2 mt-6 pt-2">
             <Button
