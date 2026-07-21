@@ -2,7 +2,7 @@
 
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { Receipt, HandCoins, Heart, UserCircle, LucideIcon } from 'lucide-react';
+import { Receipt, HandCoins, Heart, UserCircle, Shield, LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
 
@@ -15,6 +15,7 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   { label: 'Expenses', icon: Receipt, path: '/expenses' },
   { label: 'Hisab', icon: HandCoins, path: '/hisab' },
+  { label: 'Vault', icon: Shield, path: '/vault' },
   { label: 'Social', icon: Heart, path: '/marriage' },
   { label: 'Account', icon: UserCircle, path: '/profile' },
 ];

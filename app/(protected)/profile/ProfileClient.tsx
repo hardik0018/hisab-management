@@ -30,6 +30,7 @@ import { Dialog, DialogContent, DialogTitle, DialogFooter } from '@/components/u
 import { motion } from 'framer-motion';
 import { secureFetch } from '@/lib/api-utils';
 import { User, CollaborationRequest, CollaborationData } from '@/types';
+import PushNotificationManager from '@/components/settings/PushNotificationManager';
 
 interface ProfileClientProps {
   initialCollaborationData: CollaborationData;
@@ -238,6 +239,7 @@ export default function ProfileClient({ initialCollaborationData }: ProfileClien
 
         <div className="space-y-3">
            <SectionLabel label="Preferences" />
+           <PushNotificationManager />
            <div className="grid grid-cols-1 gap-3">
               <MenuButton icon={Shield} label="Privacy & Security" subLabel="Space Visibility" />
               <MenuButton icon={Info} label="Software Info" subLabel="Version 1.0.0" />
