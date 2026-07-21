@@ -1,17 +1,20 @@
-
-import { Db, MongoClient } from 'mongodb';
-import clientPromise from './mongodb-promise';
+import { Db, MongoClient } from "mongodb";
+import clientPromise from "./mongodb-promise";
 
 const dbName = process.env.DB_NAME;
 
 if (!dbName) {
-  throw new Error('Please define the DB_NAME environment variable inside .env.local');
+  throw new Error(
+    "Please define the DB_NAME environment variable inside .env.local",
+  );
 }
 
-export async function connectToDatabase(): Promise<{ client: MongoClient; db: Db }> {
+export async function connectToDatabase(): Promise<{
+  client: MongoClient;
+  db: Db;
+}> {
   const client = await clientPromise;
   const db = client.db(dbName);
-  console.log(client,db)
   return { client, db };
 }
 
