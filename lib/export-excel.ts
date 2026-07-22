@@ -1,9 +1,25 @@
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
 import { Expense } from '@/types';
 import { formatDisplayTime } from './date-utils';
 
-export function generateExcelBuffer(expenses: Expense[]): Buffer {
-  const data = expenses.map(exp => {
+export async function generateExcelBuffer(expenses: Expense[]): Promise<Buffer> {
+  const workbook = new ExcelJS.Workbook();
+  const worksheet = workbook.addWorksheet('Expenses');
+
+  // Define columns
+  worksheet.columns = [
+    { header: 'Date', key: 'date', width: 12 },
+    { header: 'Time', key: 'time', width: 12 },
+    { header: 'Item', key: 'itemName', width: 25 },
+    { header: 'Amount', key: 'amount', width: 12 },
+    { header: 'Note', key: 'note', width: 30 },
+    { header: 'Category', key: 'category', width: 15 },
+    { header: 'CreatedAt', key: 'createdAt', width: 25 },
+    { header: 'UpdatedAt', key: 'updatedAt', width: 25 }
+  ];
+
+  // Add rows
+  expenses.forEach(exp => {
     const createdAtStr = exp.createdAt instanceof Date 
       ? exp.createdAt.toISOString() 
       : new Date(exp.createdAt).toISOString();
@@ -11,39 +27,19 @@ export function generateExcelBuffer(expenses: Expense[]): Buffer {
       ? exp.updatedAt.toISOString() 
       : new Date(exp.updatedAt).toISOString();
 
-    return {
-      'Date': exp.date,
-      'Time': formatDisplayTime(exp.createdAt),
-      'Item': exp.itemName,
-      'Amount': exp.amount, // Numeric value in Excel
-      'Note': exp.note || '',
-      'Category': exp.category || 'Uncategorized',
-      'CreatedAt': createdAtStr,
-      'UpdatedAt': updatedAtStr
-    };
+    worksheet.addRow({
+      date: exp.date,
+      time: formatDisplayTime(exp.createdAt),
+      itemName: exp.itemName,
+      amount: exp.amount, // Numeric value in Excel
+      note: exp.note || '',
+      category: exp.category || 'Uncategorized',
+      createdAt: createdAtStr,
+      updatedAt: updatedAtStr
+    });
   });
 
-  // Create worksheet
-  const worksheet = XLSX.utils.json_to_sheet(data);
-
-  // Set column widths for better visual layout
-  const colWidths = [
-    { wch: 12 }, // Date
-    { wch: 12 }, // Time
-    { wch: 25 }, // Item
-    { wch: 12 }, // Amount
-    { wch: 30 }, // Note
-    { wch: 15 }, // Category
-    { wch: 25 }, // CreatedAt
-    { wch: 25 }  // UpdatedAt
-  ];
-  worksheet['!cols'] = colWidths;
-
-  // Create workbook and append worksheet
-  const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, 'Expenses');
-
   // Write to a node buffer
-  const buffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
-  return buffer;
+  const buffer = await workbook.xlsx.writeBuffer();
+  return buffer as Buffer;
 }

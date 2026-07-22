@@ -30,9 +30,13 @@ if (process.env.NODE_ENV === 'development') {
   }
   clientPromise = global._mongoClientPromise;
 } else {
-  // In production mode, it's best to not use a global variable.
-  client = new MongoClient(uri as string, options);
-  clientPromise = client.connect();
+  // In production mode, Vercel serverless containers may reuse memory. 
+  // Cache the client to prevent exhausting the connection pool.
+  if (!global._mongoClientPromise) {
+    client = new MongoClient(uri as string, options);
+    global._mongoClientPromise = client.connect();
+  }
+  clientPromise = global._mongoClientPromise;
 }
 
 // Export a module-scoped MongoClient promise. By doing this in a

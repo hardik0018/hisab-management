@@ -2,8 +2,7 @@ export const dynamic = 'force-dynamic';
 
 import { NextRequest } from 'next/server';
 import { getAuthenticatedUser } from '@/lib/auth';
-import { writeFile, mkdir } from 'fs/promises';
-import { join } from 'path';
+import { put } from '@vercel/blob';
 import { v4 as uuidv4 } from 'uuid';
 
 const MAX_SIZE_BYTES = 5 * 1024 * 1024; // 5 MB
@@ -65,21 +64,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // ── Sanitize and build file path ────────────────────────────────────────
-    // Use a safe, scoped subfolder: uploads/vault/<space_id>/
+    // ── Build path and upload to Vercel Blob ──────────────────────────────────
     const safeSpaceId = spaceId.replace(/[^a-zA-Z0-9_-]/g, '_');
     const ext = MIME_TO_EXT[mimeType] ?? '.bin';
-    const filename = `${uuidv4()}${ext}`;
+    const filename = `vault/${safeSpaceId}/${uuidv4()}${ext}`;
 
-    const uploadDir = join(process.cwd(), 'public', 'uploads', 'vault', safeSpaceId);
-    await mkdir(uploadDir, { recursive: true });
+    const blob = await put(filename, arrayBuffer, {
+      access: 'public',
+      contentType: mimeType,
+    });
 
-    const filePath = join(uploadDir, filename);
-    await writeFile(filePath, Buffer.from(arrayBuffer));
-
-    const publicUrl = `/uploads/vault/${safeSpaceId}/${filename}`;
-
-    return Response.json({ url: publicUrl }, { status: 201 });
+    return Response.json({ url: blob.url }, { status: 201 });
   } catch (err) {
     console.error('[API_UPLOAD_VAULT_ERROR]', err);
     return Response.json({ error: 'Internal Server Error' }, { status: 500 });

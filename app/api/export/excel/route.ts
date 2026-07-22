@@ -42,7 +42,7 @@ export async function GET(request: NextRequest) {
       .sort({ date: -1, createdAt: -1 })
       .toArray()) as unknown as Expense[];
 
-    const excelBuffer = generateExcelBuffer(expenses);
+    const excelBuffer = await generateExcelBuffer(expenses);
 
     // Reset backup reminder
     await updateSystemSettings(spaceId, {

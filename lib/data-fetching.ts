@@ -13,6 +13,10 @@ import { Collection, Document } from 'mongodb';
 import { checkAndGenerateRecurringExpenses } from './recurring-engine';
 import { RecurringExpense } from '@/types';
 
+function escapeRegExp(string: string) {
+  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 /**
  * Fetches all hisab records for the authenticated user's space.
  */
@@ -186,7 +190,8 @@ export async function getExpenses(options: {
   }
 
   if (options.search) {
-    const searchRegex = { $regex: options.search, $options: 'i' };
+    const escapedSearch = escapeRegExp(options.search);
+    const searchRegex = { $regex: escapedSearch, $options: 'i' };
     query.$or = [
       { itemName: searchRegex },
       { note: searchRegex }
@@ -362,7 +367,8 @@ export async function getMonthlySummary(monthStr?: string, search?: string): Pro
   // Filtered total: only needed when a search term is provided
   let filteredTotal = monthlyTotal;
   if (search) {
-    const searchRegex = { $regex: search, $options: 'i' };
+    const escapedSearch = escapeRegExp(search);
+    const searchRegex = { $regex: escapedSearch, $options: 'i' };
     const filteredAgg = await db.collection('expenses').aggregate([
       {
         $match: {

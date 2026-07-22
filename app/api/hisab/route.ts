@@ -1,5 +1,6 @@
 export const dynamic = 'force-dynamic';
 import { getDb } from '@/lib/db';
+import clientPromise from '@/lib/mongodb-promise';
 import { getAuthenticatedUser } from '@/lib/auth';
 import { v4 as uuidv4 } from 'uuid';
 import { NextRequest } from 'next/server';
@@ -73,32 +74,41 @@ export async function POST(request: NextRequest) {
       ignored: !!existingIgnored,
     };
 
-    await db.collection('hisab').insertOne(record);
+    const client = await clientPromise;
+    const session = client.startSession();
 
-    if (logAsExpense && !record.ignored) {
-      const expenseAmount = type === 'credit' ? -parseFloat(amount) : parseFloat(amount);
-      const dateObj = date ? new Date(date) : new Date();
-      const year = dateObj.getFullYear();
-      const monthStr = String(dateObj.getMonth() + 1).padStart(2, '0');
-      const dayStr = String(dateObj.getDate()).padStart(2, '0');
-      const dateStr = `${year}-${monthStr}-${dayStr}`;
+    try {
+      await session.withTransaction(async () => {
+        await db.collection('hisab').insertOne(record, { session });
 
-      const expenseDoc = {
-        space_id: spaceId,
-        user_id: user.user_id,
-        date: dateStr,
-        itemName: `Hisab: ${name}`,
-        amount: expenseAmount,
-        note: description || '',
-        category: 'Debt/Credit',
-        currency: 'INR',
-        associatedId: hisabId,
-        associatedType: 'hisab',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
+        if (logAsExpense && !record.ignored) {
+          const expenseAmount = type === 'credit' ? -parseFloat(amount) : parseFloat(amount);
+          const dateObj = date ? new Date(date) : new Date();
+          const year = dateObj.getFullYear();
+          const monthStr = String(dateObj.getMonth() + 1).padStart(2, '0');
+          const dayStr = String(dateObj.getDate()).padStart(2, '0');
+          const dateStr = `${year}-${monthStr}-${dayStr}`;
 
-      await db.collection('expenses').insertOne(expenseDoc);
+          const expenseDoc = {
+            space_id: spaceId,
+            user_id: user.user_id,
+            date: dateStr,
+            itemName: `Hisab: ${name}`,
+            amount: expenseAmount,
+            note: description || '',
+            category: 'Debt/Credit',
+            currency: 'INR',
+            associatedId: hisabId,
+            associatedType: 'hisab',
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          };
+
+          await db.collection('expenses').insertOne(expenseDoc, { session });
+        }
+      });
+    } finally {
+      await session.endSession();
     }
 
     revalidatePath('/hisab', 'layout');

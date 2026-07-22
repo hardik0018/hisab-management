@@ -1,5 +1,6 @@
 export const dynamic = 'force-dynamic';
 import { getDb } from '@/lib/db';
+import clientPromise from '@/lib/mongodb-promise';
 import { getAuthenticatedUser } from '@/lib/auth';
 import { v4 as uuidv4 } from 'uuid';
 import { NextRequest } from 'next/server';
@@ -61,33 +62,42 @@ export async function POST(request: NextRequest) {
       log_as_expense: !!logAsExpense,
     };
 
-    await db.collection('marriage_hisab').insertOne(record);
+    const client = await clientPromise;
+    const session = client.startSession();
 
-    if (logAsExpense) {
-      const dateObj = date ? new Date(date) : new Date();
-      const year = dateObj.getFullYear();
-      const monthStr = String(dateObj.getMonth() + 1).padStart(2, '0');
-      const dayStr = String(dateObj.getDate()).padStart(2, '0');
-      const dateStr = `${year}-${monthStr}-${dayStr}`;
+    try {
+      await session.withTransaction(async () => {
+        await db.collection('marriage_hisab').insertOne(record, { session });
 
-      const locationStr = city ? ` (${city})` : '';
+        if (logAsExpense) {
+          const dateObj = date ? new Date(date) : new Date();
+          const year = dateObj.getFullYear();
+          const monthStr = String(dateObj.getMonth() + 1).padStart(2, '0');
+          const dayStr = String(dateObj.getDate()).padStart(2, '0');
+          const dateStr = `${year}-${monthStr}-${dayStr}`;
 
-      const expenseDoc = {
-        space_id: spaceId,
-        user_id: user.user_id,
-        date: dateStr,
-        itemName: `Vyahar: ${name}${locationStr}`,
-        amount: parseFloat(amount),
-        note: `Vyahar gift to ${name}${city ? ` from ${city}` : ''}`,
-        category: 'Marriage',
-        currency: 'INR',
-        associatedId: marriageId,
-        associatedType: 'marriage',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
+          const locationStr = city ? ` (${city})` : '';
 
-      await db.collection('expenses').insertOne(expenseDoc);
+          const expenseDoc = {
+            space_id: spaceId,
+            user_id: user.user_id,
+            date: dateStr,
+            itemName: `Vyahar: ${name}${locationStr}`,
+            amount: parseFloat(amount),
+            note: `Vyahar gift to ${name}${city ? ` from ${city}` : ''}`,
+            category: 'Marriage',
+            currency: 'INR',
+            associatedId: marriageId,
+            associatedType: 'marriage',
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          };
+
+          await db.collection('expenses').insertOne(expenseDoc, { session });
+        }
+      });
+    } finally {
+      await session.endSession();
     }
 
     revalidatePath('/marriage', 'layout');
