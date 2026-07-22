@@ -1,0 +1,87 @@
+export const dynamic = 'force-dynamic';
+
+import { NextRequest } from 'next/server';
+import { getAuthenticatedUser } from '@/lib/auth';
+import { writeFile, mkdir } from 'fs/promises';
+import { join } from 'path';
+import { v4 as uuidv4 } from 'uuid';
+
+const MAX_SIZE_BYTES = 5 * 1024 * 1024; // 5 MB
+
+const ALLOWED_MIME_TYPES = new Set([
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'image/gif',
+  'application/pdf',
+]);
+
+const MIME_TO_EXT: Record<string, string> = {
+  'image/jpeg': '.jpg',
+  'image/png': '.png',
+  'image/webp': '.webp',
+  'image/gif': '.gif',
+  'application/pdf': '.pdf',
+};
+
+export async function POST(request: NextRequest) {
+  try {
+    // ── Auth check ──────────────────────────────────────────────────────────
+    const user = await getAuthenticatedUser();
+    if (!user) {
+      return Response.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const spaceId = user.space_id || user.user_id;
+
+    // ── Parse multipart form ────────────────────────────────────────────────
+    let formData: FormData;
+    try {
+      formData = await request.formData();
+    } catch {
+      return Response.json({ error: 'Invalid multipart form data' }, { status: 400 });
+    }
+
+    const file = formData.get('file');
+    if (!file || typeof file === 'string') {
+      return Response.json({ error: 'No file provided' }, { status: 400 });
+    }
+
+    // ── Validate MIME type ──────────────────────────────────────────────────
+    const mimeType = file.type;
+    if (!ALLOWED_MIME_TYPES.has(mimeType)) {
+      return Response.json(
+        { error: 'Unsupported file type. Allowed: JPEG, PNG, WEBP, GIF, PDF.' },
+        { status: 415 }
+      );
+    }
+
+    // ── Validate file size ──────────────────────────────────────────────────
+    const arrayBuffer = await file.arrayBuffer();
+    if (arrayBuffer.byteLength > MAX_SIZE_BYTES) {
+      return Response.json(
+        { error: 'File too large. Maximum allowed size is 5 MB.' },
+        { status: 413 }
+      );
+    }
+
+    // ── Sanitize and build file path ────────────────────────────────────────
+    // Use a safe, scoped subfolder: uploads/vault/<space_id>/
+    const safeSpaceId = spaceId.replace(/[^a-zA-Z0-9_-]/g, '_');
+    const ext = MIME_TO_EXT[mimeType] ?? '.bin';
+    const filename = `${uuidv4()}${ext}`;
+
+    const uploadDir = join(process.cwd(), 'public', 'uploads', 'vault', safeSpaceId);
+    await mkdir(uploadDir, { recursive: true });
+
+    const filePath = join(uploadDir, filename);
+    await writeFile(filePath, Buffer.from(arrayBuffer));
+
+    const publicUrl = `/uploads/vault/${safeSpaceId}/${filename}`;
+
+    return Response.json({ url: publicUrl }, { status: 201 });
+  } catch (err) {
+    console.error('[API_UPLOAD_VAULT_ERROR]', err);
+    return Response.json({ error: 'Internal Server Error' }, { status: 500 });
+  }
+}

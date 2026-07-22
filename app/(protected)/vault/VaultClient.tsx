@@ -10,13 +10,16 @@ import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Shield, Package, Bell, Plus, Trash2, Pencil, ExternalLink, AlertTriangle, Loader2 } from 'lucide-react';
+import { Shield, Package, Bell, Plus, Trash2, Pencil, ExternalLink, AlertTriangle, Loader2, Key, ChevronRight, Lock } from 'lucide-react';
+import { FileOrUrlInput } from '@/components/ui/file-or-url-input';
+import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import type { InsurancePolicy, Warranty, VaultReminder } from '@/types/vault';
 
 type Tab = 'reminders' | 'insurance' | 'warranty';
 
 export default function VaultClient() {
+  const router = useRouter();
   const [tab, setTab] = useState<Tab>('reminders');
   const [policies, setPolicies] = useState<InsurancePolicy[]>([]);
   const [warranties, setWarranties] = useState<Warranty[]>([]);
@@ -69,11 +72,26 @@ export default function VaultClient() {
       </header>
 
       {/* Tabs */}
-      <div className="flex gap-1 p-1 bg-muted/50 rounded-xl overflow-x-auto no-scrollbar w-full max-w-md">
+      <div className="flex gap-1 p-1 bg-muted/50 rounded-xl w-full">
         <TabBtn active={tab === 'reminders'} onClick={() => setTab('reminders')} icon={<Bell className="h-4 w-4" />} label="Alerts" badge={upcomingCount} />
         <TabBtn active={tab === 'insurance'} onClick={() => setTab('insurance')} icon={<Shield className="h-4 w-4" />} label="Insurance" badge={policies.length} />
         <TabBtn active={tab === 'warranty'} onClick={() => setTab('warranty')} icon={<Package className="h-4 w-4" />} label="Warranties" badge={warranties.length} />
       </div>
+
+      {/* Password Manager entry card */}
+      <button
+        onClick={() => router.push('/vault/passwords')}
+        className="w-full flex items-center gap-4 p-4 rounded-2xl border border-border bg-card hover:shadow-md hover:border-primary/30 transition-all duration-200 group text-left"
+      >
+        <div className="w-11 h-11 rounded-xl bg-primary/10 flex items-center justify-center shrink-0 group-hover:bg-primary/20 transition-colors">
+          <Lock className="h-5 w-5 text-primary" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="font-semibold text-sm">Password Manager</div>
+          <div className="text-xs text-muted-foreground mt-0.5">Securely store and auto-fill your passwords</div>
+        </div>
+        <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0 group-hover:text-primary transition-colors" />
+      </button>
 
       {loading && (
         <div className="py-20 flex flex-col items-center justify-center text-muted-foreground space-y-3">
@@ -478,7 +496,12 @@ function InsuranceDialog({ state, onClose, onSaved }: { state: { open: boolean; 
           </div>
 
           <Field label="Document Link (Optional)">
-            <Input value={f.attachmentUrl || ''} onChange={e => setF({ ...f, attachmentUrl: e.target.value })} placeholder="e.g. Google Drive or Dropbox URL" />
+            <FileOrUrlInput
+              value={f.attachmentUrl || ''}
+              onChange={(url) => setF({ ...f, attachmentUrl: url })}
+              disabled={loading}
+              placeholder="e.g. Google Drive or Dropbox URL"
+            />
           </Field>
           <Field label="Notes (Optional)">
             <Input value={f.notes || ''} onChange={e => setF({ ...f, notes: e.target.value })} />
@@ -594,10 +617,20 @@ function WarrantyDialog({ state, onClose, onSaved }: { state: { open: boolean; e
           </div>
 
           <Field label="Invoice Link (Optional)">
-            <Input value={f.invoiceUrl || ''} onChange={e => setF({ ...f, invoiceUrl: e.target.value })} placeholder="e.g. Google Drive URL" />
+            <FileOrUrlInput
+              value={f.invoiceUrl || ''}
+              onChange={(url) => setF({ ...f, invoiceUrl: url })}
+              disabled={loading}
+              placeholder="e.g. Google Drive URL"
+            />
           </Field>
           <Field label="Warranty Card Link (Optional)">
-            <Input value={f.warrantyCardUrl || ''} onChange={e => setF({ ...f, warrantyCardUrl: e.target.value })} placeholder="e.g. Google Drive URL" />
+            <FileOrUrlInput
+              value={f.warrantyCardUrl || ''}
+              onChange={(url) => setF({ ...f, warrantyCardUrl: url })}
+              disabled={loading}
+              placeholder="e.g. Google Drive URL"
+            />
           </Field>
           <Field label="Notes (Optional)">
             <Input value={f.notes || ''} onChange={e => setF({ ...f, notes: e.target.value })} />

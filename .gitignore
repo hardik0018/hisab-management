@@ -42,3 +42,8 @@ next-env.d.ts
 pnpm-lock.yaml
 package-lock.json
 pnpm-workspace.yaml
+
+# user-uploaded files
+/public/uploads/
+!/public/uploads/**/.gitkeep
+/docs
