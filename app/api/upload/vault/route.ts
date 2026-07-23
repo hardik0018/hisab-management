@@ -70,11 +70,12 @@ export async function POST(request: NextRequest) {
     const filename = `vault/${safeSpaceId}/${uuidv4()}${ext}`;
 
     const blob = await put(filename, arrayBuffer, {
-      access: 'public',
+      access: 'private',
       contentType: mimeType,
     });
 
-    return Response.json({ url: blob.url }, { status: 201 });
+    const proxyUrl = `/api/vault/view?url=${encodeURIComponent(blob.url)}`;
+    return Response.json({ url: proxyUrl }, { status: 201 });
   } catch (err) {
     console.error('[API_UPLOAD_VAULT_ERROR]', err);
     return Response.json({ error: 'Internal Server Error' }, { status: 500 });
