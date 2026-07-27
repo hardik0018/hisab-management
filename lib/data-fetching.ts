@@ -6,7 +6,9 @@ import {
   DashboardStats, 
   CollaborationData,
   Expense,
-  Settings
+  Settings,
+  FinancialYearSummary,
+  MonthlyTaxBreakdown
 } from '@/types';
 import { getSystemSettings } from '@/models/Settings';
 import { Collection, Document } from 'mongodb';
@@ -417,4 +419,98 @@ export async function getRecurringExpenses(): Promise<RecurringExpense[] | null>
     updatedAt: t.updatedAt instanceof Date ? t.updatedAt.toISOString() : t.updatedAt,
   })) as unknown as RecurringExpense[];
 }
+
+/**
+ * Fetches summary of income and expenses for a given Financial Year (e.g. "2025-26" or "2026-27").
+ * Financial Year in India runs from April 1 to March 31.
+ */
+export async function getFinancialYearSummary(fy: string): Promise<FinancialYearSummary | null> {
+  const user = await getAuthenticatedUser();
+  if (!user) return null;
+
+  const db = await getDb();
+  const spaceId = user.space_id || user.user_id;
+
+  const parts = fy.split('-');
+  let startYear = parseInt(parts[0], 10);
+  if (isNaN(startYear)) {
+    startYear = new Date().getFullYear();
+    if (new Date().getMonth() < 3) startYear -= 1; // Before April belongs to previous startYear
+  }
+  const endYear = startYear + 1;
+  const startDate = `${startYear}-04-01`;
+  const endDate = `${endYear}-03-31`;
+
+  const records = await db
+    .collection('expenses')
+    .find({
+      space_id: spaceId,
+      date: { $gte: startDate, $lte: endDate },
+      type: { $in: ['expense', 'income', null] }
+    })
+    .sort({ date: -1 })
+    .toArray();
+
+  let totalIncome = 0;
+  let totalExpense = 0;
+  const monthMap: Record<string, { income: number; expense: number }> = {};
+
+  for (let m = 4; m <= 12; m++) {
+    const monStr = `${startYear}-${String(m).padStart(2, '0')}`;
+    monthMap[monStr] = { income: 0, expense: 0 };
+  }
+  for (let m = 1; m <= 3; m++) {
+    const monStr = `${endYear}-${String(m).padStart(2, '0')}`;
+    monthMap[monStr] = { income: 0, expense: 0 };
+  }
+
+  const recentIncome: Expense[] = [];
+  const recentExpenses: Expense[] = [];
+
+  for (const doc of records) {
+    const exp = {
+      ...doc,
+      _id: doc._id.toString(),
+      createdAt: doc.createdAt instanceof Date ? doc.createdAt.toISOString() : doc.createdAt,
+      updatedAt: doc.updatedAt instanceof Date ? doc.updatedAt.toISOString() : doc.updatedAt,
+    } as unknown as Expense;
+
+    const amt = Number(exp.amount) || 0;
+    const mon = exp.date.substring(0, 7);
+
+    if (!monthMap[mon]) {
+      monthMap[mon] = { income: 0, expense: 0 };
+    }
+
+    if (exp.type === 'income') {
+      totalIncome += amt;
+      monthMap[mon].income += amt;
+      if (recentIncome.length < 5) recentIncome.push(exp);
+    } else if (exp.type === 'expense' || !exp.type) {
+      totalExpense += amt;
+      monthMap[mon].expense += amt;
+      if (recentExpenses.length < 5) recentExpenses.push(exp);
+    }
+  }
+
+  const monthlyBreakdown: MonthlyTaxBreakdown[] = Object.keys(monthMap)
+    .sort()
+    .map(mon => ({
+      month: mon,
+      income: monthMap[mon].income,
+      expense: monthMap[mon].expense,
+    }));
+
+  return {
+    fy: `${startYear}-${String(endYear).slice(-2)}`,
+    startDate,
+    endDate,
+    totalIncome,
+    totalExpense,
+    monthlyBreakdown,
+    recentIncome,
+    recentExpenses,
+  };
+}
+
 

@@ -4,7 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
-import { Plus, History, Repeat, BarChart3, Settings2 } from 'lucide-react';
+import { Plus, History, Repeat, BarChart3, Settings2, Receipt } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 export default function ExpenseTopTabs() {
@@ -15,12 +15,13 @@ export default function ExpenseTopTabs() {
     { label: 'History', href: '/expenses/history', icon: History },
     { label: 'Recurring', href: '/expenses/recurring', icon: Repeat },
     { label: 'Analysis', href: '/expenses/summary', icon: BarChart3 },
+    { label: 'Tax', href: '/expenses/tax', icon: Receipt },
     { label: 'Settings', href: '/expenses/settings', icon: Settings2 },
   ];
 
   return (
     <div className="sticky top-0 z-50 w-full border-b border-border bg-background/85 backdrop-blur-md py-2 px-3 sm:px-4 flex justify-center">
-      <div className="flex w-full max-w-md bg-muted/60 dark:bg-slate-900/60 p-1 rounded-2xl border border-border/50 shadow-[inset_0_1px_2px_rgba(0,0,0,0.05)] dark:shadow-[inset_0_1px_2px_rgba(0,0,0,0.2)]">
+      <div className="flex w-full max-w-lg bg-muted/60 dark:bg-slate-900/60 p-1 rounded-2xl border border-border/50 shadow-[inset_0_1px_2px_rgba(0,0,0,0.05)] dark:shadow-[inset_0_1px_2px_rgba(0,0,0,0.2)]">
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = pathname === tab.href;

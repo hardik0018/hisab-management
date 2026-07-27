@@ -72,3 +72,21 @@ export interface ParseResult {
   } | null;
   previewRequired: boolean;
 }
+
+export interface MonthlyTaxBreakdown {
+  month: string; // "YYYY-MM"
+  income: number;
+  expense: number;
+}
+
+export interface FinancialYearSummary {
+  fy: string; // e.g. "2025-26"
+  startDate: string; // "2025-04-01"
+  endDate: string; // "2026-03-31"
+  totalIncome: number;
+  totalExpense: number;
+  monthlyBreakdown: MonthlyTaxBreakdown[];
+  recentIncome: Expense[];
+  recentExpenses: Expense[];
+}
+
