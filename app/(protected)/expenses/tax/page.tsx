@@ -8,6 +8,8 @@ import { getFinancialYearSummary } from '@/lib/data-fetching';
 import { redirect } from 'next/navigation';
 import { getAuthenticatedUser } from '@/lib/auth';
 
+import { currentFy } from '@/lib/tax/india';
+
 export default async function TaxPage() {
   const user = await getAuthenticatedUser();
   if (!user) {
@@ -15,13 +17,8 @@ export default async function TaxPage() {
   }
 
   // Automatically get current Financial Year (e.g. FY 2026-27 for July 2026)
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = now.getMonth(); // 0 is January, 3 is April
-  const startYear = month >= 3 ? year : year - 1;
-  const currentFy = `${startYear}-${String(startYear + 1).slice(-2)}`;
-
-  const summary = await getFinancialYearSummary(currentFy);
+  const fy = currentFy();
+  const summary = await getFinancialYearSummary(fy);
 
   if (!summary) {
     redirect('/expenses');
