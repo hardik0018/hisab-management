@@ -12,15 +12,28 @@ import dynamic from 'next/dynamic';
 const SummaryChart = dynamic(() => import('@/components/expense/SummaryChart'), {
   ssr: false,
   loading: () => (
-    <div className="h-[180px] w-full flex items-center justify-center bg-slate-50 dark:bg-slate-900/50 animate-pulse rounded-2xl">
+    <div className="h-[200px] w-full flex items-center justify-center bg-slate-50 dark:bg-slate-900/50 animate-pulse rounded-2xl">
       <div className="flex flex-col items-center gap-2">
         <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary" />
-        <span className="text-xs text-muted-foreground font-medium">Loading Analytics...</span>
+        <span className="text-xs text-muted-foreground font-medium">Loading Outflow Graph...</span>
       </div>
     </div>
   ),
 });
-import { CalendarDays, TrendingDown, Search, ArrowRight, ArrowLeft, X, Users, User } from 'lucide-react';
+
+const CategoryBreakdownChart = dynamic(() => import('@/components/expense/CategoryBreakdownChart'), {
+  ssr: false,
+  loading: () => (
+    <div className="h-[200px] w-full flex items-center justify-center bg-slate-50 dark:bg-slate-900/50 animate-pulse rounded-2xl">
+      <div className="flex flex-col items-center gap-2">
+        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary" />
+        <span className="text-xs text-muted-foreground font-medium">Loading Donut Chart...</span>
+      </div>
+    </div>
+  ),
+});
+import { getCategoryColor, CategoryBreakdownItem } from '@/components/expense/CategoryBreakdownChart';
+import { CalendarDays, TrendingDown, Search, ArrowRight, ArrowLeft, X, Users, User, PieChart as PieIcon, Tag, Flame } from 'lucide-react';
 import { formatDisplayDate } from '@/lib/date-utils';
 
 interface DailyTotal {
@@ -44,6 +57,8 @@ interface SummaryClientProps {
   initialDailyTotals: DailyTotal[];
   initialTodayTotal: number;
   initialMemberBalances?: MemberBalance[];
+  initialCategoryBreakdown?: CategoryBreakdownItem[];
+  initialTopExpenses?: { _id: string; itemName: string; amount: number; date: string; category: string; note: string }[];
   searchParams: {
     month?: string;
     search?: string;
@@ -58,6 +73,8 @@ export default function SummaryClient({
   initialDailyTotals,
   initialTodayTotal,
   initialMemberBalances,
+  initialCategoryBreakdown,
+  initialTopExpenses,
   searchParams
 }: SummaryClientProps) {
   const router = useRouter();
@@ -71,6 +88,8 @@ export default function SummaryClient({
   const [dailyTotals, setDailyTotals] = useState<DailyTotal[]>(initialDailyTotals);
   const [todayTotal, setTodayTotal] = useState<number>(initialTodayTotal);
   const [memberBalances, setMemberBalances] = useState<MemberBalance[]>(initialMemberBalances || []);
+  const [categoryBreakdown, setCategoryBreakdown] = useState<CategoryBreakdownItem[]>(initialCategoryBreakdown || []);
+  const [topExpenses, setTopExpenses] = useState<{ _id: string; itemName: string; amount: number; date: string; category: string; note: string }[]>(initialTopExpenses || []);
 
   const [search, setSearch] = useState<string>(searchParams.search || '');
   const [isMountedState, setIsMountedState] = useState(false);
@@ -89,7 +108,9 @@ export default function SummaryClient({
     setDailyTotals(initialDailyTotals);
     setTodayTotal(initialTodayTotal);
     if (initialMemberBalances) setMemberBalances(initialMemberBalances);
-  }, [initialMonth, initialMonthlyTotal, initialMonthlyIncome, initialFilteredTotal, initialDailyTotals, initialTodayTotal, initialMemberBalances]);
+    if (initialCategoryBreakdown) setCategoryBreakdown(initialCategoryBreakdown);
+    if (initialTopExpenses) setTopExpenses(initialTopExpenses);
+  }, [initialMonth, initialMonthlyTotal, initialMonthlyIncome, initialFilteredTotal, initialDailyTotals, initialTodayTotal, initialMemberBalances, initialCategoryBreakdown, initialTopExpenses]);
 
   useEffect(() => {
     return () => {
@@ -314,28 +335,178 @@ export default function SummaryClient({
           )}
         </div>
 
-        {/* Analytics Chart Container */}
-        <div className="bg-card border border-border rounded-3xl p-5 space-y-4 shadow-sm">
-          <div className="flex items-center gap-2 text-primary">
-            <CalendarDays className="w-4 h-4" />
-            <h3 className="text-xs font-bold text-card-foreground uppercase tracking-wider">Outflow Graph (Daily)</h3>
+        {/* Analytics Charts Suite */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+          {/* Left Chart: Daily Outflow Area Chart */}
+          <div className="bg-card border border-border rounded-3xl p-5 space-y-4 shadow-sm flex flex-col justify-between">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-primary">
+                <CalendarDays className="w-4 h-4" />
+                <h3 className="text-xs font-bold text-card-foreground uppercase tracking-wider">Outflow Graph (Daily)</h3>
+              </div>
+              <span className="text-[10px] font-bold bg-primary/10 text-primary px-2.5 py-1 rounded-full">Trend</span>
+            </div>
+
+            {!isMountedState || isPending ? (
+              <div className="h-[200px] flex items-center justify-center text-primary">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary" />
+              </div>
+            ) : chartData.length === 0 ? (
+              <div className="h-[200px] flex items-center justify-center text-muted-foreground text-xs font-medium italic">
+                No transactions recorded in this period.
+              </div>
+            ) : (
+              <div className="h-[200px] w-full pr-2">
+                <SummaryChart data={chartData} />
+              </div>
+            )}
           </div>
 
-          {!isMountedState || isPending ? (
-            <div className="h-[180px] flex items-center justify-center text-primary">
-              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary" />
+          {/* Right Chart: Category Breakdown Donut Chart */}
+          <div className="bg-card border border-border rounded-3xl p-5 space-y-4 shadow-sm flex flex-col justify-between">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-primary">
+                <PieIcon className="w-4 h-4" />
+                <h3 className="text-xs font-bold text-card-foreground uppercase tracking-wider">Category Distribution</h3>
+              </div>
+              <span className="text-[10px] font-bold bg-primary/10 text-primary px-2.5 py-1 rounded-full">
+                {categoryBreakdown.length} Categories
+              </span>
             </div>
-          ) : chartData.length === 0 ? (
-            <div className="h-[180px] flex items-center justify-center text-muted-foreground text-xs font-medium italic">
-              No transactions recorded in this period.
-            </div>
-          ) : (
-            <div className="h-[180px] w-full pr-2">
-              <SummaryChart data={chartData} />
-            </div>
-          )}
+
+            {!isMountedState || isPending ? (
+              <div className="h-[200px] flex items-center justify-center text-primary">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary" />
+              </div>
+            ) : categoryBreakdown.length === 0 ? (
+              <div className="h-[200px] flex items-center justify-center text-muted-foreground text-xs font-medium italic">
+                No expense category data recorded.
+              </div>
+            ) : (
+              <div className="h-[200px] w-full">
+                <CategoryBreakdownChart data={categoryBreakdown} />
+              </div>
+            )}
+          </div>
         </div>
 
+        {/* Category Breakdown Matrix */}
+        {categoryBreakdown.length > 0 && (
+          <div className="bg-card border border-border rounded-3xl p-5 space-y-4 shadow-sm">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div className="flex items-center gap-2 text-primary">
+                <Tag className="w-4 h-4" />
+                <h3 className="text-xs font-bold text-card-foreground uppercase tracking-wider">Category Breakdown</h3>
+              </div>
+              <p className="text-[11px] text-muted-foreground">Click any category card to filter summary analytics</p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
+              {categoryBreakdown.map((cat) => {
+                const isSelected = search.toLowerCase() === cat.category.toLowerCase();
+                const catColor = getCategoryColor(cat.category);
+                return (
+                  <div
+                    key={cat.category}
+                    onClick={() => {
+                      if (isSelected) {
+                        handleClearSearch();
+                      } else {
+                        handleSearchChange(cat.category);
+                      }
+                    }}
+                    className={`border rounded-2xl p-4 flex flex-col justify-between gap-3 cursor-pointer transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 select-none ${
+                      isSelected
+                        ? 'bg-primary/10 border-primary ring-2 ring-primary/20'
+                        : 'bg-muted/20 border-border hover:bg-muted/50'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="w-3 h-3 rounded-full shrink-0 shadow-sm" style={{ backgroundColor: catColor }} />
+                        <span className="font-bold text-sm text-foreground truncate">{cat.category}</span>
+                      </div>
+                      <span className="text-[10px] font-black shrink-0 px-2 py-0.5 rounded-full bg-background border border-border text-foreground">
+                        {cat.percentage}%
+                      </span>
+                    </div>
+
+                    <div className="flex items-baseline justify-between mt-1">
+                      <div className="flex flex-col">
+                        <span className="text-[10px] text-muted-foreground font-medium">Spent</span>
+                        <span className="font-black text-base text-foreground">₹{formatCurrency(cat.total)}</span>
+                      </div>
+                      <div className="flex flex-col items-end">
+                        <span className="text-[10px] text-muted-foreground font-medium">Transactions</span>
+                        <span className="text-xs font-bold text-muted-foreground">{cat.count} items</span>
+                      </div>
+                    </div>
+
+                    {/* Progress Bar */}
+                    <div className="w-full bg-muted/60 rounded-full h-1.5 overflow-hidden mt-1">
+                      <div
+                        className="h-full rounded-full transition-all duration-500"
+                        style={{ width: `${Math.min(100, Math.max(2, cat.percentage))}%`, backgroundColor: catColor }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Highest Spends This Month */}
+        {topExpenses.length > 0 && (
+          <div className="bg-card border border-border rounded-3xl p-5 space-y-4 shadow-sm">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-rose-500">
+                <Flame className="w-4 h-4" />
+                <h3 className="text-xs font-bold text-card-foreground uppercase tracking-wider">Highest Spends This Month</h3>
+              </div>
+              <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Top {topExpenses.length} Transactions</span>
+            </div>
+
+            <div className="divide-y divide-border border border-border rounded-2xl overflow-hidden">
+              {topExpenses.map((exp) => {
+                const catColor = getCategoryColor(exp.category);
+                return (
+                  <div key={exp._id} className="p-3.5 bg-background/50 hover:bg-muted/30 transition-colors flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div
+                        className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 shadow-sm text-white text-xs font-bold"
+                        style={{ backgroundColor: catColor }}
+                      >
+                        {exp.category.substring(0, 1).toUpperCase()}
+                      </div>
+                      <div className="min-w-0 flex flex-col">
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-sm text-foreground truncate">{exp.itemName}</span>
+                          <span
+                            onClick={() => handleSearchChange(exp.category)}
+                            className="text-[10px] font-medium px-2 py-0.5 rounded-md bg-muted text-muted-foreground hover:bg-primary/10 hover:text-primary cursor-pointer shrink-0 transition-colors"
+                          >
+                            {exp.category}
+                          </span>
+                        </div>
+                        {exp.note ? (
+                          <span className="text-xs text-muted-foreground truncate">{exp.note}</span>
+                        ) : (
+                          <span className="text-[11px] text-muted-foreground/60 italic">No note</span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col items-end shrink-0">
+                      <span className="font-black text-sm text-foreground">₹{formatCurrency(exp.amount)}</span>
+                      <span className="text-[10px] text-muted-foreground">{formatDisplayDate(exp.date)}</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
     </PageWrapper>
   );

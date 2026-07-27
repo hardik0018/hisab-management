@@ -4,6 +4,7 @@ import { NextRequest } from 'next/server';
 import { getDb } from '@/lib/db';
 import { getAuthenticatedUser } from '@/lib/auth';
 import { RecurringExpense } from '@/types';
+import { categorizeExpense } from '@/lib/category-engine';
 
 function getPreviousMonth(monthStr: string): string {
   const [year, month] = monthStr.split('-').map(Number);
@@ -87,7 +88,7 @@ export async function POST(request: NextRequest) {
       itemName: itemName.trim(),
       amount: amt,
       note: note ? note.trim() : '',
-      category: category ? category.trim() : 'Uncategorized',
+      category: categorizeExpense(itemName, note, amt, 'expense', category),
       dayOfMonth: dom,
       isActive: isActive !== undefined ? !!isActive : true,
       startDate,

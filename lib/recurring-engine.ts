@@ -1,5 +1,6 @@
 import { getDb } from './db';
 import { ObjectId } from 'mongodb';
+import { categorizeExpense } from './category-engine';
 
 /**
  * Gets today's date string in Asia/Kolkata timezone (YYYY-MM-DD).
@@ -101,7 +102,7 @@ export async function checkAndGenerateRecurringExpenses(spaceId: string, userId:
             itemName: template.itemName,
             amount: Number(template.amount),
             note: template.note || 'Generated automatically',
-            category: template.category || 'Uncategorized',
+            category: categorizeExpense(template.itemName, template.note, Number(template.amount), 'expense', template.category),
             currency: 'INR',
             associatedId: template._id.toString(),
             associatedType: 'recurring',

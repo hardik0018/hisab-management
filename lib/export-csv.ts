@@ -1,5 +1,6 @@
 import { Expense } from '@/types';
 import { formatDisplayTime } from './date-utils';
+import { categorizeExpense } from './category-engine';
 
 export function generateCSV(expenses: Expense[]): string {
   const headers = [
@@ -28,7 +29,7 @@ export function generateCSV(expenses: Expense[]): string {
     const itemName = exp.itemName;
     const amount = exp.amount;
     const note = exp.note;
-    const category = exp.category || 'Uncategorized';
+    const category = categorizeExpense(exp.itemName, exp.note, exp.amount, exp.type, exp.category);
     
     // Formatting timestamps nicely in CSV
     const createdAt = exp.createdAt instanceof Date ? exp.createdAt.toISOString() : new Date(exp.createdAt).toISOString();

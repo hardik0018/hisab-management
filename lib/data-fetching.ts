@@ -254,6 +254,8 @@ export async function getMonthlySummary(monthStr?: string, search?: string): Pro
   dailyTotals: { date: string; total: number }[];
   todayTotal: number;
   memberBalances: { user_id: string; name: string; income: number; expense: number; balance: number }[];
+  categoryBreakdown: { category: string; total: number; count: number; percentage: number }[];
+  topExpenses: { _id: string; itemName: string; amount: number; date: string; category: string; note: string }[];
 } | null> {
   const user = await getAuthenticatedUser();
   if (!user) return null;
@@ -285,7 +287,7 @@ export async function getMonthlySummary(monthStr?: string, search?: string): Pro
   const monthEnd = `${nextYear}-${paddedNextMon}-01`;
 
   // Single aggregation for monthly totals + daily breakdown + member balances
-  const [monthlyAgg, todayAgg, incomeAgg, userExpenseAgg, userIncomeAgg, spaceUsers] = await Promise.all([
+  const [monthlyAgg, todayAgg, incomeAgg, userExpenseAgg, userIncomeAgg, spaceUsers, categoryAgg, topExpensesAgg] = await Promise.all([
     db.collection('expenses').aggregate([
       {
         $match: {
@@ -318,7 +320,33 @@ export async function getMonthlySummary(monthStr?: string, search?: string): Pro
       { $match: { space_id: spaceId, date: { $gte: monthStart, $lt: monthEnd }, type: { $in: ['income', 'transfer_in'] } } },
       { $group: { _id: '$user_id', total: { $sum: '$amount' } } },
     ]).toArray(),
-    db.collection('users').find({ space_id: spaceId }, { projection: { user_id: 1, name: 1, _id: 0 } }).toArray()
+    db.collection('users').find({ space_id: spaceId }, { projection: { user_id: 1, name: 1, _id: 0 } }).toArray(),
+    db.collection('expenses').aggregate([
+      {
+        $match: {
+          space_id: spaceId,
+          date: { $gte: monthStart, $lt: monthEnd },
+          type: { $nin: ['income', 'transfer_in', 'transfer_out'] }
+        },
+      },
+      {
+        $group: {
+          _id: '$category',
+          total: { $sum: '$amount' },
+          count: { $sum: 1 },
+        },
+      },
+      { $sort: { total: -1 } },
+    ]).toArray(),
+    db.collection('expenses')
+      .find({
+        space_id: spaceId,
+        date: { $gte: monthStart, $lt: monthEnd },
+        type: { $nin: ['income', 'transfer_in', 'transfer_out'] }
+      })
+      .sort({ amount: -1 })
+      .limit(5)
+      .toArray()
   ]);
 
   const dailyTotals = monthlyAgg.map((d) => ({ date: d._id as string, total: d.dailyTotal as number }));
@@ -385,6 +413,22 @@ export async function getMonthlySummary(monthStr?: string, search?: string): Pro
     filteredTotal = filteredAgg[0]?.total || 0;
   }
 
+  const categoryBreakdown = categoryAgg.map((c: any) => ({
+    category: (c._id as string) || 'Uncategorized',
+    total: Number(c.total || 0),
+    count: Number(c.count || 0),
+    percentage: monthlyTotal > 0 ? Math.round((Number(c.total || 0) / monthlyTotal) * 1000) / 10 : 0
+  }));
+
+  const topExpenses = topExpensesAgg.map((exp: any) => ({
+    _id: exp._id.toString(),
+    itemName: exp.itemName || 'Unknown Item',
+    amount: Number(exp.amount || 0),
+    date: exp.date || '',
+    category: exp.category || 'Uncategorized',
+    note: exp.note || ''
+  }));
+
   return {
     month,
     monthlyTotal,
@@ -393,6 +437,8 @@ export async function getMonthlySummary(monthStr?: string, search?: string): Pro
     dailyTotals,
     todayTotal,
     memberBalances,
+    categoryBreakdown,
+    topExpenses,
   };
 }
 
