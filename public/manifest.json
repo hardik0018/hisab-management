@@ -1,7 +1,7 @@
 {
-  "name": "Hisab Personal Expense Tracker",
-  "short_name": "Hisab Expense",
-  "description": "Fast personal expense tracker PWA for parsing bulk text entries, recording daily outflows, and downloading reports.",
+  "name": "Hisab Management System",
+  "short_name": "Hisab Management System",
+  "description": "Hisab Management System is a comprehensive personal finance, expense tracking, shared family ledger, and secure document vault web application.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
@@ -9,6 +9,30 @@
   "background_color": "#070a13",
   "theme_color": "#6366F1",
   "orientation": "portrait",
+  "categories": ["finance", "productivity"],
+  "shortcuts": [
+    {
+      "name": "Add Expense",
+      "short_name": "New Expense",
+      "description": "Quickly log a daily expense or income",
+      "url": "/expenses",
+      "icons": [{ "src": "/logo.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Summary & Analytics",
+      "short_name": "Analytics",
+      "description": "View monthly spending breakdown and charts",
+      "url": "/expenses/summary",
+      "icons": [{ "src": "/logo.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Secure Vault",
+      "short_name": "Vault",
+      "description": "Access password manager and insurance policies",
+      "url": "/vault",
+      "icons": [{ "src": "/logo.png", "sizes": "192x192" }]
+    }
+  ],
   "icons": [
     {
       "src": "/logo.png",

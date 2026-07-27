@@ -8,7 +8,7 @@ export default function TermsOfService() {
         <section>
           <h2 className="text-2xl font-bold mb-3">1. Acceptance of Terms</h2>
           <p>
-            By accessing and using Hisab Management, you agree to be bound by these Terms of Service. 
+            By accessing and using Hisab Management System, you agree to be bound by these Terms of Service. 
             If you do not agree with any part of these terms, you may not use our service.
           </p>
         </section>
@@ -16,7 +16,7 @@ export default function TermsOfService() {
         <section>
           <h2 className="text-2xl font-bold mb-3">2. Service Description</h2>
           <p>
-            Hisab Management is a personal finance, ledger, and document vault application provided "as is". 
+            Hisab Management System is a personal finance, ledger, and document vault application provided "as is". 
             We do not guarantee 100% uptime or absolute protection against data loss, though we employ industry-standard practices.
           </p>
         </section>
@@ -32,7 +32,7 @@ export default function TermsOfService() {
         <section>
           <h2 className="text-2xl font-bold mb-3">4. Limitation of Liability</h2>
           <p>
-            Hisab Management and its developers shall not be liable for any indirect, incidental, special, 
+            Hisab Management System and its developers shall not be liable for any indirect, incidental, special, 
             consequential, or punitive damages resulting from your use of the service or any financial decisions 
             made based on the data stored within.
           </p>

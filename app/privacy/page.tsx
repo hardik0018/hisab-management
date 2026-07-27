@@ -8,7 +8,7 @@ export default function PrivacyPolicy() {
         <section>
           <h2 className="text-2xl font-bold mb-3">1. Information We Collect</h2>
           <p>
-            When you use Hisab Management, we collect the following types of information:
+            When you use Hisab Management System, we collect the following types of information:
             <ul className="list-disc ml-6 mt-2">
               <li><strong>Google Profile Data:</strong> Name, email address, and profile picture (managed via Google OAuth).</li>
               <li><strong>Financial Data:</strong> Expenses, Hisab (credit/debit), marriage records, and vault documents that you input into the app.</li>
@@ -19,7 +19,7 @@ export default function PrivacyPolicy() {
         <section>
           <h2 className="text-2xl font-bold mb-3">2. How We Use Your Information</h2>
           <p>
-            We use your information exclusively to provide the core services of Hisab Management:
+            We use your information exclusively to provide the core services of Hisab Management System:
             <ul className="list-disc ml-6 mt-2">
               <li>To securely authenticate you and maintain your session.</li>
               <li>To store, calculate, and display your personal financial tracking data.</li>
