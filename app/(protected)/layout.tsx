@@ -1,6 +1,7 @@
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import BottomNav from '@/components/BottomNav';
+import QuickAddSheet from '@/components/QuickAddSheet';
 import { ReactNode } from 'react';
 
 interface ProtectedLayoutProps {
@@ -23,6 +24,7 @@ export default async function ProtectedLayout({ children }: ProtectedLayoutProps
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
       {children}
+      <QuickAddSheet />
       <BottomNav />
     </div>
   );
