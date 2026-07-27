@@ -66,19 +66,12 @@ export async function getDashboardStats(): Promise<DashboardStats | null> {
     const spaceId = user.space_id;
 
     const [
-        hisabAgg,
+        hisabRecords,
         marriageAgg,
         recentHisab,
         expenseAgg
     ] = await Promise.all([
-        db.collection('hisab').aggregate([
-             { $match: { space_id: spaceId, ignored: { $ne: true } } },
-             { $group: { 
-                 _id: null, 
-                 debit: { $sum: { $cond: [{ $eq: ["$type", "debit"] }, "$amount", 0] } }, 
-                 credit: { $sum: { $cond: [{ $eq: ["$type", "credit"] }, "$amount", 0] } } 
-             } }
-        ]).toArray(),
+        db.collection('hisab').find({ space_id: spaceId }).toArray(),
         db.collection('marriage_hisab').aggregate([
             { $match: { space_id: spaceId } },
             { $group: { _id: null, total: { $sum: "$amount" } } }
@@ -92,14 +85,37 @@ export async function getDashboardStats(): Promise<DashboardStats | null> {
             { $match: { space_id: spaceId } },
             { $group: {
                 _id: null,
-                totalExpense: { $sum: { $cond: [{ $nin: ["$type", ["income", "transfer_in", "transfer_out"]] }, "$amount", 0] } },
+                totalExpense: { $sum: { $cond: [{ $in: ["$type", ["income", "transfer_in", "transfer_out"]] }, 0, "$amount"] } },
                 totalIncome: { $sum: { $cond: [{ $eq: ["$type", "income"] }, "$amount", 0] } }
             } }
         ]).toArray()
     ]);
 
-    const totalDebit = hisabAgg[0]?.debit || 0;
-    const totalCredit = hisabAgg[0]?.credit || 0;
+    // Calculate Hisab net totals by grouping by person (matching HisabClient.tsx exactly)
+    const peopleGroups: Record<string, { debit: number; credit: number; ignored?: boolean }> = {};
+    for (const r of hisabRecords) {
+      const key = `${r.name}_${r.mobile || ''}`;
+      if (!peopleGroups[key]) {
+        peopleGroups[key] = { debit: 0, credit: 0, ignored: r.ignored };
+      }
+      if (r.type === 'debit') peopleGroups[key].debit += (r.amount || 0);
+      else if (r.type === 'credit') peopleGroups[key].credit += (r.amount || 0);
+      if (r.ignored !== undefined) {
+        peopleGroups[key].ignored = r.ignored;
+      }
+    }
+
+    let hisabYouWillGet = 0;
+    let hisabYouWillGive = 0;
+    for (const p of Object.values(peopleGroups)) {
+      if (p.ignored) continue;
+      const diffGet = p.debit - p.credit;
+      if (diffGet > 0) hisabYouWillGet += diffGet;
+      const diffGive = p.credit - p.debit;
+      if (diffGive > 0) hisabYouWillGive += diffGive;
+    }
+    const hisabNetBalance = hisabYouWillGet - hisabYouWillGive; // positive = to get, negative = to give
+
     const totalMarriage = marriageAgg[0]?.total || 0;
     const totalExpense = expenseAgg[0]?.totalExpense || 0;
     const totalIncome = expenseAgg[0]?.totalIncome || 0;
@@ -107,10 +123,10 @@ export async function getDashboardStats(): Promise<DashboardStats | null> {
     return {
       totalExpense,
       totalIncome,
-      totalDebit,
-      totalCredit,
+      totalDebit: hisabYouWillGet,
+      totalCredit: hisabYouWillGive,
       totalMarriage,
-      balance: totalCredit - totalDebit,
+      balance: hisabNetBalance,
       recentExpenses: [],
       recentHisab: recentHisab as unknown as HisabRecord[],
     };
@@ -559,4 +575,109 @@ export async function getFinancialYearSummary(fy: string): Promise<FinancialYear
   };
 }
 
+export async function getVaultReminders(): Promise<any[]> {
+  const user = await getAuthenticatedUser();
+  if (!user) return [];
+  const db = await getDb();
+  const spaceId = user.space_id || user.user_id;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const horizon = new Date(today);
+  horizon.setDate(horizon.getDate() + 60);
+  const horizonStr = horizon.toISOString().slice(0, 10);
+
+  const [insurance, warranties] = await Promise.all([
+    db.collection('insurance_policies').find({ space_id: spaceId, nextDueDate: { $lte: horizonStr } }).sort({ nextDueDate: 1 }).toArray(),
+    db.collection('warranties').find({ space_id: spaceId, expiryDate: { $lte: horizonStr } }).sort({ expiryDate: 1 }).toArray()
+  ]);
+
+  const dayDiff = (d: string) => Math.round((new Date(d).getTime() - today.getTime()) / 86400000);
+
+  return [
+    ...insurance.map((p: any) => ({
+      kind: 'insurance' as const,
+      id: p._id ? p._id.toString() : Math.random().toString(),
+      title: p.policyName || 'Policy',
+      subtitle: `${p.provider || ''} • ${p.policyNumber || ''}`,
+      dueDate: p.nextDueDate || '',
+      daysLeft: dayDiff(p.nextDueDate || today.toISOString()),
+      amount: p.premiumAmount || 0,
+    })),
+    ...warranties.map((w: any) => ({
+      kind: 'warranty' as const,
+      id: w._id ? w._id.toString() : Math.random().toString(),
+      title: w.itemName || 'Warranty Item',
+      subtitle: [w.brand, w.vendor].filter(Boolean).join(' • ') || 'Warranty',
+      dueDate: w.expiryDate || '',
+      daysLeft: dayDiff(w.expiryDate || today.toISOString()),
+    })),
+  ].sort((a, b) => a.daysLeft - b.daysLeft);
+}
+
+export async function getRecentActivity(limit = 6): Promise<any[]> {
+  const user = await getAuthenticatedUser();
+  if (!user) return [];
+  const db = await getDb();
+  const spaceId = user.space_id || user.user_id;
+
+  const [expenses, hisabs, marriages] = await Promise.all([
+    db.collection('expenses').find({ space_id: spaceId }).sort({ date: -1, createdAt: -1 }).limit(limit).toArray(),
+    db.collection('hisab').find({ space_id: spaceId, ignored: { $ne: true } }).sort({ date: -1, created_at: -1 }).limit(limit).toArray(),
+    db.collection('marriage_hisab').find({ space_id: spaceId }).sort({ date: -1 }).limit(limit).toArray()
+  ]);
+
+  const safeDateStr = (d: any): string => {
+    if (!d) return '';
+    if (typeof d === 'string') return d.slice(0, 10);
+    if (d instanceof Date) return d.toISOString().slice(0, 10);
+    try {
+      return new Date(d).toISOString().slice(0, 10);
+    } catch {
+      return String(d);
+    }
+  };
+
+  const safeTimestamp = (d: any): number => {
+    if (!d) return 0;
+    if (typeof d === 'number') return d;
+    if (d instanceof Date) return d.getTime();
+    const parsed = new Date(d).getTime();
+    return isNaN(parsed) ? 0 : parsed;
+  };
+
+  const activity = [
+    ...expenses.map((e: any) => ({
+      kind: 'expense' as const,
+      id: e._id ? e._id.toString() : Math.random().toString(),
+      title: e.itemName || 'Expense',
+      subtitle: e.category || 'General',
+      amount: e.amount || 0,
+      date: safeDateStr(e.date),
+      rawDate: e.date || e.createdAt,
+      type: e.type || 'expense'
+    })),
+    ...hisabs.map((h: any) => ({
+      kind: 'hisab' as const,
+      id: h._id ? h._id.toString() : Math.random().toString(),
+      title: h.name || 'Hisab',
+      subtitle: h.type === 'debit' ? 'Gave money' : 'Took money',
+      amount: h.amount || 0,
+      date: safeDateStr(h.date),
+      rawDate: h.date || h.created_at,
+      type: h.type
+    })),
+    ...marriages.map((m: any) => ({
+      kind: 'marriage' as const,
+      id: m._id ? m._id.toString() : Math.random().toString(),
+      title: m.person_name || 'Social Vayvhar',
+      subtitle: m.event_name || 'Gift',
+      amount: m.amount || 0,
+      date: safeDateStr(m.date),
+      rawDate: m.date || m.createdAt,
+      type: m.type
+    }))
+  ];
+
+  return activity.sort((a, b) => safeTimestamp(b.rawDate) - safeTimestamp(a.rawDate)).slice(0, limit);
+}
 

@@ -27,7 +27,7 @@ export default async function TaxPage() {
   return (
     <PageWrapper>
       <ExpenseTopTabs />
-      <div className="max-w-4xl mx-auto p-4 space-y-6">
+      <div className="max-w-4xl mx-auto p-4 space-y-6 pb-32">
         <div className="space-y-1">
           <h2 className="text-2xl font-black text-foreground font-sans tracking-tight flex items-center gap-2">
             💡 Simple Income Tax Check (This Year)

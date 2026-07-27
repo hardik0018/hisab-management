@@ -265,17 +265,28 @@ export default function QuickAddSheet() {
               animate={{ y: 0, opacity: 1 }}
               exit={{ y: '100%', opacity: 0 }}
               transition={{ type: 'spring', stiffness: 340, damping: 32 }}
+              drag="y"
+              dragConstraints={{ top: 0 }}
+              dragElastic={0.2}
+              onDragEnd={(e, info) => {
+                if (info.offset.y > 100 || info.velocity.y > 500) {
+                  handleClose();
+                }
+              }}
               className="fixed bottom-0 left-0 right-0 z-[200] max-w-2xl mx-auto bg-background border border-border rounded-t-3xl shadow-2xl flex flex-col max-h-[88vh]"
             >
+              {/* Drag Handle for mobile swipe-down */}
+              <div className="w-12 h-1.5 bg-muted-foreground/30 rounded-full mx-auto mt-2.5 mb-0.5 cursor-grab active:cursor-grabbing shrink-0" />
+
               {/* Header */}
-              <div className="flex items-center justify-between px-5 pt-5 pb-3 shrink-0">
+              <div className="flex items-center justify-between px-5 pt-2 pb-3 shrink-0 border-b border-border/40">
                 <div className="flex items-center gap-2.5">
                   <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center">
                     <Zap className="h-4 w-4 text-primary" />
                   </div>
                   <div>
                     <h2 className="text-sm font-bold text-foreground">Quick Add</h2>
-                    <p className="text-[10px] text-muted-foreground">One box for all modules</p>
+                    <p className="text-[10px] text-muted-foreground">Swipe down to close · One box for all</p>
                   </div>
                 </div>
                 <button
@@ -287,90 +298,93 @@ export default function QuickAddSheet() {
                 </button>
               </div>
 
-              {/* Prefix chip buttons */}
-              <div className="px-4 pb-3 shrink-0">
-                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">
-                  Tap to insert prefix →
-                </p>
-                <div className="flex flex-wrap gap-1.5">
-                  {PREFIX_CHIPS.map((chip) => (
-                    <button
-                      key={chip.label}
-                      type="button"
-                      id={`quick-add-prefix-${chip.label.toLowerCase()}`}
-                      onClick={() => insertPrefix(chip.prefix, chip.placeholder)}
-                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all active:scale-95 hover:shadow-sm ${chip.color}`}
-                    >
-                      {chip.icon}
-                      {chip.label}
-                    </button>
-                  ))}
+              {/* Scrollable Body for small mobile screens / keyboard open */}
+              <div className="overflow-y-auto flex-1 space-y-3.5 px-4 py-3">
+                {/* Prefix chip buttons */}
+                <div>
+                  <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+                    Tap to insert prefix →
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {PREFIX_CHIPS.map((chip) => (
+                      <button
+                        key={chip.label}
+                        type="button"
+                        id={`quick-add-prefix-${chip.label.toLowerCase()}`}
+                        onClick={() => insertPrefix(chip.prefix, chip.placeholder)}
+                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all active:scale-95 hover:shadow-sm ${chip.color}`}
+                      >
+                        {chip.icon}
+                        {chip.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
 
-              {/* Textarea */}
-              <div className="px-4 shrink-0">
-                <textarea
-                  ref={textareaRef}
-                  value={text}
-                  onChange={e => setText(e.target.value)}
-                  placeholder={
-                    'Milk 50\nTea 20\nhisab Ramesh gave 500 lunch\nins LIC Health 5000 yearly 2027-06\nwar Samsung TV 2024-01 2027-01\npass gmail.com user@email myPass123'
-                  }
-                  rows={6}
-                  className="w-full p-3.5 bg-muted/40 border border-border rounded-xl text-sm font-mono text-foreground placeholder-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary resize-none leading-relaxed"
-                />
-              </div>
+                {/* Textarea */}
+                <div>
+                  <textarea
+                    ref={textareaRef}
+                    value={text}
+                    onChange={e => setText(e.target.value)}
+                    placeholder={
+                      'Milk 50\nTea 20\nhisab Ramesh gave 500 lunch\nins LIC Health 5000 yearly 2027-06\nwar Samsung TV 2024-01 2027-01\npass gmail.com user@email myPass123'
+                    }
+                    rows={5}
+                    className="w-full p-3.5 bg-muted/40 border border-border rounded-xl text-sm font-mono text-foreground placeholder-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary resize-none leading-relaxed"
+                  />
+                </div>
 
-              {/* Live Preview */}
-              {parseResult && (parseResult.items.length > 0 || parseResult.invalidLines.length > 0) && (
-                <div className="mx-4 mt-3 rounded-xl border border-border bg-muted/20 overflow-hidden shrink-0">
-                  <div className="px-3 py-2 border-b border-border/60 flex items-center justify-between">
-                    <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Preview</span>
-                    <div className="flex gap-2">
-                      {validCount > 0 && (
-                        <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">
-                          {validCount} valid
-                        </span>
-                      )}
-                      {invalidCount > 0 && (
-                        <span className="text-[10px] font-semibold text-rose-600 dark:text-rose-400">
-                          {invalidCount} error{invalidCount > 1 ? 's' : ''}
-                        </span>
-                      )}
+                {/* Live Preview */}
+                {parseResult && (parseResult.items.length > 0 || parseResult.invalidLines.length > 0) && (
+                  <div className="rounded-xl border border-border bg-muted/20 overflow-hidden">
+                    <div className="px-3 py-2 border-b border-border/60 flex items-center justify-between">
+                      <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Preview</span>
+                      <div className="flex gap-2">
+                        {validCount > 0 && (
+                          <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">
+                            {validCount} valid
+                          </span>
+                        )}
+                        {invalidCount > 0 && (
+                          <span className="text-[10px] font-semibold text-rose-600 dark:text-rose-400">
+                            {invalidCount} error{invalidCount > 1 ? 's' : ''}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="px-3 py-2 max-h-[160px] overflow-y-auto space-y-0">
+                      {parseResult.items.map((item, i) => (
+                        <PreviewRow key={i} item={item} />
+                      ))}
+                      {parseResult.invalidLines.map((inv, i) => (
+                        <div key={`inv-${i}`} className="flex items-start gap-2 py-1.5 border-b border-border/40 last:border-0">
+                          <AlertTriangle className="h-3.5 w-3.5 text-rose-500 shrink-0 mt-0.5" />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-[10px] font-mono text-rose-600 dark:text-rose-400 truncate">{inv.line}</p>
+                            <p className="text-[10px] text-muted-foreground">{inv.reason}</p>
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </div>
+                )}
 
-                  <div className="px-3 py-2 max-h-[180px] overflow-y-auto space-y-0">
-                    {parseResult.items.map((item, i) => (
-                      <PreviewRow key={i} item={item} />
-                    ))}
-                    {parseResult.invalidLines.map((inv, i) => (
-                      <div key={`inv-${i}`} className="flex items-start gap-2 py-1.5 border-b border-border/40 last:border-0">
-                        <AlertTriangle className="h-3.5 w-3.5 text-rose-500 shrink-0 mt-0.5" />
-                        <div className="flex-1 min-w-0">
-                          <p className="text-[10px] font-mono text-rose-600 dark:text-rose-400 truncate">{inv.line}</p>
-                          <p className="text-[10px] text-muted-foreground">{inv.reason}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+                {/* Syntax hint */}
+                <div className="pb-1">
+                  <p className="text-[10px] text-muted-foreground leading-relaxed">
+                    <span className="font-mono font-semibold text-violet-600 dark:text-violet-400">Milk 50</span>
+                    {' · '}
+                    <span className="font-mono font-semibold text-amber-600 dark:text-amber-400">hisab Ram gave 500</span>
+                    {' · '}
+                    <span className="font-mono font-semibold text-blue-600 dark:text-blue-400">ins LIC 5000 yearly 2027-06</span>
+                    {' · '}
+                    <span className="font-mono font-semibold text-green-600 dark:text-green-400">war TV 2024-01 2027-01</span>
+                    {' · '}
+                    <span className="font-mono font-semibold text-rose-600 dark:text-rose-400">pass site user pass</span>
+                  </p>
                 </div>
-              )}
-
-              {/* Syntax hint */}
-              <div className="px-4 mt-2 shrink-0">
-                <p className="text-[10px] text-muted-foreground leading-relaxed">
-                  <span className="font-mono font-semibold text-violet-600 dark:text-violet-400">Milk 50</span>
-                  {' · '}
-                  <span className="font-mono font-semibold text-amber-600 dark:text-amber-400">hisab Ram gave 500</span>
-                  {' · '}
-                  <span className="font-mono font-semibold text-blue-600 dark:text-blue-400">ins LIC 5000 yearly 2027-06</span>
-                  {' · '}
-                  <span className="font-mono font-semibold text-green-600 dark:text-green-400">war TV 2024-01 2027-01</span>
-                  {' · '}
-                  <span className="font-mono font-semibold text-rose-600 dark:text-rose-400">pass site user pass</span>
-                </p>
               </div>
 
               {/* Action buttons */}

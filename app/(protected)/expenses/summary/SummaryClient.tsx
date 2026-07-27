@@ -196,7 +196,7 @@ export default function SummaryClient({
   return (
     <PageWrapper>
       <ExpenseTopTabs />
-      <div className="max-w-7xl mx-auto p-4 space-y-5">
+      <div className="max-w-7xl mx-auto p-4 space-y-5 pb-32">
         <div className="space-y-1">
           <h2 className="text-2xl font-black text-foreground">Analysis & Summary</h2>
           <p className="text-xs text-muted-foreground font-medium">Evaluate spending metrics and trends in this space.</p>
