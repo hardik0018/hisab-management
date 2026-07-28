@@ -262,7 +262,7 @@ export function getTodayKolkata(): string {
 /**
  * Fetches monthly summary data for the authenticated user.
  */
-export async function getMonthlySummary(monthStr?: string, search?: string): Promise<{
+export async function getMonthlySummary(monthStr?: string, search?: string, categoryStr?: string): Promise<{
   month: string;
   monthlyTotal: number;
   monthlyIncome: number;
@@ -271,6 +271,7 @@ export async function getMonthlySummary(monthStr?: string, search?: string): Pro
   todayTotal: number;
   memberBalances: { user_id: string; name: string; income: number; expense: number; balance: number }[];
   categoryBreakdown: { category: string; total: number; count: number; percentage: number }[];
+  categoryTransactions: { _id: string; itemName: string; amount: number; date: string; category: string; note: string }[];
   topExpenses: { _id: string; itemName: string; amount: number; date: string; category: string; note: string }[];
 } | null> {
   const user = await getAuthenticatedUser();
@@ -445,6 +446,19 @@ export async function getMonthlySummary(monthStr?: string, search?: string): Pro
     note: exp.note || ''
   }));
 
+  let categoryTransactions: any[] = [];
+  if (categoryStr) {
+    categoryTransactions = await db.collection('expenses')
+      .find({
+        space_id: spaceId,
+        date: { $gte: monthStart, $lt: monthEnd },
+        type: { $nin: ['income', 'transfer_in', 'transfer_out'] },
+        category: categoryStr
+      })
+      .sort({ date: -1, createdAt: -1 })
+      .toArray();
+  }
+
   return {
     month,
     monthlyTotal,
@@ -454,6 +468,14 @@ export async function getMonthlySummary(monthStr?: string, search?: string): Pro
     todayTotal,
     memberBalances,
     categoryBreakdown,
+    categoryTransactions: categoryTransactions.map((exp: any) => ({
+      _id: exp._id.toString(),
+      itemName: exp.itemName || 'Unknown Item',
+      amount: Number(exp.amount || 0),
+      date: exp.date || '',
+      category: exp.category || 'Uncategorized',
+      note: exp.note || ''
+    })),
     topExpenses,
   };
 }

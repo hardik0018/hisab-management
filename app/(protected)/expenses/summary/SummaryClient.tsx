@@ -58,10 +58,12 @@ interface SummaryClientProps {
   initialTodayTotal: number;
   initialMemberBalances?: MemberBalance[];
   initialCategoryBreakdown?: CategoryBreakdownItem[];
+  initialCategoryTransactions?: { _id: string; itemName: string; amount: number; date: string; category: string; note: string }[];
   initialTopExpenses?: { _id: string; itemName: string; amount: number; date: string; category: string; note: string }[];
   searchParams: {
     month?: string;
     search?: string;
+    category?: string;
   };
 }
 
@@ -74,6 +76,7 @@ export default function SummaryClient({
   initialTodayTotal,
   initialMemberBalances,
   initialCategoryBreakdown,
+  initialCategoryTransactions,
   initialTopExpenses,
   searchParams
 }: SummaryClientProps) {
@@ -89,9 +92,11 @@ export default function SummaryClient({
   const [todayTotal, setTodayTotal] = useState<number>(initialTodayTotal);
   const [memberBalances, setMemberBalances] = useState<MemberBalance[]>(initialMemberBalances || []);
   const [categoryBreakdown, setCategoryBreakdown] = useState<CategoryBreakdownItem[]>(initialCategoryBreakdown || []);
+  const [categoryTransactions, setCategoryTransactions] = useState<{ _id: string; itemName: string; amount: number; date: string; category: string; note: string }[]>(initialCategoryTransactions || []);
   const [topExpenses, setTopExpenses] = useState<{ _id: string; itemName: string; amount: number; date: string; category: string; note: string }[]>(initialTopExpenses || []);
 
   const [search, setSearch] = useState<string>(searchParams.search || '');
+  const [category, setCategory] = useState<string>(searchParams.category || '');
   const [isMountedState, setIsMountedState] = useState(false);
   const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -109,8 +114,9 @@ export default function SummaryClient({
     setTodayTotal(initialTodayTotal);
     if (initialMemberBalances) setMemberBalances(initialMemberBalances);
     if (initialCategoryBreakdown) setCategoryBreakdown(initialCategoryBreakdown);
+    if (initialCategoryTransactions) setCategoryTransactions(initialCategoryTransactions);
     if (initialTopExpenses) setTopExpenses(initialTopExpenses);
-  }, [initialMonth, initialMonthlyTotal, initialMonthlyIncome, initialFilteredTotal, initialDailyTotals, initialTodayTotal, initialMemberBalances, initialCategoryBreakdown, initialTopExpenses]);
+  }, [initialMonth, initialMonthlyTotal, initialMonthlyIncome, initialFilteredTotal, initialDailyTotals, initialTodayTotal, initialMemberBalances, initialCategoryBreakdown, initialCategoryTransactions, initialTopExpenses]);
 
   useEffect(() => {
     return () => {
@@ -120,14 +126,21 @@ export default function SummaryClient({
     };
   }, []);
 
-  const updateUrl = (monthVal: string, searchVal: string) => {
+  const updateUrl = (monthVal: string, searchVal: string, categoryVal: string = category) => {
     const params = new URLSearchParams();
     if (monthVal) params.set('month', monthVal);
     if (searchVal.trim()) params.set('search', searchVal.trim());
+    if (categoryVal.trim()) params.set('category', categoryVal.trim());
 
     startTransition(() => {
       router.push(`${pathname}?${params.toString()}`);
     });
+  };
+
+  const handleCategoryClick = (catName: string) => {
+    const newCategory = category === catName ? '' : catName;
+    setCategory(newCategory);
+    updateUrl(month, search, newCategory);
   };
 
   const handleSearchChange = (val: string) => {
@@ -136,7 +149,7 @@ export default function SummaryClient({
       clearTimeout(debounceTimeoutRef.current);
     }
     debounceTimeoutRef.current = setTimeout(() => {
-      updateUrl(month, val);
+      updateUrl(month, val, category);
     }, 400); // 400ms debounce
   };
 
@@ -150,7 +163,7 @@ export default function SummaryClient({
     }
     const newMonth = `${prevYear}-${String(prevMon).padStart(2, '0')}`;
     setMonth(newMonth);
-    updateUrl(newMonth, search);
+    updateUrl(newMonth, search, category);
   };
 
   const handleNextMonth = () => {
@@ -163,12 +176,12 @@ export default function SummaryClient({
     }
     const newMonth = `${nextYear}-${String(nextMon).padStart(2, '0')}`;
     setMonth(newMonth);
-    updateUrl(newMonth, search);
+    updateUrl(newMonth, search, category);
   };
 
   const handleClearSearch = () => {
     setSearch('');
-    updateUrl(month, '');
+    updateUrl(month, '', category);
   };
 
   const chartData = dailyTotals.map((dt) => {
@@ -403,18 +416,12 @@ export default function SummaryClient({
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
               {categoryBreakdown.map((cat) => {
-                const isSelected = search.toLowerCase() === cat.category.toLowerCase();
+                const isSelected = category.toLowerCase() === cat.category.toLowerCase();
                 const catColor = getCategoryColor(cat.category);
                 return (
                   <div
                     key={cat.category}
-                    onClick={() => {
-                      if (isSelected) {
-                        handleClearSearch();
-                      } else {
-                        handleSearchChange(cat.category);
-                      }
-                    }}
+                    onClick={() => handleCategoryClick(cat.category)}
                     className={`border rounded-2xl p-4 flex flex-col justify-between gap-3 cursor-pointer transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 select-none ${
                       isSelected
                         ? 'bg-primary/10 border-primary ring-2 ring-primary/20'
@@ -448,6 +455,52 @@ export default function SummaryClient({
                         className="h-full rounded-full transition-all duration-500"
                         style={{ width: `${Math.min(100, Math.max(2, cat.percentage))}%`, backgroundColor: catColor }}
                       />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Category Transactions Details */}
+        {categoryTransactions.length > 0 && (
+          <div className="bg-card border border-border rounded-3xl p-5 space-y-4 shadow-sm mt-5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-primary">
+                <Tag className="w-4 h-4" />
+                <h3 className="text-xs font-bold text-card-foreground uppercase tracking-wider">{category} Transactions</h3>
+              </div>
+              <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">{categoryTransactions.length} Items</span>
+            </div>
+
+            <div className="divide-y divide-border border border-border rounded-2xl overflow-hidden">
+              {categoryTransactions.map((exp) => {
+                const catColor = getCategoryColor(exp.category);
+                return (
+                  <div key={exp._id} className="p-3.5 bg-background/50 hover:bg-muted/30 transition-colors flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div
+                        className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 shadow-sm text-white text-xs font-bold"
+                        style={{ backgroundColor: catColor }}
+                      >
+                        {exp.category.substring(0, 1).toUpperCase()}
+                      </div>
+                      <div className="min-w-0 flex flex-col">
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-sm text-foreground truncate">{exp.itemName}</span>
+                        </div>
+                        {exp.note ? (
+                          <span className="text-xs text-muted-foreground truncate">{exp.note}</span>
+                        ) : (
+                          <span className="text-[11px] text-muted-foreground/60 italic">No note</span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col items-end shrink-0">
+                      <span className="font-black text-sm text-foreground">₹{formatCurrency(exp.amount)}</span>
+                      <span className="text-[10px] text-muted-foreground">{formatDisplayDate(exp.date)}</span>
                     </div>
                   </div>
                 );

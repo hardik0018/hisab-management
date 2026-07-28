@@ -9,6 +9,7 @@ interface PageProps {
   searchParams: Promise<{
     month?: string;
     search?: string;
+    category?: string;
   }>;
 }
 
@@ -26,7 +27,7 @@ export default async function SummaryPage({ searchParams }: PageProps) {
     activeMonth = todayStr.substring(0, 7);
   }
 
-  const summary = await getMonthlySummary(activeMonth, params.search);
+  const summary = await getMonthlySummary(activeMonth, params.search, params.category);
 
   if (!summary) {
     redirect('/expenses');
@@ -42,6 +43,7 @@ export default async function SummaryPage({ searchParams }: PageProps) {
       initialTodayTotal={summary.todayTotal}
       initialMemberBalances={summary.memberBalances}
       initialCategoryBreakdown={summary.categoryBreakdown}
+      initialCategoryTransactions={summary.categoryTransactions}
       initialTopExpenses={summary.topExpenses}
       searchParams={params}
     />
