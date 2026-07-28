@@ -1,6 +1,7 @@
 import ExcelJS from 'exceljs';
 import { Expense } from '@/types';
 import { formatDisplayTime } from './date-utils';
+import { categorizeExpense } from './category-engine';
 
 export async function generateExcelBuffer(expenses: Expense[]): Promise<Buffer> {
   const workbook = new ExcelJS.Workbook();
@@ -33,7 +34,7 @@ export async function generateExcelBuffer(expenses: Expense[]): Promise<Buffer> 
       itemName: exp.itemName,
       amount: exp.amount, // Numeric value in Excel
       note: exp.note || '',
-      category: exp.category || 'Uncategorized',
+      category: categorizeExpense(exp.itemName, exp.note, exp.amount, exp.type, exp.category),
       createdAt: createdAtStr,
       updatedAt: updatedAtStr
     });

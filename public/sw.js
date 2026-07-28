@@ -1,5 +1,5 @@
 // Bump CACHE_VERSION on every deploy to purge stale caches automatically
-const CACHE_VERSION = 'v4';
+const CACHE_VERSION = 'v5';
 const STATIC_CACHE = `hisab-static-${CACHE_VERSION}`;
 const NAV_CACHE = `hisab-nav-${CACHE_VERSION}`;
 

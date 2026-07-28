@@ -6,6 +6,7 @@ import { ObjectId } from 'mongodb';
 import { getAuthenticatedUser } from '@/lib/auth';
 import { validateExpense } from '@/models/Expense';
 import { Expense } from '@/types';
+import { categorizeExpense } from '@/lib/category-engine';
 import { revalidatePath } from 'next/cache';
 
 export async function PATCH(
@@ -27,7 +28,7 @@ export async function PATCH(
     }
 
     const body = await request.json();
-    const { itemName, amount, note, date } = body;
+    const { itemName, amount, note, date, category } = body;
 
     const db = await getDb();
     const spaceId = user.space_id || user.user_id;
@@ -45,6 +46,8 @@ export async function PATCH(
       );
     }
 
+    const newCat = category !== undefined ? category : existing.category;
+
     // Merge updates
     const updatedDoc: Partial<Expense> = {
       space_id: spaceId,
@@ -53,6 +56,13 @@ export async function PATCH(
       itemName: itemName !== undefined ? itemName : existing.itemName,
       amount: amount !== undefined ? Number(amount) : existing.amount,
       note: note !== undefined ? note : existing.note,
+      category: categorizeExpense(
+        itemName !== undefined ? itemName : existing.itemName,
+        note !== undefined ? note : existing.note,
+        amount !== undefined ? Number(amount) : existing.amount,
+        existing.type,
+        newCat
+      ),
     };
 
     const validation = validateExpense(updatedDoc);

@@ -41,6 +41,8 @@ export default async function SummaryPage({ searchParams }: PageProps) {
       initialDailyTotals={summary.dailyTotals}
       initialTodayTotal={summary.todayTotal}
       initialMemberBalances={summary.memberBalances}
+      initialCategoryBreakdown={summary.categoryBreakdown}
+      initialTopExpenses={summary.topExpenses}
       searchParams={params}
     />
   );

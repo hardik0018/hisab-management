@@ -185,7 +185,7 @@ export default function HistoryClient({ initialExpenses, searchParams, collabora
   const filteredTotal = expenses.reduce((sum, e) => sum + e.amount, 0); return (
     <PageWrapper>
       <ExpenseTopTabs />
-      <div className="max-w-7xl mx-auto p-4 space-y-4 ">
+      <div className="max-w-7xl mx-auto p-4 space-y-4 pb-32">
         <div className="space-y-1">
           <h2 className="text-2xl font-black text-foreground">Expense History</h2>
           <p className="text-xs text-muted-foreground font-medium">View and manage collaborative outflows in this space.</p>

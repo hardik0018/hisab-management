@@ -137,7 +137,7 @@ const LandingPage = () => {
               <div className="w-10 h-10 bg-black rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform shadow-xl">
                 <Wallet className="w-6 h-6 text-white" />
               </div>
-              <span className="text-black">HISAB</span>
+              <span className="text-black tracking-tight font-black text-xl md:text-2xl not-italic">Hisab Management System</span>
             </div>
 
             <div className="hidden md:flex items-center gap-8">
@@ -175,12 +175,18 @@ const LandingPage = () => {
               MANAGE YOUR<br /> <span className="text-blue-600 italic">HISAB</span> & <span className="text-rose-500 italic">VAYVHAR</span>
             </motion.h1>
 
-            <motion.p 
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}
-              className="max-w-2xl text-lg lg:text-xl text-slate-500 font-medium mb-12"
+            <motion.div 
+               initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
+               className="max-w-3xl bg-white/80 backdrop-blur-md border border-slate-200/80 p-6 sm:p-8 rounded-3xl shadow-xl shadow-slate-200/40 mb-12 text-left space-y-3"
             >
-              Ditch the paper books. A professional tool for Indian users to manage debit-credit, daily expenses, and social gifting flawlessly.
-            </motion.p>
+              <h2 className="text-lg sm:text-xl font-bold text-slate-900 flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-blue-600 inline-block shrink-0" />
+                About Hisab Management System
+              </h2>
+              <p className="text-sm sm:text-base text-slate-600 leading-relaxed font-normal">
+                <strong className="text-slate-900 font-semibold">Hisab Management System</strong> is a comprehensive personal finance, expense tracking, shared family ledger, and document vault web application. Our platform is designed to help users log daily expenses with automated categorization, manage shared debit-credit records (Hisab) with collaborators, track cultural gifts (Vyavahar), compute income tax obligations, and securely store sensitive documents and passwords in an encrypted cloud vault.
+              </p>
+            </motion.div>
 
             <motion.div 
               initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
@@ -365,20 +371,29 @@ const LandingPage = () => {
         </section>
       </main>
 
-      <footer className="py-2 px-6 border-t border-slate-100">
-         <div className="max-w-7xl mx-auto flex flex-col items-center">
-            <div className="flex items-center gap-2 mb-10 font-black text-2xl tracking-tighter italic">
+      <footer className="py-12 px-6 border-t border-slate-100 bg-slate-50/50">
+         <div className="max-w-7xl mx-auto flex flex-col items-center text-center">
+            <div className="flex items-center gap-2 mb-6 font-black text-2xl tracking-tight">
               <div className="w-8 h-8 bg-black rounded-lg flex items-center justify-center">
                 <Wallet className="w-5 h-5 text-white" />
               </div>
-              <span>HISAB</span>
+              <span className="text-slate-900">Hisab Management System</span>
             </div>
             
-            <div className="flex flex-wrap items-center justify-center gap-10 mb-5 text-[10px] font-black uppercase tracking-[0.4em] text-slate-400">
-               {['About', 'Features', 'Privacy', 'Support'].map(i => <a key={i} href="#" className="hover:text-blue-600 transition-colors">{i}</a>)}
+            <p className="text-xs sm:text-sm text-slate-500 font-medium mb-6 max-w-lg leading-relaxed">
+              Hisab Management System is a verified cloud application providing personal debit-credit ledgers, daily expense tracking, and encrypted document storage.
+            </p>
+
+            <div className="flex flex-wrap items-center justify-center gap-8 mb-8 text-xs font-bold text-slate-600">
+               <a href="#features" className="hover:text-blue-600 transition-colors">Features & Purpose</a>
+               <a href="#ledger" className="hover:text-blue-600 transition-colors">Live Demo</a>
+               <Link href="/privacy" className="hover:text-blue-600 transition-colors text-blue-600 font-extrabold">Privacy Policy</Link>
+               <Link href="/terms" className="hover:text-blue-600 transition-colors text-blue-600 font-extrabold">Terms of Service</Link>
             </div>
 
-            <p className="text-[11px] font-black text-slate-300 uppercase tracking-widest">© 2026 HISAB LABS. MADE WITH ❤️ IN INDIA.</p>
+            <div className="w-full max-w-xs h-px bg-slate-200 mb-6" />
+
+            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">© {new Date().getFullYear()} HISAB MANAGEMENT SYSTEM. ALL RIGHTS RESERVED.</p>
          </div>
       </footer>
 

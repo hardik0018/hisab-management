@@ -4,7 +4,7 @@ import { auth } from "@/auth"
 import { Providers } from '@/components/Providers'
 import { Plus_Jakarta_Sans } from 'next/font/google'
 import { ReactNode } from 'react'
-import PwaRegister from '@/components/PwaRegister'
+import PwaManager from '@/components/PwaManager'
 
 const plusJakartaSans = Plus_Jakarta_Sans({ 
   subsets: ['latin'],
@@ -13,8 +13,8 @@ const plusJakartaSans = Plus_Jakarta_Sans({
 })
 
 export const metadata = {
-  title: 'Hisab Expense Tracker',
-  description: 'Fast personal expense tracker PWA for daily use',
+  title: 'Hisab Management System',
+  description: 'Hisab Management System is a secure personal finance, expense tracking, shared family ledger, and document vault web application.',
   manifest: '/manifest.json',
   icons: {
     icon: '/logo.png',
@@ -23,7 +23,10 @@ export const metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
-    title: 'Hisab Expense',
+    title: 'Hisab Management System',
+  },
+  verification: {
+    google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION || '',
   },
 }
 
@@ -45,7 +48,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
         <Providers session={session}>
           {children}
         </Providers>
-        <PwaRegister />
+        <PwaManager />
         <Toaster position="bottom-right" offset={96} />
       </body>
     </html>

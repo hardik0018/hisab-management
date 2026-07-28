@@ -4,6 +4,7 @@ import { NextRequest } from 'next/server';
 import { getDb } from '@/lib/db';
 import { ObjectId } from 'mongodb';
 import { getAuthenticatedUser } from '@/lib/auth';
+import { categorizeExpense } from '@/lib/category-engine';
 
 function getPreviousMonth(monthStr: string): string {
   const [year, month] = monthStr.split('-').map(Number);
@@ -84,9 +85,14 @@ export async function PATCH(
       updates.note = note.trim();
     }
 
-    if (category !== undefined) {
-      updates.category = category.trim();
-    }
+    const newCat = category !== undefined ? category.trim() : existing.category;
+    updates.category = categorizeExpense(
+      updates.itemName || existing.itemName,
+      updates.note !== undefined ? updates.note : existing.note,
+      updates.amount || existing.amount,
+      'expense',
+      newCat
+    );
 
     if (isActive !== undefined) {
       updates.isActive = !!isActive;

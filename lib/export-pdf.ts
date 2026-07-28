@@ -1,6 +1,7 @@
 import PDFDocument from 'pdfkit';
 import { Expense } from '@/types';
 import { formatDisplayDate, formatDisplayTime } from './date-utils';
+import { categorizeExpense } from './category-engine';
 import path from 'path';
 
 export function generatePDFBuffer(
@@ -192,7 +193,8 @@ export function generatePDFBuffer(
         doc.fillColor('#0F172A').font('Roboto-Bold').text(exp.itemName, 160, currentY + 9, { width: 110, height: 10, ellipsis: true });
         
         // Col 3: Category
-        doc.fillColor('#64748B').font('Roboto-Regular').text(exp.category || 'Uncategorized', 280, currentY + 9, { width: 70, height: 10, ellipsis: true });
+        const catText = categorizeExpense(exp.itemName, exp.note, exp.amount, exp.type, exp.category);
+        doc.fillColor('#64748B').font('Roboto-Regular').text(catText, 280, currentY + 9, { width: 70, height: 10, ellipsis: true });
         
         // Col 4: Note
         doc.text(exp.note || '-', 360, currentY + 9, { width: 110, height: 10, ellipsis: true });

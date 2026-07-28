@@ -5,6 +5,7 @@ import { getDb } from '@/lib/db';
 import { validateExpense } from '@/models/Expense';
 import { getAuthenticatedUser } from '@/lib/auth';
 import { Expense } from '@/types';
+import { categorizeExpense } from '@/lib/category-engine';
 import { revalidatePath } from 'next/cache';
 
 export async function POST(request: NextRequest) {
@@ -39,7 +40,7 @@ export async function POST(request: NextRequest) {
         itemName: exp.itemName,
         amount: Number(exp.amount),
         note: exp.note || '',
-        category: exp.category || 'Uncategorized',
+        category: categorizeExpense(exp.itemName, exp.note, Number(exp.amount), exp.type, exp.category),
         currency: 'INR',
         type: exp.type as any, // handled below
       };

@@ -9,6 +9,7 @@ import { Calendar, PenLine, Trash2, ArrowRight, Loader2, ArrowLeftRight } from '
 import PreviewDialog from './PreviewDialog';
 import { ParseResult, User } from '@/types';
 import { parseExpenses } from '@/lib/expense-parser';
+import { queueOfflineExpenses } from '@/lib/offline-queue';
 
 const DRAFT_KEY = 'hisab_expense_draft';
 
@@ -158,18 +159,25 @@ export default function ExpenseEntryBox({ largeAmountLimit = 10000, collaborator
         type: entryType
       }));
 
-      const res = await fetch('/api/expenses', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ expenses: normalizedExpenses })
-      });
+      const isOffline = typeof navigator !== 'undefined' && !navigator.onLine;
 
-      if (!res.ok) {
-        throw new Error('Failed to save expenses to database');
+      if (isOffline) {
+        await queueOfflineExpenses(normalizedExpenses);
+        toast.warning(`📴 Offline Mode: Saved ${normalizedExpenses.length} expense(s) to your local queue! They will sync automatically when back online.`, { duration: 6000 });
+      } else {
+        const res = await fetch('/api/expenses', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ expenses: normalizedExpenses })
+        });
+
+        if (!res.ok) {
+          throw new Error('Failed to save expenses to database');
+        }
+
+        const data = await res.json();
+        toast.success(`Successfully saved ${data.count} expense records!`);
       }
-
-      const data = await res.json();
-      toast.success(`Successfully saved ${data.count} expense records!`);
 
       if (invalidLinesLeft.length > 0) {
         const remainingText = invalidLinesLeft.map(il => il.line).join('\n');
@@ -189,8 +197,39 @@ export default function ExpenseEntryBox({ largeAmountLimit = 10000, collaborator
 
       setIsPreviewOpen(false);
       setParseResult(null);
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
+      const isNetworkError = err instanceof TypeError || (err?.message && (err.message.includes('fetch') || err.message.includes('network') || err.message.includes('Failed to fetch'))) || (typeof navigator !== 'undefined' && !navigator.onLine);
+      if (isNetworkError) {
+        try {
+          const normalizedExpenses = expensesToSave.map(exp => ({
+            ...exp,
+            date: targetDate,
+            type: entryType
+          }));
+          await queueOfflineExpenses(normalizedExpenses);
+          toast.warning(`📴 Connection lost! Saved ${normalizedExpenses.length} expense(s) to your local offline queue. They will sync automatically when online.`, { duration: 6000 });
+          if (invalidLinesLeft.length > 0) {
+            const remainingText = invalidLinesLeft.map(il => il.line).join('\n');
+            setText(remainingText);
+            saveDraft(remainingText, targetDate);
+          } else {
+            if (entryType === 'transfer') {
+              setTransferAmount('');
+              setTransferNote('');
+              setTransferToUser('');
+            } else {
+              setText('');
+              saveDraft('', targetDate);
+            }
+          }
+          setIsPreviewOpen(false);
+          setParseResult(null);
+          return;
+        } catch (queueErr) {
+          console.error('[OFFLINE_QUEUE_FALLBACK_ERROR]', queueErr);
+        }
+      }
       toast.error('Database connection failed. Your text has been preserved in draft.', {
         duration: 5000
       });
