@@ -23,9 +23,12 @@ async function initIndexes() {
     console.log('Creating indexes for `expenses` collection...');
     await db.collection('expenses').createIndex({ space_id: 1, date: -1 });
     await db.collection('expenses').createIndex({ space_id: 1, associatedId: 1 });
+    await db.collection('expenses').createIndex({ space_id: 1, type: 1, date: -1 }); // Optimizes getMonthlySummary
+
 
     console.log('Creating indexes for `hisab` collection...');
     await db.collection('hisab').createIndex({ space_id: 1, date: -1 });
+    await db.collection('hisab').createIndex({ space_id: 1, ignored: 1, date: -1 }); // Optimizes getDashboardStats
 
     console.log('Creating indexes for `marriage_hisab` collection...');
     await db.collection('marriage_hisab').createIndex({ space_id: 1, date: -1 });
