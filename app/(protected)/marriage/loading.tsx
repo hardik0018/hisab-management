@@ -1,69 +1,59 @@
-
 import { Skeleton } from "@/components/ui/skeleton";
 import PageWrapper from "@/components/PageWrapper";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 
 export default function MarriageLoading() {
   return (
     <PageWrapper>
-      <div className="p-4 space-y-8 max-w-7xl mx-auto pb-32">
+      <div className="p-4 sm:p-6 lg:p-8 space-y-8 max-w-5xl mx-auto pb-32">
         <div className="space-y-6">
-          <div className="flex justify-between items-end">
-            <div className="space-y-1">
-              <Skeleton className="h-10 w-48 rounded-md" />
-              <Skeleton className="h-4 w-32 rounded-md" />
-            </div>
-            <Skeleton className="h-12 w-32 rounded-2xl" />
-          </div>
+           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
+             <div className="space-y-2">
+                <Skeleton className="h-10 w-64 rounded-md" />
+                <Skeleton className="h-4 w-72 rounded-md" />
+             </div>
+             <Skeleton className="h-12 w-full sm:w-32 rounded-2xl" />
+           </div>
 
-          <Card className="border-none shadow-xl bg-gradient-to-br from-rose-600 to-rose-700 text-white rounded-[1.5rem] sm:rounded-[2.5rem] overflow-hidden relative">
-            <CardContent className="p-5 sm:p-10 relative z-10">
-              <div className="flex items-center gap-4 sm:gap-8">
-                <Skeleton className="w-16 h-16 sm:w-28 sm:h-28 rounded-2xl sm:rounded-[2rem] bg-white/10" />
-                <div className="space-y-2 flex-1">
-                  <Skeleton className="h-3 w-24 bg-white/10" />
-                  <div className="flex items-baseline gap-1.5 sm:gap-3">
-                    <Skeleton className="h-10 sm:h-16 w-32 bg-white/20" />
-                    <Skeleton className="h-4 w-16 bg-white/10" />
+           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
+              {[1, 2, 3].map((i) => (
+                <Card key={i} className="border-none shadow-sm rounded-3xl p-5 border border-slate-100">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Skeleton className="w-5 h-5 rounded-full" />
+                    <Skeleton className="h-4 w-28 rounded-md" />
                   </div>
-                  <Skeleton className="h-3 w-40 bg-white/10" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+                  <Skeleton className="h-8 w-24 rounded-md mb-1" />
+                  <Skeleton className="h-3 w-32 rounded-md" />
+                </Card>
+              ))}
+           </div>
         </div>
 
-        <div className="space-y-4">
-          <Skeleton className="h-14 w-full rounded-2xl" />
-          <Skeleton className="h-4 w-32 px-4" />
-          
-          <div className="space-y-4">
-            {[1, 2, 3, 4].map((i) => (
-              <Card key={i} className="group border-none shadow-lg rounded-2xl sm:rounded-3xl bg-white overflow-hidden p-3 sm:p-5">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-3 sm:gap-5 flex-1 min-w-0">
-                    <Skeleton className="w-12 h-12 rounded-xl" />
-                    <div className="min-w-0 flex-1 space-y-1.5">
-                      <Skeleton className="h-5 w-40" />
-                      <div className="flex items-center gap-2">
-                        <Skeleton className="h-3 w-24" />
-                        <Skeleton className="h-3 w-24" />
+        <div className="space-y-6">
+            <Skeleton className="h-14 w-full rounded-2xl" />
+            
+            <div className="space-y-4">
+              <Skeleton className="h-4 w-32 rounded-md mb-2" />
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {[1, 2, 3, 4, 5, 6].map((i) => (
+                  <Card key={i} className="border-none shadow-sm rounded-[2rem] overflow-hidden p-5">
+                    <div className="flex justify-between items-center">
+                      <div className="flex items-center gap-4">
+                        <Skeleton className="w-12 h-12 rounded-2xl" />
+                        <div className="space-y-2">
+                          <Skeleton className="h-5 w-24 rounded-md" />
+                          <Skeleton className="h-3 w-20 rounded-md" />
+                        </div>
+                      </div>
+                      <div className="space-y-2 text-right">
+                        <Skeleton className="h-6 w-16 rounded-md ml-auto" />
+                        <Skeleton className="h-4 w-12 rounded-full ml-auto" />
                       </div>
                     </div>
-                  </div>
-                  <div className="flex items-center gap-3 sm:gap-4">
-                    <div className="text-right flex-shrink-0">
-                      <Skeleton className="h-6 w-24 ml-auto" />
-                    </div>
-                    <div className="flex gap-1">
-                      <Skeleton className="h-8 w-8 rounded-lg" />
-                      <Skeleton className="h-8 w-8 rounded-lg" />
-                    </div>
-                  </div>
-                </div>
-              </Card>
-            ))}
-          </div>
+                  </Card>
+                ))}
+              </div>
+            </div>
         </div>
       </div>
     </PageWrapper>
