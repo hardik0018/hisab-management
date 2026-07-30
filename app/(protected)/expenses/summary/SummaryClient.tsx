@@ -46,7 +46,11 @@ interface MemberBalance {
   name: string;
   income: number;
   expense: number;
-  balance: number;
+  transfer_in: number;
+  transfer_out: number;
+  month_balance: number;
+  previous_balance: number;
+  total_balance: number;
 }
 
 interface SummaryClientProps {
@@ -297,18 +301,44 @@ export default function SummaryClient({
                     </div>
                     <span className="font-bold text-sm text-foreground truncate">{mb.name}</span>
                   </div>
+                  {mb.previous_balance !== 0 && (
+                    <div className="flex justify-between items-center text-xs pb-1 mb-1 border-b border-border/50">
+                      <span className="text-muted-foreground font-medium">Brought Forward:</span>
+                      <span className={`font-bold ${mb.previous_balance >= 0 ? 'text-emerald-600' : 'text-destructive'}`}>
+                        ₹{formatCurrency(mb.previous_balance)}
+                      </span>
+                    </div>
+                  )}
                   <div className="flex justify-between items-center text-xs mt-1">
                     <span className="text-muted-foreground font-medium">Income:</span>
                     <span className="font-bold text-green-600 dark:text-green-400">₹{formatCurrency(mb.income)}</span>
                   </div>
+                  {mb.transfer_in > 0 && (
+                    <div className="flex justify-between items-center text-xs">
+                      <span className="text-muted-foreground font-medium">Transfer In:</span>
+                      <span className="font-bold text-green-600 dark:text-green-400">+₹{formatCurrency(mb.transfer_in)}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between items-center text-xs">
                     <span className="text-muted-foreground font-medium">Expense:</span>
                     <span className="font-bold text-destructive">₹{formatCurrency(mb.expense)}</span>
                   </div>
-                  <div className="pt-2 mt-1 border-t border-border flex justify-between items-center">
-                    <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Net Balance</span>
-                    <span className={`font-black text-sm ${mb.balance >= 0 ? 'text-emerald-600' : 'text-destructive'}`}>
-                      ₹{formatCurrency(mb.balance)}
+                  {mb.transfer_out > 0 && (
+                    <div className="flex justify-between items-center text-xs">
+                      <span className="text-muted-foreground font-medium">Transfer Out:</span>
+                      <span className="font-bold text-destructive">-₹{formatCurrency(mb.transfer_out)}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between items-center text-xs mt-1">
+                    <span className="text-muted-foreground font-medium">Month Net:</span>
+                    <span className={`font-bold ${mb.month_balance >= 0 ? 'text-emerald-600' : 'text-destructive'}`}>
+                      ₹{formatCurrency(mb.month_balance)}
+                    </span>
+                  </div>
+                  <div className="pt-2 mt-1 border-t border-border flex justify-between items-center bg-background/50 p-2 rounded-lg">
+                    <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Total Balance</span>
+                    <span className={`font-black text-sm ${mb.total_balance >= 0 ? 'text-emerald-600' : 'text-destructive'}`}>
+                      ₹{formatCurrency(mb.total_balance)}
                     </span>
                   </div>
                 </div>

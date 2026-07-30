@@ -269,7 +269,7 @@ export async function getMonthlySummary(monthStr?: string, search?: string, cate
   filteredTotal: number;
   dailyTotals: { date: string; total: number }[];
   todayTotal: number;
-  memberBalances: { user_id: string; name: string; income: number; expense: number; balance: number }[];
+  memberBalances: { user_id: string; name: string; income: number; expense: number; transfer_in: number; transfer_out: number; month_balance: number; previous_balance: number; total_balance: number; }[];
   categoryBreakdown: { category: string; total: number; count: number; percentage: number }[];
   categoryTransactions: { _id: string; itemName: string; amount: number; date: string; category: string; note: string }[];
   topExpenses: { _id: string; itemName: string; amount: number; date: string; category: string; note: string }[];
@@ -304,7 +304,7 @@ export async function getMonthlySummary(monthStr?: string, search?: string, cate
   const monthEnd = `${nextYear}-${paddedNextMon}-01`;
 
   // Single aggregation for monthly totals + daily breakdown + member balances
-  const [monthlyAgg, todayAgg, incomeAgg, userExpenseAgg, userIncomeAgg, spaceUsers, categoryAgg, topExpensesAgg] = await Promise.all([
+  const [monthlyAgg, todayAgg, incomeAgg, userExpenseAgg, userIncomeAgg, userTransferInAgg, userTransferOutAgg, spaceUsers, categoryAgg, topExpensesAgg, previousBalancesAgg] = await Promise.all([
     db.collection('expenses').aggregate([
       {
         $match: {
@@ -330,11 +330,19 @@ export async function getMonthlySummary(monthStr?: string, search?: string, cate
       { $group: { _id: null, total: { $sum: '$amount' } } },
     ]).toArray(),
     db.collection('expenses').aggregate([
-      { $match: { space_id: spaceId, date: { $gte: monthStart, $lt: monthEnd }, type: { $nin: ['income', 'transfer_in'] } } },
+      { $match: { space_id: spaceId, date: { $gte: monthStart, $lt: monthEnd }, type: { $nin: ['income', 'transfer_in', 'transfer_out'] } } },
       { $group: { _id: '$user_id', total: { $sum: '$amount' } } },
     ]).toArray(),
     db.collection('expenses').aggregate([
-      { $match: { space_id: spaceId, date: { $gte: monthStart, $lt: monthEnd }, type: { $in: ['income', 'transfer_in'] } } },
+      { $match: { space_id: spaceId, date: { $gte: monthStart, $lt: monthEnd }, type: 'income' } },
+      { $group: { _id: '$user_id', total: { $sum: '$amount' } } },
+    ]).toArray(),
+    db.collection('expenses').aggregate([
+      { $match: { space_id: spaceId, date: { $gte: monthStart, $lt: monthEnd }, type: 'transfer_in' } },
+      { $group: { _id: '$user_id', total: { $sum: '$amount' } } },
+    ]).toArray(),
+    db.collection('expenses').aggregate([
+      { $match: { space_id: spaceId, date: { $gte: monthStart, $lt: monthEnd }, type: 'transfer_out' } },
       { $group: { _id: '$user_id', total: { $sum: '$amount' } } },
     ]).toArray(),
     db.collection('users').find({ space_id: spaceId }, { projection: { user_id: 1, name: 1, _id: 0 } }).toArray(),
@@ -363,7 +371,11 @@ export async function getMonthlySummary(monthStr?: string, search?: string, cate
       })
       .sort({ amount: -1 })
       .limit(5)
-      .toArray()
+      .toArray(),
+    db.collection('expenses').aggregate([
+      { $match: { space_id: spaceId, date: { $gte: '2026-07-01', $lt: monthStart } } },
+      { $group: { _id: { user_id: '$user_id', type: '$type' }, total: { $sum: '$amount' } } }
+    ]).toArray()
   ]);
 
   const dailyTotals = monthlyAgg.map((d) => ({ date: d._id as string, total: d.dailyTotal as number }));
@@ -372,7 +384,7 @@ export async function getMonthlySummary(monthStr?: string, search?: string, cate
   const monthlyIncome = incomeAgg[0]?.total || 0;
 
   // Build Member Balances
-  const memberBalancesMap = new Map<string, { user_id: string; name: string; income: number; expense: number; balance: number }>();
+  const memberBalancesMap = new Map<string, { user_id: string; name: string; income: number; expense: number; transfer_in: number; transfer_out: number; month_balance: number; previous_balance: number; total_balance: number; }>();
   
   // Initialize with all users in space
   spaceUsers.forEach((u: any) => {
@@ -381,35 +393,71 @@ export async function getMonthlySummary(monthStr?: string, search?: string, cate
       name: u.name,
       income: 0,
       expense: 0,
-      balance: 0
+      transfer_in: 0,
+      transfer_out: 0,
+      month_balance: 0,
+      previous_balance: 0,
+      total_balance: 0
     });
   });
 
+  const getOrInitMember = (userId: string) => {
+    if (!memberBalancesMap.has(userId)) {
+      memberBalancesMap.set(userId, { user_id: userId, name: 'Unknown User', income: 0, expense: 0, transfer_in: 0, transfer_out: 0, month_balance: 0, previous_balance: 0, total_balance: 0 });
+    }
+    return memberBalancesMap.get(userId)!;
+  };
+
   // Populate incomes
   userIncomeAgg.forEach((agg: any) => {
-    const userId = agg._id;
-    if (memberBalancesMap.has(userId)) {
-      memberBalancesMap.get(userId)!.income = agg.total;
-    } else {
-      memberBalancesMap.set(userId, { user_id: userId, name: 'Unknown User', income: agg.total, expense: 0, balance: 0 });
-    }
+    const mb = getOrInitMember(agg._id);
+    mb.income = agg.total;
   });
 
   // Populate expenses
   userExpenseAgg.forEach((agg: any) => {
-    const userId = agg._id;
-    if (memberBalancesMap.has(userId)) {
-      memberBalancesMap.get(userId)!.expense = agg.total;
+    const mb = getOrInitMember(agg._id);
+    mb.expense = agg.total;
+  });
+
+  // Populate transfer_in
+  userTransferInAgg.forEach((agg: any) => {
+    const mb = getOrInitMember(agg._id);
+    mb.transfer_in = agg.total;
+  });
+
+  // Populate transfer_out
+  userTransferOutAgg.forEach((agg: any) => {
+    const mb = getOrInitMember(agg._id);
+    mb.transfer_out = agg.total;
+  });
+
+  // Populate previous balances
+  previousBalancesAgg.forEach((agg: any) => {
+    if (!agg._id || !agg._id.user_id) return;
+    const userId = agg._id.user_id;
+    const type = agg._id.type;
+    const amount = agg.total || 0;
+    
+    const mb = getOrInitMember(userId);
+    
+    if (type === 'income' || type === 'transfer_in') {
+      mb.previous_balance += amount;
     } else {
-      memberBalancesMap.set(userId, { user_id: userId, name: 'Unknown User', income: 0, expense: agg.total, balance: 0 });
+      // expense, transfer_out, or undefined/null
+      mb.previous_balance -= amount;
     }
   });
 
   // Calculate balances
-  const memberBalances = Array.from(memberBalancesMap.values()).map(mb => ({
-    ...mb,
-    balance: mb.income - mb.expense
-  }));
+  const memberBalances = Array.from(memberBalancesMap.values()).map(mb => {
+    const month_balance = (mb.income + mb.transfer_in) - (mb.expense + mb.transfer_out);
+    return {
+      ...mb,
+      month_balance,
+      total_balance: mb.previous_balance + month_balance
+    };
+  });
 
   // Filtered total: only needed when a search term is provided
   let filteredTotal = monthlyTotal;
