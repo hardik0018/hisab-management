@@ -172,6 +172,8 @@ export async function getExpenses(options: {
   month?: string;
   startDate?: string;
   endDate?: string;
+  limit?: number;
+  page?: number;
 } = {}): Promise<Expense[] | null> {
   const user = await getAuthenticatedUser();
   if (!user) return null;
@@ -216,10 +218,16 @@ export async function getExpenses(options: {
     ];
   }
 
+  const limit = options.limit || 50;
+  const page = options.page || 1;
+  const skip = (page - 1) * limit;
+
   const expenses = await db
     .collection('expenses')
     .find(query)
     .sort({ date: -1, createdAt: -1 })
+    .skip(skip)
+    .limit(limit)
     .toArray();
 
   return expenses.map(exp => ({

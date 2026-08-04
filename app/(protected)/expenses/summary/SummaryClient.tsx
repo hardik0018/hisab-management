@@ -200,7 +200,8 @@ export default function SummaryClient({
   });
 
   const formatCurrency = (amt: number) => {
-    return amt.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+    const safeAmt = Number(amt) || 0;
+    return safeAmt.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
   };
 
   const getMonthName = () => {

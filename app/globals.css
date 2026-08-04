@@ -109,3 +109,7 @@
     opacity 300ms,
     transform 300ms;
 }
+
+.perspective-2000 { perspective: 2000px; }
+.perspective-500 { perspective: 500px; }
+.rotate-y-12 { transform: rotateY(12deg); }

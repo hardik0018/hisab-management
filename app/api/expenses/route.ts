@@ -7,6 +7,27 @@ import { getAuthenticatedUser } from '@/lib/auth';
 import { Expense } from '@/types';
 import { categorizeExpense } from '@/lib/category-engine';
 import { revalidatePath } from 'next/cache';
+import { getExpenses } from '@/lib/data-fetching';
+
+export async function GET(request: NextRequest) {
+  try {
+    const user = await getAuthenticatedUser();
+    if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
+
+    const { searchParams } = new URL(request.url);
+    const search = searchParams.get('search') || undefined;
+    const date = searchParams.get('date') || undefined;
+    const month = searchParams.get('month') || undefined;
+    const page = parseInt(searchParams.get('page') || '1', 10);
+    const limit = parseInt(searchParams.get('limit') || '50', 10);
+
+    const expenses = await getExpenses({ search, date, month, page, limit });
+    return Response.json({ expenses, success: true });
+  } catch (error) {
+    console.error('[API_EXPENSES_GET_ERROR]', error);
+    return Response.json({ error: 'Internal Server Error' }, { status: 500 });
+  }
+}
 
 export async function POST(request: NextRequest) {
   try {

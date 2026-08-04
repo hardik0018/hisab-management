@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Sparkles, ShieldCheck, Zap, Globe, LucideIcon } from 'lucide-react';
 import { signIn, useSession } from 'next-auth/react';
 import { motion } from 'framer-motion';
+import Image from 'next/image';
 
 export default function LoginPageClient() {
   const router = useRouter();
@@ -25,7 +26,7 @@ export default function LoginPageClient() {
     return (
       <div className="flex items-center justify-center min-h-screen bg-slate-50">
         <div className="relative">
-          <img src="/logo.png" alt="Logo" className="h-24 w-24 object-contain animate-pulse" />
+          <Image src="/logo.png" alt="Logo" width={96} height={96} className="h-24 w-24 object-contain animate-pulse" priority />
         </div>
       </div>
     );
@@ -92,7 +93,7 @@ export default function LoginPageClient() {
         >
           <div className="text-center lg:text-left space-y-2">
             <div className="lg:hidden mx-auto w-24 h-24 flex items-center justify-center mb-6">
-               <img src="/logo.png" alt="Logo" className="h-full w-full object-contain" />
+               <Image src="/logo.png" alt="Logo" width={96} height={96} className="h-full w-full object-contain" priority />
             </div>
             <h2 className="text-4xl font-extrabold text-slate-900 tracking-tight">Welcome Back</h2>
             <p className="text-slate-500 font-medium">Log in to your account to continue.</p>

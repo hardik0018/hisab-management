@@ -1,61 +1,25 @@
-"use client";
-
-import React, { useRef, useState, useEffect } from "react";
-import { motion, useScroll, useTransform } from "framer-motion";
+import React from "react";
 import { 
-  ArrowUpRight, 
-  ArrowDownLeft, 
   Wallet, 
   Users, 
-  Download, 
-  ShieldCheck, 
   Zap, 
-  ChevronRight,
   TrendingUp,
-  CreditCard,
-  Smartphone,
-  BarChart3,
   Search,
   CheckCircle2,
-  Lock,
   Heart,
   Plus,
   ArrowRight,
   LayoutDashboard
 } from "lucide-react";
 import Link from "next/link";
+import { TiltCard } from "./TiltCard.client";
+import { LandingNav, FadeIn } from "./LandingAnimations.client";
 
 const Headline = ({ children, className = "" }: { children: React.ReactNode, className?: string }) => (
   <h2 className={`text-4xl lg:text-6xl font-black tracking-tighter leading-[0.95] ${className}`}>
     {children}
   </h2>
 );
-
-const TiltCard = ({ children, className = "" }: { children: React.ReactNode, className?: string }) => {
-  const [rotate, setRotate] = useState({ x: 0, y: 0 });
-  const cardRef = useRef<HTMLDivElement>(null);
-
-  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!cardRef.current) return;
-    const rect = cardRef.current.getBoundingClientRect();
-    const rotateX = (e.clientY - rect.top - rect.height / 2) / 20;
-    const rotateY = (rect.width / 2 - (e.clientX - rect.left)) / 20;
-    setRotate({ x: rotateX, y: rotateY });
-  };
-
-  return (
-    <motion.div
-      ref={cardRef}
-      onMouseMove={handleMouseMove}
-      onMouseLeave={() => setRotate({ x: 0, y: 0 })}
-      style={{ transformStyle: "preserve-3d", rotateX: rotate.x, rotateY: rotate.y }}
-      transition={{ type: "spring", stiffness: 300, damping: 30 }}
-      className={`relative ${className}`}
-    >
-      {children}
-    </motion.div>
-  );
-};
 
 const Icon3D = ({ icon: Icon, color = "blue" }: { icon: any, color?: string }) => {
   const colors: any = {
@@ -75,13 +39,6 @@ const Icon3D = ({ icon: Icon, color = "blue" }: { icon: any, color?: string }) =
 };
 
 const LandingPage = () => {
-  const [scrolled, setScrolled] = useState(false);
-  useEffect(() => {
-    const handleScroll = () => setScrolled(window.scrollY > 50);
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
-
   const features = [
     {
       title: "Hisab Management",
@@ -129,56 +86,21 @@ const LandingPage = () => {
         <div className="absolute bottom-[5%] -right-[10%] w-[500px] h-[500px] bg-rose-50/50 blur-[120px] rounded-full animate-pulse [animation-delay:2s]" />
       </div>
 
-      {/* Navigation */}
-      <nav className={`fixed top-0 w-full z-[100] transition-all duration-500 ${scrolled ? 'py-4' : 'py-6'}`}>
-        <div className="max-w-7xl mx-auto px-6">
-          <div className={`flex items-center justify-between px-6 py-3 rounded-[1.5rem] transition-all duration-500 ${scrolled ? 'bg-white/70 backdrop-blur-xl border border-white/40 shadow-2xl shadow-slate-200/50' : 'bg-transparent'}`}>
-            <div className="flex items-center gap-2 group cursor-pointer font-black text-2xl tracking-tighter italic">
-              <div className="w-10 h-10 bg-black rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform shadow-xl">
-                <Wallet className="w-6 h-6 text-white" />
-              </div>
-              <span className="text-black tracking-tight font-black text-xl md:text-2xl not-italic">Hisab Management System</span>
-            </div>
-
-            <div className="hidden md:flex items-center gap-8">
-              {['Features', 'Ledger', 'Demo'].map(item => (
-                <a key={item} href={`#${item.toLowerCase()}`} className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400 hover:text-blue-600 transition-colors">
-                  {item}
-                </a>
-              ))}
-            </div>
-
-            <div className="flex items-center gap-4">
-              <Link href="/login" className="px-6 py-2.5 bg-black text-white rounded-xl font-black text-xs uppercase tracking-widest hover:bg-blue-600 transition-all active:scale-95 shadow-lg shadow-black/10">
-                Sign In
-              </Link>
-            </div>
-          </div>
-        </div>
-      </nav>
+      <LandingNav />
 
       <main>
         {/* HERO SECTION */}
         <section className="relative pt-28 pb-16 px-6">
           <div className="max-w-7xl mx-auto flex flex-col items-center text-center">
-            <motion.div 
-              initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-              className="px-4 py-1.5 bg-slate-100 rounded-full text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 mb-8"
-            >
+            <FadeIn y={10} className="px-4 py-1.5 bg-slate-100 rounded-full text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 mb-8">
               All your records in one professional space
-            </motion.div>
+            </FadeIn>
 
-            <motion.h1 
-               initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
-               className="text-4xl sm:text-5xl md:text-6xl lg:text-[7rem] font-[1000] tracking-[-0.05em] leading-[0.9] mb-10 text-slate-900"
-            >
+            <FadeIn as="h1" scale={0.95} className="text-4xl sm:text-5xl md:text-6xl lg:text-[7rem] font-[1000] tracking-[-0.05em] leading-[0.9] mb-10 text-slate-900">
               MANAGE YOUR<br /> <span className="text-blue-600 italic">HISAB</span> & <span className="text-rose-500 italic">VAYVHAR</span>
-            </motion.h1>
+            </FadeIn>
 
-            <motion.div 
-               initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
-               className="max-w-3xl bg-white/80 backdrop-blur-md border border-slate-200/80 p-6 sm:p-8 rounded-3xl shadow-xl shadow-slate-200/40 mb-12 text-left space-y-3"
-            >
+            <FadeIn y={10} delay={0.2} className="max-w-3xl bg-white/80 backdrop-blur-md border border-slate-200/80 p-6 sm:p-8 rounded-3xl shadow-xl shadow-slate-200/40 mb-12 text-left space-y-3">
               <h2 className="text-lg sm:text-xl font-bold text-slate-900 flex items-center gap-2">
                 <span className="w-2.5 h-2.5 rounded-full bg-blue-600 inline-block shrink-0" />
                 About Hisab Management System
@@ -186,12 +108,9 @@ const LandingPage = () => {
               <p className="text-sm sm:text-base text-slate-600 leading-relaxed font-normal">
                 <strong className="text-slate-900 font-semibold">Hisab Management System</strong> is a comprehensive personal finance, expense tracking, shared family ledger, and document vault web application. Our platform is designed to help users log daily expenses with automated categorization, manage shared debit-credit records (Hisab) with collaborators, track cultural gifts (Vyavahar), compute income tax obligations, and securely store sensitive documents and passwords in an encrypted cloud vault.
               </p>
-            </motion.div>
+            </FadeIn>
 
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
-              className="flex flex-col sm:flex-row items-center gap-6"
-            >
+            <FadeIn y={20} delay={0.3} className="flex flex-col sm:flex-row items-center gap-6">
               <Link href="/login" className="px-10 py-5 bg-black text-white rounded-[2rem] font-black text-lg hover:bg-blue-600 transition-all shadow-2xl active:scale-95 flex items-center gap-3">
                 Get Started
                 <ArrowRight className="w-6 h-6" />
@@ -199,7 +118,7 @@ const LandingPage = () => {
               <div className="flex items-center gap-4 text-sm font-black text-slate-400">
                 <CheckCircle2 className="w-5 h-5 text-green-500" /> Secure Cloud Backup
               </div>
-            </motion.div>
+            </FadeIn>
           </div>
 
           {/* Interactive Mockup */}
@@ -397,11 +316,6 @@ const LandingPage = () => {
          </div>
       </footer>
 
-      <style jsx global>{`
-        .perspective-2000 { perspective: 2000px; }
-        .perspective-500 { perspective: 500px; }
-        .rotate-y-12 { transform: rotateY(12deg); }
-      `}</style>
     </div>
   );
 };

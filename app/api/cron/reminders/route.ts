@@ -37,18 +37,29 @@ export async function GET(req: NextRequest) {
 
     let sentCount = 0;
 
+    // Pre-fetch all related data to prevent N+1 queries
+    const userIds = users.map(u => u.user_id);
+    const spaceIds = users.map(u => u.space_id || u.user_id);
+
+    const allInsurances = await db.collection('insurance_policies')
+      .find({ space_id: { $in: spaceIds }, nextDueDate: { $lte: horizonStr } })
+      .toArray();
+
+    const allWarranties = await db.collection('warranties')
+      .find({ space_id: { $in: spaceIds }, expiryDate: { $lte: horizonStr } })
+      .toArray();
+
+    const allPushSubscriptions = process.env.VAPID_PRIVATE_KEY && process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
+      ? await db.collection('push_subscriptions').find({ user_id: { $in: userIds } }).toArray()
+      : [];
+
     // 3. Process each user
     for (const user of users) {
       if (!user.email) continue;
       const spaceId = user.space_id || user.user_id;
 
-      const insurances = await db.collection('insurance_policies')
-        .find({ space_id: spaceId, nextDueDate: { $lte: horizonStr } })
-        .toArray();
-
-      const warranties = await db.collection('warranties')
-        .find({ space_id: spaceId, expiryDate: { $lte: horizonStr } })
-        .toArray();
+      const insurances = allInsurances.filter((p: any) => p.space_id === spaceId);
+      const warranties = allWarranties.filter((w: any) => w.space_id === spaceId);
 
       const urgentItems: Array<{ type: string; name: string; due: string; daysLeft: number; amount?: number }> = [];
 
@@ -97,7 +108,7 @@ export async function GET(req: NextRequest) {
               process.env.VAPID_PRIVATE_KEY
             );
 
-            const pushSubscriptions = await db.collection('push_subscriptions').find({ user_id: user.user_id }).toArray();
+            const pushSubscriptions = allPushSubscriptions.filter((sub: any) => sub.user_id === user.user_id);
             
             const payload = JSON.stringify({
               title: `Vault Reminder`,

@@ -4,6 +4,7 @@ import { MongoDBAdapter } from "@auth/mongodb-adapter"
 import clientPromise from "@/lib/mongodb-promise"
 import { v4 as uuidv4 } from 'uuid'
 import { ObjectId } from 'mongodb'
+import { authConfig } from "./auth.config"
 
 declare module "next-auth" {
   interface Session {
@@ -21,6 +22,7 @@ declare module "next-auth" {
 }
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
+  ...authConfig,
   adapter: MongoDBAdapter(clientPromise),
   providers: [
     Google({
@@ -28,17 +30,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
        clientSecret: process.env.GOOGLE_CLIENT_SECRET || process.env.AUTH_GOOGLE_SECRET,
     })
   ],
-  session: {
-    strategy: 'database',
-  },
   callbacks: {
-    async session({ session, user }) {
-      if (session.user) {
-        session.user.id = user.id;
-        // user_id and space_id are fetched in lib/auth.ts for server components/actions
-      }
-      return session;
-    },
+    ...authConfig.callbacks,
   },
   events: {
     async createUser({ user }) {
@@ -51,8 +44,4 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       );
     },
   },
-  pages: {
-    signIn: '/login',
-  },
-  secret: process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET,
 })
