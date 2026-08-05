@@ -2,21 +2,18 @@ import React from "react";
 import { 
   Wallet, 
   Users, 
-  Zap, 
-  TrendingUp,
-  Search,
-  CheckCircle2,
+  Zap,
   Heart,
-  Plus,
   ArrowRight,
-  LayoutDashboard
+  LayoutDashboard,
+  FileText
 } from "lucide-react";
 import Link from "next/link";
 import { TiltCard } from "./TiltCard.client";
 import { LandingNav, FadeIn } from "./LandingAnimations.client";
 
 const Headline = ({ children, className = "" }: { children: React.ReactNode, className?: string }) => (
-  <h2 className={`text-4xl lg:text-6xl font-black tracking-tighter leading-[0.95] ${className}`}>
+  <h2 className={`text-4xl lg:text-5xl font-black tracking-tighter leading-[0.95] ${className}`}>
     {children}
   </h2>
 );
@@ -27,56 +24,19 @@ const Icon3D = ({ icon: Icon, color = "blue" }: { icon: any, color?: string }) =
     emerald: "from-emerald-400 to-teal-600 shadow-emerald-500/20",
     rose: "from-rose-500 to-pink-600 shadow-rose-500/20",
     amber: "from-amber-400 to-orange-500 shadow-amber-500/20",
+    white: "from-white/20 to-white/10 shadow-black/10 border-white/10",
   };
   return (
     <div className="relative group perspective-500">
       <div className={`absolute inset-0 bg-gradient-to-br ${colors[color]} blur-2xl opacity-20 group-hover:opacity-40 transition-opacity`} />
       <div className={`relative w-14 h-14 bg-gradient-to-br ${colors[color]} rounded-2xl flex items-center justify-center shadow-2xl border border-white/20 transform-gpu group-hover:rotate-y-12 transition-all duration-300`}>
-        <Icon className="w-7 h-7 text-white drop-shadow-md" />
+        <Icon className={`w-7 h-7 drop-shadow-md ${color === 'white' ? 'text-white' : 'text-white'}`} />
       </div>
     </div>
   );
 };
 
 const LandingPage = () => {
-  const features = [
-    {
-      title: "Hisab Management",
-      description: "Manage your personal debit and credit records with ease. Track what you gave and what you took.",
-      icon: Wallet,
-      color: "blue"
-    },
-    {
-      title: "Daily Expenses",
-      description: "Keep your daily spendings in check. Log every expense and filter by categories.",
-      icon: Zap,
-      color: "amber"
-    },
-    {
-      title: "Social Gifting",
-      description: "Manage Marriage gifting and Vayvhar. Track social contributions across celebrations.",
-      icon: Heart,
-      color: "rose"
-    },
-    {
-      title: "Shared Spaces",
-      description: "Invite partners to track together. Manage collaborators and maintain privacy.",
-      icon: Users,
-      color: "emerald"
-    }
-  ];
-
-  const dummyRecords = [
-    { name: "Rahul Sharma", amount: 2450, type: "credit", date: "Today", tag: "Hisab" },
-    { name: "Suresh's Wedding", amount: 500, type: "debit", date: "Yesterday", tag: "Social" },
-    { name: "Grocery Store", amount: 1200, type: "debit", date: "Feb 15", tag: "Expense" },
-  ];
-
-  const chartData = [
-    { name: 'M', amount: 400 }, { name: 'T', amount: 300 }, { name: 'W', amount: 600 },
-    { name: 'T', amount: 500 }, { name: 'F', amount: 800 }, { name: 'S', amount: 700 }, { name: 'S', amount: 900 },
-  ];
-
   return (
     <div className="min-h-screen bg-[#FDFEFF] text-slate-900 font-sans selection:bg-blue-600 selection:text-white overflow-x-hidden">
       
@@ -90,197 +50,142 @@ const LandingPage = () => {
 
       <main>
         {/* HERO SECTION */}
-        <section className="relative pt-28 pb-16 px-6">
+        <section className="relative pt-24 pb-16 px-6">
           <div className="max-w-7xl mx-auto flex flex-col items-center text-center">
-            <FadeIn y={10} className="px-4 py-1.5 bg-slate-100 rounded-full text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 mb-8">
-              All your records in one professional space
-            </FadeIn>
-
-            <FadeIn as="h1" scale={0.95} className="text-4xl sm:text-5xl md:text-6xl lg:text-[7rem] font-[1000] tracking-[-0.05em] leading-[0.9] mb-10 text-slate-900">
+            
+            <FadeIn as="h1" scale={0.95} className="text-4xl sm:text-5xl md:text-6xl lg:text-[7rem] font-[1000] tracking-[-0.05em] leading-[0.9] mb-8 text-slate-900">
               MANAGE YOUR<br /> <span className="text-blue-600 italic">HISAB</span> & <span className="text-rose-500 italic">VAYVHAR</span>
             </FadeIn>
 
-            <FadeIn y={10} delay={0.2} className="max-w-3xl bg-white/80 backdrop-blur-md border border-slate-200/80 p-6 sm:p-8 rounded-3xl shadow-xl shadow-slate-200/40 mb-12 text-left space-y-3">
-              <h2 className="text-lg sm:text-xl font-bold text-slate-900 flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-blue-600 inline-block shrink-0" />
-                About Hisab Management System
-              </h2>
-              <p className="text-sm sm:text-base text-slate-600 leading-relaxed font-normal">
-                <strong className="text-slate-900 font-semibold">Hisab Management System</strong> is a comprehensive personal finance, expense tracking, shared family ledger, and document vault web application. Our platform is designed to help users log daily expenses with automated categorization, manage shared debit-credit records (Hisab) with collaborators, track cultural gifts (Vyavahar), compute income tax obligations, and securely store sensitive documents and passwords in an encrypted cloud vault.
-              </p>
+            <FadeIn y={10} delay={0.2} className="max-w-xl mx-auto mb-10 text-slate-600 text-lg sm:text-xl font-medium">
+              Log daily expenses, track shared records, and compute tax obligations in one secure space.
             </FadeIn>
 
-            <FadeIn y={20} delay={0.3} className="flex flex-col sm:flex-row items-center gap-6">
+            <FadeIn y={20} delay={0.3} className="flex flex-col sm:flex-row items-center gap-6 mb-16">
               <Link href="/login" className="px-10 py-5 bg-black text-white rounded-[2rem] font-black text-lg hover:bg-blue-600 transition-all shadow-2xl active:scale-95 flex items-center gap-3">
                 Get Started
                 <ArrowRight className="w-6 h-6" />
               </Link>
-              <div className="flex items-center gap-4 text-sm font-black text-slate-400">
-                <CheckCircle2 className="w-5 h-5 text-green-500" /> Secure Cloud Backup
-              </div>
             </FadeIn>
           </div>
 
-          {/* Interactive Mockup */}
-          <div className="mt-10 max-w-6xl mx-auto perspective-2000">
+          {/* Image Placeholder */}
+          <div className="max-w-6xl mx-auto perspective-2000">
              <TiltCard className="relative">
                 <div className="absolute -inset-4 bg-blue-400 blur-[100px] opacity-10" />
-                <div className="relative bg-white/40 backdrop-blur-3xl border border-white/50 p-3 rounded-[3.5rem] shadow-2xl">
-                   <div className="bg-[#F8FAFC] rounded-[3rem] p-10 overflow-hidden">
-                      <div className="flex justify-between items-center mb-10">
-                          <div className="flex items-center gap-4">
-                             <div className="w-12 h-12 bg-white rounded-2xl shadow-sm flex items-center justify-center border border-slate-100">
-                                <LayoutDashboard className="w-6 h-6 text-blue-600" />
-                             </div>
-                             <div>
-                                <h3 className="text-xl font-black italic tracking-tighter">My Financials</h3>
-                                <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Personal Dashboard</p>
-                             </div>
-                          </div>
-                          <div className="flex gap-2">
-                             <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center text-blue-600"><Plus className="w-5 h-5"/></div>
-                             <div className="w-10 h-10 rounded-xl bg-white border border-slate-100 flex items-center justify-center text-slate-400"><Search className="w-5 h-5"/></div>
-                          </div>
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-                         <div className="p-6 bg-white rounded-3xl border border-slate-100 shadow-sm transition-transform hover:scale-[1.02]">
-                            <div className="flex items-center justify-between mb-4">
-                               <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600"><Wallet className="w-5 h-5"/></div>
-                               <TrendingUp className="w-4 h-4 text-green-500" />
-                            </div>
-                            <p className="text-[10px] font-black uppercase text-slate-400 mb-1">BALANCE</p>
-                            <h4 className="text-2xl font-black tracking-tight">₹6,01,000</h4>
-                         </div>
-                         <div className="p-6 bg-white rounded-3xl border border-slate-100 shadow-sm transition-transform hover:scale-[1.02]">
-                            <div className="flex items-center justify-between mb-4">
-                               <div className="w-10 h-10 rounded-xl bg-green-50 flex items-center justify-center text-green-600"><TrendingUp className="w-5 h-5"/></div>
-                            </div>
-                            <p className="text-[10px] font-black uppercase text-slate-400 mb-1">CREDIT</p>
-                            <h4 className="text-2xl font-black tracking-tight text-green-600">₹8,27,000</h4>
-                         </div>
-                         <div className="p-6 bg-rose-600 text-white rounded-3xl shadow-xl transition-transform hover:scale-[1.02]">
-                            <div className="flex items-center justify-between mb-4">
-                               <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center text-white"><Heart className="w-5 h-5"/></div>
-                            </div>
-                            <p className="text-[10px] font-black uppercase opacity-60 mb-1">SOCIAL GIFT</p>
-                            <h4 className="text-2xl font-black tracking-tight">₹3,200</h4>
-                         </div>
-                      </div>
-
-                      <div className="grid grid-cols-12 gap-8">
-                         <div className="col-span-12 lg:col-span-7 bg-white rounded-[2rem] p-8 border border-slate-100 shadow-sm">
-                            <p className="text-[10px] font-black uppercase text-slate-400 mb-6">Spending Overview</p>
-                             <div className="h-40 w-full flex items-end justify-between gap-2.5 pt-2">
-                               {chartData.map((e, i) => {
-                                 const maxVal = Math.max(...chartData.map(d => d.amount));
-                                 const percent = (e.amount / maxVal) * 100;
-                                 return (
-                                   <div key={i} className="flex flex-col items-center gap-2 flex-1 group" style={{ contentVisibility: 'auto' }}>
-                                     <div className="relative w-full flex flex-col justify-end h-28">
-                                       <div 
-                                         style={{ height: `${percent}%` }}
-                                         className={`w-full rounded-t-lg transition-all duration-500 group-hover:opacity-85 ${i === 4 ? 'bg-blue-600 shadow-[0_4px_12px_rgba(37,99,235,0.35)]' : 'bg-slate-100'}`}
-                                       />
-                                     </div>
-                                     <span className="text-[10px] font-black text-slate-400">{e.name}</span>
-                                   </div>
-                                 );
-                               })}
-                            </div>
-                         </div>
-                         <div className="col-span-12 lg:col-span-5 space-y-4">
-                            {dummyRecords.map((r, i) => (
-                               <div key={i} className="flex justify-between items-center p-4 bg-white rounded-2xl border border-slate-50 shadow-sm">
-                                  <div className="flex items-center gap-4">
-                                     <div className={`w-10 h-10 rounded-full flex items-center justify-center font-black text-xs ${r.type === 'credit' ? 'bg-green-100 text-green-600' : 'bg-rose-100 text-rose-600'}`}>{r.name.charAt(0)}</div>
-                                     <div>
-                                        <p className="text-sm font-black">{r.name}</p>
-                                        <p className="text-[10px] text-slate-400 font-bold uppercase">{r.tag} • {r.date}</p>
-                                     </div>
-                                  </div>
-                                  <span className={`text-sm font-black ${r.type === 'credit' ? 'text-green-600' : 'text-rose-600'}`}>{r.type === 'credit' ? '+' : '-'}₹{r.amount}</span>
-                               </div>
-                            ))}
-                         </div>
-                      </div>
+                <div className="relative bg-white/40 backdrop-blur-3xl border border-white/50 p-2 sm:p-4 rounded-[2rem] sm:rounded-[3.5rem] shadow-2xl">
+                   {/* TODO: hero product photo, 1600x900 */}
+                   <div className="bg-slate-100 rounded-[1.5rem] sm:rounded-[3rem] overflow-hidden aspect-[16/9] flex items-center justify-center border border-slate-200/60 relative">
+                     <div className="absolute inset-0 bg-gradient-to-br from-blue-50/50 to-transparent" />
+                     <div className="text-center p-6 text-slate-400 relative z-10">
+                        <LayoutDashboard className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                        <p className="font-bold text-sm uppercase tracking-widest text-slate-500">Product Interface Screenshot</p>
+                        <p className="text-xs mt-2 max-w-xs mx-auto text-slate-400">Please provide a real screenshot of the application dashboard here.</p>
+                     </div>
                    </div>
                 </div>
              </TiltCard>
           </div>
         </section>
 
-        {/* CORE FEATURES (REAL APP FEATURES) */}
-        <section id="features" className="py-10 px-6">
+        {/* BENTO GRID FEATURES */}
+        <section id="features" className="py-20 px-6">
            <div className="max-w-7xl mx-auto">
-              <div className="mb-20 text-center space-y-4">
-                 <p className="text-[10px] font-black uppercase tracking-[0.4em] text-blue-600">The Ecosystem</p>
+              <div className="mb-16">
                  <Headline>Built for your real<br />financial <span className="text-blue-600 underline underline-offset-8 decoration-slate-100">workflow.</span></Headline>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-                 {features.map((f, i) => (
-                    <div key={i} className="p-10 bg-white border border-slate-100 rounded-[2.5rem] hover:shadow-2xl hover:-translate-y-2 transition-all group">
-                       <Icon3D icon={f.icon} color={f.color} />
-                       <h3 className="text-2xl font-black mt-8 mb-4 tracking-tighter">{f.title}</h3>
-                       <p className="text-slate-500 text-sm font-medium leading-relaxed">{f.description}</p>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                 {/* Cell 1: Large Span */}
+                 <div className="md:col-span-2 p-10 bg-blue-50/50 border border-blue-100/50 rounded-[2.5rem] hover:shadow-xl hover:-translate-y-1 transition-all flex flex-col justify-between overflow-hidden relative group">
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-blue-400/20 blur-[80px] rounded-full group-hover:bg-blue-400/30 transition-colors" />
+                    <div>
+                      <Icon3D icon={Wallet} color="blue" />
+                      <h3 className="text-2xl font-black mt-8 mb-3 tracking-tighter">Hisab Management</h3>
+                      <p className="text-slate-600 text-sm font-medium leading-relaxed max-w-sm">Manage your personal debit and credit records. Track what you gave and what you took with complete transparency.</p>
                     </div>
-                 ))}
+                 </div>
+
+                 {/* Cell 2: Small Span */}
+                 <div className="md:col-span-1 p-10 bg-white border border-slate-100 rounded-[2.5rem] hover:shadow-xl hover:-translate-y-1 transition-all flex flex-col justify-between">
+                    <div>
+                      <Icon3D icon={Zap} color="amber" />
+                      <h3 className="text-2xl font-black mt-8 mb-3 tracking-tighter">Daily Expenses</h3>
+                      <p className="text-slate-500 text-sm font-medium leading-relaxed">Keep daily spendings in check. Log every expense and filter by categories effortlessly.</p>
+                    </div>
+                 </div>
+
+                 {/* Cell 3: Small Span Dark */}
+                 <div className="md:col-span-1 p-10 bg-rose-600 text-white rounded-[2.5rem] hover:shadow-xl hover:-translate-y-1 transition-all flex flex-col justify-between relative overflow-hidden">
+                    <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-rose-500 rounded-full blur-[40px]" />
+                    <div className="relative z-10">
+                      <Icon3D icon={Heart} color="white" />
+                      <h3 className="text-2xl font-black mt-8 mb-3 tracking-tighter">Social Gifting</h3>
+                      <p className="text-rose-100 text-sm font-medium leading-relaxed">Manage Marriage gifting and Vayvhar. Track social contributions across celebrations.</p>
+                    </div>
+                 </div>
+
+                 {/* Cell 4: Large Span */}
+                 <div className="md:col-span-2 p-10 bg-emerald-50/50 border border-emerald-100/50 rounded-[2.5rem] hover:shadow-xl hover:-translate-y-1 transition-all flex flex-col justify-between relative overflow-hidden group">
+                    <div className="absolute -left-10 bottom-0 w-64 h-64 bg-emerald-400/20 blur-[80px] rounded-full group-hover:bg-emerald-400/30 transition-colors" />
+                    <div className="relative z-10 flex flex-col sm:flex-row items-start sm:items-end justify-between gap-8">
+                      <div>
+                        <Icon3D icon={Users} color="emerald" />
+                        <h3 className="text-2xl font-black mt-8 mb-3 tracking-tighter">Shared Spaces</h3>
+                        <p className="text-slate-600 text-sm font-medium leading-relaxed max-w-sm">Invite partners to track together. Manage collaborators and maintain privacy across all your shared ledgers.</p>
+                      </div>
+                      {/* Abstract visual element inside the bento cell */}
+                      <div className="w-full sm:w-48 h-32 bg-white rounded-2xl shadow-sm border border-emerald-100 p-4 flex flex-col gap-3">
+                         <div className="w-full h-3 bg-slate-100 rounded-full" />
+                         <div className="w-3/4 h-3 bg-emerald-100 rounded-full" />
+                         <div className="mt-auto flex -space-x-2">
+                           <div className="w-8 h-8 rounded-full bg-blue-100 border-2 border-white flex items-center justify-center text-[10px] font-black text-blue-600">A</div>
+                           <div className="w-8 h-8 rounded-full bg-rose-100 border-2 border-white flex items-center justify-center text-[10px] font-black text-rose-600">B</div>
+                         </div>
+                      </div>
+                    </div>
+                 </div>
               </div>
            </div>
         </section>
 
-        {/* REFINED LEDGER */}
-        <section id="ledger" className="py-10 px-6 bg-slate-900 text-white relative">
+        {/* LEDGER SPLIT SCREEN */}
+        <section id="ledger" className="py-20 px-6 bg-slate-900 text-white relative overflow-hidden">
+           {/* Subtle background gradient */}
+           <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-blue-900/20 blur-[120px] rounded-full pointer-events-none" />
+           
            <div className="max-w-7xl mx-auto">
-              <div className="flex flex-col lg:flex-row items-center justify-between mb-20 gap-8">
-                 <div className="text-center lg:text-left">
-                    <p className="text-[10px] font-black uppercase tracking-[0.4em] text-blue-400 mb-4">Live Ledger Preview</p>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+                 
+                 <div className="space-y-8">
                     <Headline className="text-white">Clean. Fast.<br />Transparent.</Headline>
+                    <p className="text-slate-400 text-lg leading-relaxed max-w-md">
+                      Your financial data deserves a clear interface. View complete transaction histories, filter by counterparty, and monitor your exact standing in real time.
+                    </p>
+                    <div className="flex gap-4 pt-4">
+                       <Link href="/login" className="px-8 py-4 bg-white text-slate-900 rounded-full font-black text-sm uppercase tracking-widest shadow-xl hover:bg-slate-200 transition-colors">
+                          Try Live Demo
+                       </Link>
+                    </div>
                  </div>
-                 <div className="flex gap-4">
-                    <div className="px-10 py-4 bg-white text-black rounded-full font-black text-xs uppercase tracking-widest shadow-xl cursor-default">VIEW FULL LEDGER</div>
-                 </div>
-              </div>
 
-              <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-[3rem] overflow-hidden">
-                 <div className="overflow-x-auto">
-                    <table className="w-full text-left">
-                       <thead>
-                          <tr className="border-b border-white/5 uppercase text-[9px] font-black tracking-[0.4em] text-white/30">
-                             <th className="py-6 sm:py-10 pl-4 sm:pl-12 font-black">Counterparty Name</th>
-                             <th className="py-6 sm:py-10 font-black">Transaction Category</th>
-                             <th className="py-6 sm:py-10 font-black">History</th>
-                             <th className="py-6 sm:py-10 text-right pr-4 sm:pr-12 font-black">Amount (INR)</th>
-                       </tr>
-                       </thead>
-                       <tbody className="divide-y divide-white/5">
-                          {dummyRecords.concat(dummyRecords).map((r, i) => (
-                             <tr key={i} className="hover:bg-white/[0.02] transition-colors group">
-                                <td className="py-4 sm:py-8 pl-4 sm:pl-12">
-                                   <div className="flex items-center gap-4">
-                                      <div className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center font-black text-xs text-blue-400">{r.name.charAt(0)}</div>
-                                      <p className="font-black text-lg italic">{r.name}</p>
-                                   </div>
-                                </td>
-                                <td className="py-4 sm:py-8"><span className="px-4 py-1.5 rounded-full bg-white/5 border border-white/5 text-[10px] font-black uppercase tracking-widest text-white/40">{r.tag}</span></td>
-                                <td className="py-4 sm:py-8 text-[11px] font-black uppercase text-white/20 tracking-widest">{r.date}</td>
-                                <td className={`py-4 sm:py-8 text-right pr-4 sm:pr-12 text-2xl font-black italic tracking-tighter ${r.type === 'credit' ? 'text-green-500' : 'text-rose-600'}`}>
-                                   {r.type === 'credit' ? '+' : '-'}₹{r.amount.toLocaleString()}
-                                </td>
-                             </tr>
-                          ))}
-                       </tbody>
-                    </table>
+                 <div className="relative aspect-[4/3] w-full">
+                    {/* TODO: ledger UI photo, 1200x900 */}
+                    <div className="absolute inset-0 bg-slate-800 rounded-3xl border border-slate-700 shadow-2xl flex flex-col items-center justify-center p-8 text-center overflow-hidden">
+                       <div className="absolute inset-0 bg-[linear-gradient(to_right,#1e293b_1px,transparent_1px),linear-gradient(to_bottom,#1e293b_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_60%_at_50%_50%,#000_70%,transparent_100%)] opacity-20" />
+                       <FileText className="w-12 h-12 text-slate-600 mb-4 relative z-10" />
+                       <p className="font-bold text-sm uppercase tracking-widest text-slate-400 relative z-10">Ledger Interface Screenshot</p>
+                       <p className="text-xs mt-2 max-w-xs mx-auto text-slate-500 relative z-10">Please provide a real screenshot of the ledger data table here.</p>
+                    </div>
                  </div>
+
               </div>
            </div>
         </section>
 
         {/* FINAL CTA */}
-        <section className="py-10 px-6">
-           <div className="max-w-4xl mx-auto text-center space-y-12">
-              <p className="text-[11px] font-black uppercase tracking-[0.5em] text-slate-300">Join the movement</p>
+        <section className="py-24 px-6 text-center bg-[#FDFEFF]">
+           <div className="max-w-4xl mx-auto space-y-12">
               <Headline>Ready to take control of<br /><span className="text-blue-600 italic">your daily hisab?</span></Headline>
               <Link href="/login" className="px-12 py-6 bg-black text-white rounded-[2.5rem] font-black text-xl hover:bg-blue-600 transition-all shadow-2xl active:scale-95 group inline-flex items-center gap-4">
                  GET STARTED FOR FREE
@@ -300,12 +205,12 @@ const LandingPage = () => {
             </div>
             
             <p className="text-xs sm:text-sm text-slate-500 font-medium mb-6 max-w-lg leading-relaxed">
-              Hisab Management System is a verified cloud application providing personal debit-credit ledgers, daily expense tracking, and encrypted document storage.
+              Hisab Management System is a verified cloud application providing personal debit and credit ledgers, daily expense tracking, and encrypted document storage.
             </p>
 
             <div className="flex flex-wrap items-center justify-center gap-8 mb-8 text-xs font-bold text-slate-600">
-               <a href="#features" className="hover:text-blue-600 transition-colors">Features & Purpose</a>
-               <a href="#ledger" className="hover:text-blue-600 transition-colors">Live Demo</a>
+               <a href="#features" className="hover:text-blue-600 transition-colors">Features</a>
+               <a href="#ledger" className="hover:text-blue-600 transition-colors">Ledger Preview</a>
                <Link href="/privacy" className="hover:text-blue-600 transition-colors text-blue-600 font-extrabold">Privacy Policy</Link>
                <Link href="/terms" className="hover:text-blue-600 transition-colors text-blue-600 font-extrabold">Terms of Service</Link>
             </div>

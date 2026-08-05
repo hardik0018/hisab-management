@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { motion } from "framer-motion";
+import React, { useState } from "react";
+import { motion, useReducedMotion, useScroll, useMotionValueEvent } from "framer-motion";
 import Link from "next/link";
 import { Wallet } from "lucide-react";
 
@@ -20,10 +20,12 @@ export const FadeIn = ({
   className?: string,
   as?: any
 }) => {
-  const MotionComponent = motion(Component);
+  const MotionComponent = motion(Component as any);
+  const shouldReduceMotion = useReducedMotion();
+  
   return (
     <MotionComponent
-      initial={{ opacity: 0, y, scale }}
+      initial={shouldReduceMotion ? false : { opacity: 0, y, scale }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       transition={{ delay }}
       className={className}
@@ -35,11 +37,11 @@ export const FadeIn = ({
 
 export const LandingNav = () => {
   const [scrolled, setScrolled] = useState(false);
-  useEffect(() => {
-    const handleScroll = () => setScrolled(window.scrollY > 50);
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
+  const { scrollY } = useScroll();
+
+  useMotionValueEvent(scrollY, "change", (latest) => {
+    setScrolled(latest > 50);
+  });
 
   return (
     <nav className={`fixed top-0 w-full z-[100] transition-all duration-500 ${scrolled ? 'py-4' : 'py-6'}`}>
