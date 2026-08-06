@@ -1,8 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import PageWrapper from '@/components/PageWrapper';
-import ExpenseTopTabs from '@/components/expense/ExpenseTopTabs';
+import AppShell from '@/components/AppShell';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -23,6 +22,7 @@ import {
   Clock
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import EmptyState from '@/components/EmptyState';
 
 interface RecurringClientProps {
   initialTemplates: RecurringExpense[];
@@ -103,7 +103,7 @@ export default function RecurringClient({ initialTemplates, collaborators, curre
       });
 
       if (res && res.success) {
-        toast.success(`Recurring template is now ${!previousState ? 'Active' : 'Inactive'}`);
+        toast.success(`Auto template is now ${!previousState ? 'Active' : 'Inactive'}`);
       } else {
         throw new Error('Toggle failed');
       }
@@ -154,7 +154,7 @@ export default function RecurringClient({ initialTemplates, collaborators, curre
         });
 
         if (res && res.success) {
-          toast.success('Recurring expense template added successfully!');
+          toast.success('Auto expense template added successfully!');
           setTemplates(prev => [res.template, ...prev]);
           setIsModalOpen(false);
         }
@@ -174,7 +174,7 @@ export default function RecurringClient({ initialTemplates, collaborators, curre
         });
 
         if (res && res.success) {
-          toast.success('Recurring expense template updated successfully!');
+          toast.success('Auto expense template updated successfully!');
           setTemplates(prev => prev.map(item => item._id === editingId ? res.template : item));
           setIsModalOpen(false);
         }
@@ -215,38 +215,37 @@ export default function RecurringClient({ initialTemplates, collaborators, curre
   };
 
   return (
-    <PageWrapper>
-      <ExpenseTopTabs />
-      <div className="max-w-7xl mx-auto p-4 space-y-5 font-sans pb-24">
+    <AppShell>
+      <div className="space-y-5 font-sans">
         {/* Header Row */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="space-y-1">
-            <h2 className="text-2xl font-black text-foreground">Recurring Expenses</h2>
+            <h2 className="text-2xl font-black" style={{ color: 'var(--foreground)' }}>Auto Expenses</h2>
           </div>
           <Button
             onClick={handleOpenAdd}
-            className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold rounded-xl cursor-pointer shadow-sm transition-all"
+            className="font-bold rounded-xl cursor-pointer shadow-sm active:scale-95 transition-all border-0"
+            style={{ backgroundImage: 'var(--gradient-hero)', color: 'white' }}
           >
             <Plus className="w-4 h-4 mr-2" />
-            Add Recurring
+            Add Auto
           </Button>
         </div>
 
         {/* Templates List */}
         {templates.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 px-4 text-center gap-4 bg-card border border-border rounded-[2rem] shadow-sm">
-            <div className="w-16 h-16 rounded-full bg-muted border border-border flex items-center justify-center text-muted-foreground">
-              <Repeat className="w-8 h-8 animate-pulse text-primary" />
+          <div className="space-y-4">
+            <EmptyState
+              icon={Repeat}
+              title="No recurring expenses configured"
+              hint="Set up recurring templates to automate items like Netflix, SIP Mutual Funds, or LIC payments."
+              color="--violet"
+            />
+            <div className="flex justify-center">
+              <Button onClick={handleOpenAdd} variant="outline" className="rounded-xl font-bold cursor-pointer bg-transparent" style={{ borderColor: 'var(--border)', color: 'var(--foreground)' }}>
+                Create First Template
+              </Button>
             </div>
-            <div className="space-y-1.5">
-              <h3 className="text-base font-bold text-foreground">No recurring expenses configured</h3>
-              <p className="text-xs text-muted-foreground max-w-sm">
-                Set up recurring templates to automate items like Netflix, SIP Mutual Funds, or LIC payments.
-              </p>
-            </div>
-            <Button onClick={handleOpenAdd} variant="outline" className="rounded-xl font-bold cursor-pointer">
-              Create First Template
-            </Button>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
@@ -258,22 +257,20 @@ export default function RecurringClient({ initialTemplates, collaborators, curre
                   initial={{ opacity: 0, y: 15 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.95 }}
-                  className={`group bg-card border rounded-2xl p-4 shadow-sm hover:shadow-md transition-all duration-300 flex justify-between items-center gap-3 ${t.isActive ? 'border-border' : 'border-dashed border-border/60 opacity-70'
-                    }`}
+                  className={`group card-surface p-4 flex justify-between items-center gap-3 transition-all duration-300 ${t.isActive ? '' : 'opacity-70'}`}
+                  style={!t.isActive ? { borderStyle: 'dashed', borderColor: 'var(--border)' } : undefined}
                 >
                   <div className="flex flex-col gap-1 min-w-0 pr-2 flex-1">
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className="font-bold text-foreground text-sm truncate">{t.itemName}</span>
-                      <span className="shrink-0 text-[8px] bg-primary/10 text-primary border border-primary/20 px-1.5 py-0.5 rounded font-black uppercase tracking-wider">
+                    <div className="flex items-center gap-1.5 flex-wrap mb-1">
+                      <span className="font-bold text-sm truncate" style={{ color: 'var(--foreground)' }}>{t.itemName}</span>
+                      <span className="shrink-0 text-[9px] px-1.5 py-0.5 rounded font-black uppercase tracking-wider" style={{ background: 'var(--violet-soft)', color: 'var(--violet)' }}>
                         {t.category}
                       </span>
                       {/* Active Status Badge Button */}
                       <button
                         onClick={() => handleToggleActive(t)}
-                        className={`shrink-0 text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded border transition-all cursor-pointer ${t.isActive
-                            ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/25'
-                            : 'bg-muted text-muted-foreground border-border hover:bg-muted/80'
-                          }`}
+                        className="shrink-0 text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded transition-all cursor-pointer border"
+                        style={t.isActive ? { background: 'var(--success-soft)', color: 'var(--success)', borderColor: 'var(--success-soft)' } : { background: 'var(--danger-soft)', color: 'var(--danger)', borderColor: 'var(--danger-soft)' }}
                         title="Click to toggle status"
                       >
                         {t.isActive ? 'Active' : 'Inactive'}
@@ -281,38 +278,38 @@ export default function RecurringClient({ initialTemplates, collaborators, curre
                     </div>
 
                     {t.note && (
-                      <span className="text-xs text-muted-foreground font-medium truncate max-w-[240px]">
+                      <span className="text-xs font-medium truncate max-w-[240px]" style={{ color: 'var(--muted-foreground)' }}>
                         {t.note}
                       </span>
                     )}
 
                     {/* Schedule Info Horizontal Badges */}
-                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-1.5 text-[10px] text-muted-foreground/80 font-medium">
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-1.5 text-[10px] font-medium" style={{ color: 'var(--muted-foreground)' }}>
                       <span className="flex items-center gap-0.5 whitespace-nowrap">
-                        <Calendar className="w-3 h-3 text-primary shrink-0" />
+                        <Calendar className="w-3 h-3 shrink-0" style={{ color: 'var(--primary)' }} />
                         Day {t.dayOfMonth}
                       </span>
-                      <span className="text-muted-foreground/30 select-none">•</span>
+                      <span className="select-none opacity-30">•</span>
                       <span className="flex items-center gap-0.5 whitespace-nowrap">
-                        <Play className="w-3 h-3 text-teal-500 shrink-0" />
+                        <Play className="w-3 h-3 shrink-0" style={{ color: 'var(--teal)' }} />
                         {formatMonth(t.startDate)}
                       </span>
                       {t.lastGeneratedMonth && (
                         <>
-                          <span className="text-muted-foreground/30 select-none">•</span>
+                          <span className="select-none opacity-30">•</span>
                           <span className="flex items-center gap-0.5 whitespace-nowrap">
-                            <CheckCircle2 className="w-3 h-3 text-indigo-500 shrink-0" />
+                            <CheckCircle2 className="w-3 h-3 shrink-0" style={{ color: 'var(--sky)' }} />
                             Last: {formatMonth(t.lastGeneratedMonth)}
                           </span>
                         </>
                       )}
-                      <span className="text-muted-foreground/30 select-none">•</span>
+                      <span className="select-none opacity-30">•</span>
                       <span className="text-[9px] opacity-70 whitespace-nowrap font-mono">
                         {t.createdAt ? new Date(t.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : 'N/A'}
                       </span>
                       {t.user_id !== currentUserId && (
                         <>
-                          <span className="text-muted-foreground/30 select-none">•</span>
+                          <span className="select-none opacity-30">•</span>
                           <span className="text-[10px] font-medium whitespace-nowrap">
                             Paid by: <span className="font-bold">{collaborators.find(c => c.user_id === t.user_id)?.name || 'Unknown'}</span>
                           </span>
@@ -322,7 +319,7 @@ export default function RecurringClient({ initialTemplates, collaborators, curre
                   </div>
 
                   <div className="flex items-center gap-2 shrink-0">
-                    <span className="font-black text-base font-sans text-foreground">
+                    <span className="font-black text-base font-sans amount" style={{ color: 'var(--foreground)' }}>
                       ₹{t.amount}
                     </span>
 
@@ -331,7 +328,8 @@ export default function RecurringClient({ initialTemplates, collaborators, curre
                         size="icon"
                         variant="ghost"
                         onClick={() => handleOpenEdit(t)}
-                        className="h-8 w-8 hover:bg-primary/10 text-muted-foreground hover:text-primary rounded-lg cursor-pointer"
+                        className="h-8 w-8 rounded-lg cursor-pointer transition-colors active:scale-95"
+                        style={{ color: 'var(--muted-foreground)' }}
                         title="Edit Template"
                       >
                         <Edit2 className="w-3.5 h-3.5" />
@@ -340,7 +338,8 @@ export default function RecurringClient({ initialTemplates, collaborators, curre
                         size="icon"
                         variant="ghost"
                         onClick={() => handleOpenDelete(t)}
-                        className="h-8 w-8 hover:bg-destructive/10 text-muted-foreground hover:text-destructive rounded-lg cursor-pointer"
+                        className="h-8 w-8 rounded-lg cursor-pointer transition-colors active:scale-95"
+                        style={{ color: 'var(--muted-foreground)' }}
                         title="Delete Template"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
@@ -355,12 +354,12 @@ export default function RecurringClient({ initialTemplates, collaborators, curre
 
         {/* Add/Edit Modal */}
         <Dialog open={isModalOpen} onOpenChange={(open) => !open && setIsModalOpen(false)}>
-          <DialogContent className="max-w-md w-[92%] bg-card border border-border text-card-foreground rounded-3xl p-6 shadow-2xl">
+          <DialogContent className="max-w-md w-[92%] card-surface p-6 rounded-3xl border-0 shadow-2xl">
             <DialogHeader className="text-left space-y-1">
-              <DialogTitle className="text-lg font-bold text-foreground font-sans">
-                {modalMode === 'add' ? 'Add Recurring Expense' : 'Edit Recurring Template'}
+              <DialogTitle className="text-lg font-bold font-sans" style={{ color: 'var(--foreground)' }}>
+                {modalMode === 'add' ? 'Add Auto Expense' : 'Edit Auto Template'}
               </DialogTitle>
-              <DialogDescription className="text-muted-foreground text-xs">
+              <DialogDescription className="text-xs" style={{ color: 'var(--muted-foreground)' }}>
                 Set up a template to automatically insert a monthly record.
               </DialogDescription>
             </DialogHeader>
@@ -368,14 +367,15 @@ export default function RecurringClient({ initialTemplates, collaborators, curre
             <form onSubmit={handleSubmit} className="space-y-4 mt-3">
               {/* Item Name */}
               <div className="space-y-1.5">
-                <Label htmlFor="item-name" className="text-xs font-semibold text-muted-foreground">Item Name</Label>
+                <Label htmlFor="item-name" className="text-xs font-semibold" style={{ color: 'var(--muted-foreground)' }}>Item Name</Label>
                 <Input
                   id="item-name"
                   type="text"
                   placeholder="e.g. LIC Premium, SIP, Gas Bill"
                   value={itemName}
                   onChange={(e) => setItemName(e.target.value)}
-                  className="bg-background border-input text-foreground text-sm rounded-xl h-11"
+                  className="text-sm rounded-xl h-11 border-0 focus-visible:ring-1"
+                  style={{ background: 'var(--surface-muted)', color: 'var(--foreground)' }}
                   required
                 />
               </div>
@@ -383,7 +383,7 @@ export default function RecurringClient({ initialTemplates, collaborators, curre
               {/* Amount & Day Of Month Row */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <Label htmlFor="amount" className="text-xs font-semibold text-muted-foreground">Amount (INR)</Label>
+                  <Label htmlFor="amount" className="text-xs font-semibold" style={{ color: 'var(--muted-foreground)' }}>Amount (INR)</Label>
                   <Input
                     id="amount"
                     type="number"
@@ -391,12 +391,13 @@ export default function RecurringClient({ initialTemplates, collaborators, curre
                     placeholder="5000"
                     value={amount}
                     onChange={(e) => setAmount(e.target.value)}
-                    className="bg-background border-input text-foreground text-sm rounded-xl h-11"
+                    className="text-sm rounded-xl h-11 border-0 focus-visible:ring-1"
+                    style={{ background: 'var(--surface-muted)', color: 'var(--foreground)' }}
                     required
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="day" className="text-xs font-semibold text-muted-foreground">Day of Month</Label>
+                  <Label htmlFor="day" className="text-xs font-semibold" style={{ color: 'var(--muted-foreground)' }}>Day of Month</Label>
                   <Input
                     id="day"
                     type="number"
@@ -405,7 +406,8 @@ export default function RecurringClient({ initialTemplates, collaborators, curre
                     placeholder="5"
                     value={dayOfMonth}
                     onChange={(e) => setDayOfMonth(e.target.value)}
-                    className="bg-background border-input text-foreground text-sm rounded-xl h-11"
+                    className="text-sm rounded-xl h-11 border-0 focus-visible:ring-1"
+                    style={{ background: 'var(--surface-muted)', color: 'var(--foreground)' }}
                     required
                   />
                 </div>
@@ -414,51 +416,55 @@ export default function RecurringClient({ initialTemplates, collaborators, curre
               {/* Start Month & Category Row */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <Label htmlFor="start-month" className="text-xs font-semibold text-muted-foreground">Start Month</Label>
+                  <Label htmlFor="start-month" className="text-xs font-semibold" style={{ color: 'var(--muted-foreground)' }}>Start Month</Label>
                   <Input
                     id="start-month"
                     type="month"
                     value={startDate}
                     onChange={(e) => setStartDate(e.target.value)}
-                    className="bg-background border-input text-foreground text-sm rounded-xl h-11"
+                    className="text-sm rounded-xl h-11 border-0 focus-visible:ring-1"
+                    style={{ background: 'var(--surface-muted)', color: 'var(--foreground)' }}
                     required
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="category" className="text-xs font-semibold text-muted-foreground">Category</Label>
+                  <Label htmlFor="category" className="text-xs font-semibold" style={{ color: 'var(--muted-foreground)' }}>Category</Label>
                   <Input
                     id="category"
                     type="text"
                     placeholder="Investment"
                     value={category}
                     onChange={(e) => setCategory(e.target.value)}
-                    className="bg-background border-input text-foreground text-sm rounded-xl h-11"
+                    className="text-sm rounded-xl h-11 border-0 focus-visible:ring-1"
+                    style={{ background: 'var(--surface-muted)', color: 'var(--foreground)' }}
                   />
                 </div>
               </div>
 
               {/* Note */}
               <div className="space-y-1.5">
-                <Label htmlFor="note" className="text-xs font-semibold text-muted-foreground">Note (Optional)</Label>
+                <Label htmlFor="note" className="text-xs font-semibold" style={{ color: 'var(--muted-foreground)' }}>Note (Optional)</Label>
                 <Input
                   id="note"
                   type="text"
                   placeholder="e.g. direct debit, online payment"
                   value={note}
                   onChange={(e) => setNote(e.target.value)}
-                  className="bg-background border-input text-foreground text-sm rounded-xl h-11"
+                  className="text-sm rounded-xl h-11 border-0 focus-visible:ring-1"
+                  style={{ background: 'var(--surface-muted)', color: 'var(--foreground)' }}
                 />
               </div>
 
               {/* Paid By */}
               {collaborators.length > 0 && (
                 <div className="space-y-1.5">
-                  <Label htmlFor="paid-by" className="text-xs font-semibold text-muted-foreground">Paid By</Label>
+                  <Label htmlFor="paid-by" className="text-xs font-semibold" style={{ color: 'var(--muted-foreground)' }}>Paid By</Label>
                   <select
                     id="paid-by"
                     value={paidByUserId}
                     onChange={(e) => setPaidByUserId(e.target.value)}
-                    className="w-full h-11 px-3 rounded-xl bg-background border border-input text-sm text-foreground focus-visible:ring-primary outline-none"
+                    className="w-full h-11 px-3 rounded-xl border-0 text-sm focus-visible:ring-1 outline-none"
+                    style={{ background: 'var(--surface-muted)', color: 'var(--foreground)' }}
                   >
                     {collaborators.map((c) => (
                       <option key={c.user_id} value={c.user_id}>
@@ -470,17 +476,18 @@ export default function RecurringClient({ initialTemplates, collaborators, curre
               )}
 
               {/* Active Toggle Switch */}
-              <div className="flex items-center justify-between p-3 bg-muted/50 rounded-xl border border-border mt-2">
+              <div className="flex items-center justify-between p-3 rounded-xl mt-2" style={{ background: 'var(--surface-muted)' }}>
                 <div className="flex flex-col gap-0.5">
-                  <Label htmlFor="active-toggle" className="text-xs font-bold cursor-pointer">Template Active</Label>
-                  <span className="text-[10px] text-muted-foreground">Inactive templates do not generate new logs.</span>
+                  <Label htmlFor="active-toggle" className="text-xs font-bold cursor-pointer" style={{ color: 'var(--foreground)' }}>Template Active</Label>
+                  <span className="text-[10px]" style={{ color: 'var(--muted-foreground)' }}>Inactive templates do not generate new logs.</span>
                 </div>
                 <input
                   type="checkbox"
                   id="active-toggle"
                   checked={isActive}
                   onChange={(e) => setIsActive(e.target.checked)}
-                  className="w-4 h-4 text-primary accent-primary cursor-pointer"
+                  className="w-4 h-4 cursor-pointer"
+                  style={{ accentColor: 'var(--primary)' }}
                 />
               </div>
 
@@ -489,14 +496,16 @@ export default function RecurringClient({ initialTemplates, collaborators, curre
                   type="button"
                   variant="outline"
                   onClick={() => setIsModalOpen(false)}
-                  className="w-1/2 bg-background border border-border text-muted-foreground hover:text-foreground rounded-xl cursor-pointer"
+                  className="w-1/2 rounded-xl cursor-pointer bg-transparent"
+                  style={{ border: '1px solid var(--border)', color: 'var(--foreground)' }}
                 >
                   Cancel
                 </Button>
                 <Button
                   type="submit"
                   disabled={isSubmitting}
-                  className="w-1/2 bg-primary hover:bg-primary/90 text-primary-foreground font-bold rounded-xl border-0 cursor-pointer"
+                  className="w-1/2 font-bold rounded-xl border-0 cursor-pointer"
+                  style={{ background: 'var(--primary)', color: 'white' }}
                 >
                   {isSubmitting ? (
                     <>
@@ -514,14 +523,14 @@ export default function RecurringClient({ initialTemplates, collaborators, curre
 
         {/* Delete Confirmation Dialog */}
         <Dialog open={isDeleteConfirmOpen} onOpenChange={(open) => !open && setIsDeleteConfirmOpen(false)}>
-          <DialogContent className="max-w-sm w-[92%] bg-card border border-border text-card-foreground rounded-3xl p-6 shadow-2xl">
+          <DialogContent className="max-w-sm w-[92%] card-surface rounded-3xl p-6 shadow-2xl border-0">
             <DialogHeader className="text-left space-y-1">
-              <div className="w-10 h-10 rounded-full bg-destructive/10 text-destructive flex items-center justify-center mb-3">
+              <div className="tile w-10 h-10 mb-3" style={{ background: 'var(--danger-soft)', color: 'var(--danger)' }}>
                 <AlertCircle className="w-5 h-5" />
               </div>
-              <DialogTitle className="text-base font-bold text-foreground font-sans">Delete Recurring Template</DialogTitle>
-              <DialogDescription className="text-muted-foreground text-xs leading-relaxed">
-                Are you sure you want to delete <strong className="text-foreground">"{templateToDelete?.itemName}"</strong>?
+              <DialogTitle className="text-base font-bold font-sans" style={{ color: 'var(--foreground)' }}>Delete Auto Template</DialogTitle>
+              <DialogDescription className="text-xs leading-relaxed" style={{ color: 'var(--muted-foreground)' }}>
+                Are you sure you want to delete <strong style={{ color: 'var(--foreground)' }}>"{templateToDelete?.itemName}"</strong>?
                 This only stops future auto-generations. Already generated expenses in daily hisab history will not be deleted.
               </DialogDescription>
             </DialogHeader>
@@ -531,7 +540,8 @@ export default function RecurringClient({ initialTemplates, collaborators, curre
                 type="button"
                 variant="outline"
                 onClick={() => setIsDeleteConfirmOpen(false)}
-                className="w-1/2 bg-background border border-border text-muted-foreground hover:text-foreground rounded-xl cursor-pointer"
+                className="w-1/2 rounded-xl cursor-pointer bg-transparent"
+                style={{ border: '1px solid var(--border)', color: 'var(--foreground)' }}
               >
                 Cancel
               </Button>
@@ -540,7 +550,8 @@ export default function RecurringClient({ initialTemplates, collaborators, curre
                 variant="destructive"
                 onClick={handleDeleteConfirm}
                 disabled={isSubmitting}
-                className="w-1/2 bg-destructive hover:bg-destructive/90 text-destructive-foreground font-bold rounded-xl border-0 cursor-pointer"
+                className="w-1/2 font-bold rounded-xl border-0 cursor-pointer"
+                style={{ background: 'var(--danger)', color: 'white' }}
               >
                 {isSubmitting ? (
                   <>
@@ -555,6 +566,6 @@ export default function RecurringClient({ initialTemplates, collaborators, curre
           </DialogContent>
         </Dialog>
       </div>
-    </PageWrapper>
+    </AppShell>
   );
 }

@@ -74,18 +74,22 @@ export default function TaxDashboardClient({ initialSummary }: Props) {
       {/* HEADLINE */}
       <motion.div
         initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }}
-        className={`rounded-3xl p-6 sm:p-8 text-center shadow-lg border-2 ${
-          zeroTax
-            ? 'bg-gradient-to-br from-emerald-500/15 to-teal-500/15 border-emerald-500/40'
-            : 'bg-gradient-to-br from-amber-500/15 to-rose-500/15 border-amber-500/40'
-        }`}
+        className="rounded-3xl p-6 sm:p-8 text-center shadow-lg border-2"
+        style={zeroTax
+          ? { background: 'color-mix(in srgb, var(--success) 10%, transparent)', borderColor: 'color-mix(in srgb, var(--success) 40%, transparent)' }
+          : { background: 'color-mix(in srgb, var(--warning) 10%, transparent)', borderColor: 'color-mix(in srgb, var(--warning) 40%, transparent)' }
+        }
       >
-        <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm ${
-          zeroTax ? 'bg-emerald-500/20 text-emerald-600' : 'bg-amber-500/20 text-amber-600'
-        }`}>
+        <div
+          className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm"
+          style={zeroTax
+            ? { background: 'var(--success-soft)', color: 'var(--success)' }
+            : { background: 'var(--warning-soft)', color: 'var(--warning)' }
+          }
+        >
           {zeroTax ? <CheckCircle2 className="w-9 h-9" /> : <AlertCircle className="w-9 h-9" />}
         </div>
-        <span className="text-xs font-black bg-black/5 dark:bg-white/10 px-3 py-1 rounded-full uppercase tracking-wider">
+        <span className="text-xs font-black px-3 py-1 rounded-full uppercase tracking-wider" style={{ background: 'var(--surface-muted)', color: 'var(--muted-foreground)' }}>
           FY {fy} · {regime === 'new' ? 'New Regime' : 'Old Regime'}
           {result.fyUsed !== fy && ` · rules of ${result.fyUsed}`}
         </span>
@@ -99,7 +103,7 @@ export default function TaxDashboardClient({ initialSummary }: Props) {
         </p>
         {tdsPaid > 0 && !zeroTax && (
           <p className="text-xs mt-2 font-bold">
-            TDS already paid: {inr(tdsPaid)} · You still owe: <span className="text-rose-600">{inr(result.netPayable)}</span>
+            TDS already paid: {inr(tdsPaid)} · You still owe: <span style={{ color: 'var(--danger)' }}>{inr(result.netPayable)}</span>
           </p>
         )}
       </motion.div>
@@ -167,7 +171,7 @@ export default function TaxDashboardClient({ initialSummary }: Props) {
               r.label === 'Taxable income' ? 'bg-muted/40 font-bold' : ''
             }`}>
               <span>{r.label}</span>
-              <span className={r.amount < 0 ? 'text-emerald-600' : ''}>{inr(r.amount)}</span>
+              <span style={{ color: r.amount < 0 ? 'var(--success)' : undefined }}>{inr(r.amount)}</span>
             </div>
           ))}
         </div>
@@ -230,7 +234,7 @@ function RegimeCard({ title, tax, active, recommended, onClick }:{
       }`}>
       <div className="flex items-center justify-between">
         <span className="text-xs font-black uppercase tracking-wider">{title}</span>
-        {recommended && <span className="text-[10px] bg-emerald-500/20 text-emerald-700 px-2 py-0.5 rounded-full font-bold">Best</span>}
+        {recommended && <span className="text-[10px] px-2 py-0.5 rounded-full font-bold" style={{ background: 'var(--success-soft)', color: 'var(--success)' }}>Best</span>}
       </div>
       <div className="text-2xl font-black font-mono mt-1">{inr(tax)}</div>
     </button>

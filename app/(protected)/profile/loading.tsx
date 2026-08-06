@@ -1,51 +1,33 @@
 import { Skeleton } from "@/components/ui/skeleton";
-import PageWrapper from "@/components/PageWrapper";
-import { Card } from "@/components/ui/card";
+import AppShell from "@/components/AppShell";
 
-export default function ProfileLoading() {
+export default function Loading() {
   return (
-    <PageWrapper>
-      <div className="p-4 sm:p-6 lg:p-8 space-y-8 max-w-5xl mx-auto pb-32">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
-          <div className="space-y-2">
-            <Skeleton className="h-10 w-48 rounded-md" />
-            <Skeleton className="h-4 w-72 rounded-md" />
-          </div>
+    <AppShell>
+      <div className="space-y-6 animate-in fade-in duration-500">
+        <div className="space-y-2">
+          <Skeleton className="h-10 w-48 rounded-xl" />
+          <Skeleton className="h-4 w-72 rounded-xl" />
         </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          <Card className="border-none shadow-sm rounded-3xl p-6 border border-slate-100 space-y-6">
-             <div className="flex items-center gap-4">
-                <Skeleton className="h-20 w-20 rounded-full" />
-                <div className="space-y-2">
-                   <Skeleton className="h-6 w-32 rounded-md" />
-                   <Skeleton className="h-4 w-48 rounded-md" />
-                </div>
-             </div>
-             <Skeleton className="h-10 w-full rounded-xl" />
-          </Card>
-          
-          <Card className="border-none shadow-sm rounded-3xl p-6 border border-slate-100 space-y-6">
-             <div className="space-y-2 mb-6">
-                 <Skeleton className="h-6 w-40 rounded-md" />
-                 <Skeleton className="h-4 w-64 rounded-md" />
-             </div>
-             <div className="space-y-4">
-                {[1, 2].map(i => (
-                  <div key={i} className="flex items-center justify-between">
-                     <div className="flex items-center gap-3">
-                        <Skeleton className="h-10 w-10 rounded-full" />
-                        <div className="space-y-1">
-                           <Skeleton className="h-4 w-24 rounded-md" />
-                           <Skeleton className="h-3 w-32 rounded-md" />
-                        </div>
-                     </div>
-                  </div>
-                ))}
-             </div>
-          </Card>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <Skeleton className="h-28 w-full rounded-2xl" />
+          <Skeleton className="h-28 w-full rounded-2xl" />
+          <Skeleton className="h-28 w-full rounded-2xl" />
+        </div>
+        <div className="space-y-3 pt-4">
+          <Skeleton className="h-6 w-32 rounded-md mb-4" />
+          {[1, 2, 3, 4, 5].map((i) => (
+            <div key={i} className="card-surface p-4 flex items-center gap-4">
+              <Skeleton className="w-12 h-12 rounded-2xl shrink-0" />
+              <div className="space-y-2 flex-1">
+                <Skeleton className="h-5 w-1/3 rounded-md" />
+                <Skeleton className="h-3 w-1/4 rounded-md" />
+              </div>
+              <Skeleton className="h-6 w-16 rounded-md shrink-0" />
+            </div>
+          ))}
         </div>
       </div>
-    </PageWrapper>
+    </AppShell>
   );
 }

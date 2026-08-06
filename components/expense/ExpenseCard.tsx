@@ -1,9 +1,10 @@
 'use client';
 
 import React from 'react';
+import { cn } from '@/lib/utils';
 import { Expense, User } from '@/types';
 import { formatDisplayTime } from '@/lib/date-utils';
-import { Edit2, Trash2, Link, Repeat } from 'lucide-react';
+import { Edit2, Trash2, Link as LinkIcon, Repeat, TrendingUp, ShoppingCart, Apple, Car, Coffee, Home, Shield, Coins, HeartPulse, ShoppingBag, Book, Gift, ArrowRightLeft, CreditCard, Heart, Tag } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface ExpenseCardProps {
@@ -14,126 +15,172 @@ interface ExpenseCardProps {
   currentUserId: string;
 }
 
+function fmt(amt: number) {
+  const abs = Math.abs(amt);
+  return abs % 1 === 0 ? `₹${abs}` : `₹${abs.toFixed(2)}`;
+}
+
+function getCategoryIcon(category?: string) {
+  switch (category) {
+    case 'Groceries & Kitchen': return <ShoppingCart className="w-5 h-5" />;
+    case 'Vegetables & Fruits': return <Apple className="w-5 h-5" />;
+    case 'Fuel, Vehicle & Travel': return <Car className="w-5 h-5" />;
+    case 'Snacks, Food & Dining': return <Coffee className="w-5 h-5" />;
+    case 'Bills, Rent & Housing': return <Home className="w-5 h-5" />;
+    case 'Investments & Insurance': return <Shield className="w-5 h-5" />;
+    case 'Salary & Income': return <Coins className="w-5 h-5" />;
+    case 'Personal Care & Medical': return <HeartPulse className="w-5 h-5" />;
+    case 'Shopping & Stores': return <ShoppingBag className="w-5 h-5" />;
+    case 'Education & Stationery': return <Book className="w-5 h-5" />;
+    case 'Gifts & Marriage': return <Gift className="w-5 h-5" />;
+    case 'Transfers & Settlements': return <ArrowRightLeft className="w-5 h-5" />;
+    case 'Debt/Credit': return <CreditCard className="w-5 h-5" />;
+    case 'Marriage': return <Heart className="w-5 h-5" />;
+    default: return <Tag className="w-5 h-5" />;
+  }
+}
+
 export default function ExpenseCard({
   expense,
   onEditClick,
   onDeleteClick,
   collaborators,
-  currentUserId
+  currentUserId,
 }: ExpenseCardProps) {
-  // Rule H: Decimal Amount Support & negative values
-  const formatAmount = (amt: number) => {
-    const isNegative = amt < 0;
-    const absAmt = Math.abs(amt);
-    const formatted = absAmt % 1 === 0 ? `₹${absAmt}` : `₹${absAmt.toFixed(2)}`;
-    return isNegative ? `-${formatted}` : formatted;
-  };
+  const isLinked =
+    (expense.associatedType === 'hisab' || expense.associatedType === 'marriage') &&
+    expense.type !== 'transfer_out' &&
+    expense.type !== 'transfer_in';
 
-  const isLinked = (expense.associatedType === 'hisab' || expense.associatedType === 'marriage') && expense.type !== 'transfer_out' && expense.type !== 'transfer_in';
+  const isIncome = expense.type === 'income' || expense.amount < 0;
 
   const handleDisabledActionClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    const source = expense.associatedType === 'hisab' ? 'Hisab' : 'Marriage';
-    toast.info(
-      `This expense is linked to a ${source} record. Please edit or delete it on the ${source} page to keep records in sync.`,
-      { duration: 5000 }
-    );
+    const src = expense.associatedType === 'hisab' ? 'Hisab' : 'Marriage';
+    toast.info(`Linked to a ${src} record. Edit or delete on the ${src} page.`, {
+      duration: 4000,
+    });
   };
 
   return (
-    <div className="group bg-card border border-border hover:border-border/80 rounded-2xl px-4 py-2 flex justify-between items-center transition-all duration-300 shadow-sm hover:shadow-md">
-      <div className="flex flex-col gap-1 pr-2 min-w-0">
-        <div className="flex items-center gap-1 min-w-0 flex-wrap">
-          <span className="font-bold text-foreground text-sm truncate">{expense.itemName}</span>
-          {(expense.type === 'transfer_out' || expense.associatedType === 'transfer') && (
-            <span className="shrink-0 text-[8px] bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 px-1.5 py-0.5 rounded font-black uppercase tracking-wider flex items-center gap-0.5">
-              <Link className="w-2 h-2" /> Transfer
-            </span>
-          )}
+    <div className="flex items-center gap-3 px-3 py-3">
+      {/* Category / type icon tile */}
+      <div
+        className="tile w-10 h-10 shrink-0 text-sm font-bold"
+        style={{
+          background: isIncome ? 'var(--success-soft)' : 'var(--violet-soft)',
+          color: isIncome ? 'var(--success)' : 'var(--violet)',
+        }}
+      >
+        {isIncome ? (
+          <TrendingUp className="w-5 h-5" />
+        ) : (
+          getCategoryIcon(expense.category)
+        )}
+      </div>
+
+      {/* Content */}
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <span
+            className="font-semibold text-sm truncate"
+            style={{ color: 'var(--foreground)' }}
+          >
+            {expense.itemName}
+          </span>
+
+          {/* Badges */}
           {expense.associatedType === 'hisab' && expense.type !== 'transfer_out' && expense.type !== 'transfer_in' && (
-            <span className="shrink-0 text-[8px] bg-primary/5 dark:bg-primary/10 text-primary border border-primary/20 px-1.5 py-0.5 rounded font-black uppercase tracking-wider flex items-center gap-0.5">
-              <Link className="w-2 h-2" /> Hisab
-            </span>
-          )}
-          {expense.associatedType === 'marriage' && (
-            <span className="shrink-0 text-[8px] bg-destructive/5 dark:bg-destructive/10 text-destructive border border-destructive/25 px-1.5 py-0.5 rounded font-black uppercase tracking-wider flex items-center gap-0.5">
-              <Link className="w-2 h-2" /> Marriage
+            <span className="inline-flex items-center gap-0.5 text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-full"
+              style={{ background: 'var(--accent)', color: 'var(--accent-foreground)' }}>
+              <LinkIcon className="w-2 h-2" />Hisab
             </span>
           )}
           {expense.associatedType === 'recurring' && (
-            <span className="shrink-0 text-[8px] bg-teal-500/10 text-teal-600 dark:text-teal-400 border border-teal-500/20 px-1.5 py-0.5 rounded font-black uppercase tracking-wider flex items-center gap-0.5">
-              <Repeat className="w-2 h-2" /> Auto
+            <span className="inline-flex items-center gap-0.5 text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-full"
+              style={{ background: 'var(--teal-soft)', color: 'var(--teal)' }}>
+              <Repeat className="w-2 h-2" />Auto
             </span>
           )}
           {expense.type === 'income' && (
-            <span className="shrink-0 text-[8px] bg-green-500/10 text-green-600 dark:text-green-400 border border-green-500/20 px-1.5 py-0.5 rounded font-black uppercase tracking-wider flex items-center gap-0.5">
+            <span className="inline-flex items-center text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-full"
+              style={{ background: 'var(--success-soft)', color: 'var(--success)' }}>
               Income
+            </span>
+          )}
+          {(expense.type === 'transfer_out' || expense.type === 'transfer_in') && (
+            <span className="inline-flex items-center gap-0.5 text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-full"
+              style={{ background: 'var(--sky-soft)', color: 'var(--sky)' }}>
+              <LinkIcon className="w-2 h-2" />Transfer
             </span>
           )}
         </div>
 
-        {expense.note && (
-          <span className="text-xs text-muted-foreground font-medium truncate max-w-[220px]">
-            {expense.note}
-          </span>
-        )}
-
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-          <span className="text-[10px] text-muted-foreground/80 font-mono font-medium">
+        <div className="flex items-center gap-2 mt-0.5">
+          {expense.note && (
+            <span className="text-xs truncate max-w-[160px]" style={{ color: 'var(--muted-foreground)' }}>
+              {expense.note}
+            </span>
+          )}
+          <span className="text-[10px] font-mono" style={{ color: 'var(--muted-foreground)' }}>
             {formatDisplayTime(expense.createdAt)}
           </span>
           {expense.user_id !== currentUserId && (
-            <>
-              <span className="text-muted-foreground/30 select-none text-[10px]">•</span>
-              <span className="text-[10px] font-medium whitespace-nowrap text-muted-foreground/80">
-                Paid by: <span className="font-bold text-foreground">{collaborators?.find(c => c.user_id === expense.user_id)?.name || 'Unknown'}</span>
-              </span>
-            </>
+            <span className="text-[10px]" style={{ color: 'var(--muted-foreground)' }}>
+              · {collaborators?.find((c) => c.user_id === expense.user_id)?.name ?? 'Other'}
+            </span>
           )}
         </div>
       </div>
 
-      <div className="flex items-center gap-3 shrink-0">
-        <span className={`font-black text-base font-sans ${expense.amount < 0 || expense.type === 'income' ? 'text-emerald-600 dark:text-emerald-400' : 'text-foreground'}`}>
-          {expense.type === 'income' ? '+' : ''}{formatAmount(expense.amount)}
+      {/* Amount + actions */}
+      <div className="flex items-center gap-1 shrink-0">
+        <span
+          className="text-sm font-bold amount"
+          style={{ color: isIncome ? 'var(--success)' : 'var(--danger)' }}
+        >
+          {isIncome ? '+' : '−'}{fmt(expense.amount)}
         </span>
 
-        {/* Edit and Delete Buttons */}
-        <div className="flex items-center gap-1">
+        <div className="flex items-center">
           {isLinked ? (
             <>
               <button
                 onClick={handleDisabledActionClick}
-                className="p-2 text-muted-foreground/40 hover:text-muted-foreground/60 rounded-xl cursor-not-allowed transition-all"
-                title="Linked record - Edit at source"
+                aria-label="Linked record — edit at source"
+                className="p-1.5 rounded-lg opacity-30 cursor-not-allowed"
               >
-                <Edit2 className="w-4 h-4 opacity-55" />
+                <Edit2 className="w-3.5 h-3.5" style={{ color: 'var(--muted-foreground)' }} />
               </button>
-
               <button
                 onClick={handleDisabledActionClick}
-                className="p-2 text-muted-foreground/40 hover:text-muted-foreground/60 rounded-xl cursor-not-allowed transition-all"
-                title="Linked record - Delete at source"
+                aria-label="Linked record — delete at source"
+                className="p-1.5 rounded-lg opacity-30 cursor-not-allowed"
               >
-                <Trash2 className="w-4 h-4 opacity-55" />
+                <Trash2 className="w-3.5 h-3.5" style={{ color: 'var(--muted-foreground)' }} />
               </button>
             </>
           ) : (
             <>
               <button
                 onClick={() => onEditClick(expense)}
-                className="p-2 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-xl transition-all cursor-pointer"
-                title="Edit"
+                aria-label={`Edit ${expense.itemName}`}
+                className="p-1.5 rounded-lg transition-colors active:scale-95"
+                style={{ color: 'var(--muted-foreground)' }}
+                onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--primary)')}
+                onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--muted-foreground)')}
               >
-                <Edit2 className="w-4 h-4" />
+                <Edit2 className="w-3.5 h-3.5" />
               </button>
-
               <button
                 onClick={() => onDeleteClick(expense)}
-                className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-xl transition-all cursor-pointer"
-                title="Delete"
+                aria-label={`Delete ${expense.itemName}`}
+                className="p-1.5 rounded-lg transition-colors active:scale-95"
+                style={{ color: 'var(--muted-foreground)' }}
+                onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--danger)')}
+                onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--muted-foreground)')}
               >
-                <Trash2 className="w-4 h-4" />
+                <Trash2 className="w-3.5 h-3.5" />
               </button>
             </>
           )}

@@ -18,44 +18,144 @@ import { RecurringExpense } from '@/types';
 function escapeRegExp(string: string) {
   return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
+export interface HisabGroupedPerson {
+  name: string;
+  mobile: string;
+  debit: number;
+  credit: number;
+  latest: Date;
+  ignored: boolean;
+}
+
+export interface HisabGroupedData {
+  people: HisabGroupedPerson[];
+  totalDebit: number;
+  totalCredit: number;
+  netBalance: number;
+  hasMore: boolean;
+}
 
 /**
- * Fetches all hisab records for the authenticated user's space.
+ * Fetches and groups hisab records for the authenticated user's space.
  */
-export async function getHisabRecords(): Promise<HisabRecord[] | null> {
+export async function getHisabRecords(options: {
+  page?: number;
+  limit?: number;
+  search?: string;
+} = {}): Promise<HisabGroupedData | null> {
   const user = await getAuthenticatedUser();
   if (!user) return null;
 
   const db = await getDb();
   const spaceId = user.space_id;
 
+  const page = options.page || 1;
+  const limit = options.limit || 50;
+  const skip = (page - 1) * limit;
+
+  // We fetch all records to group them properly, as grouping paginated raw data is incorrect.
+  // In a very large app, this aggregation should happen directly in MongoDB using $group.
   const records = await db
     .collection('hisab')
     .find({ space_id: spaceId }, { projection: { _id: 0 } })
-    .sort({ date: -1 })
-    .toArray();
+    .sort({ date: -1, created_at: -1 })
+    .toArray() as unknown as HisabRecord[];
 
-  return records as unknown as HisabRecord[];
+  const peopleGroups: Record<string, HisabGroupedPerson> = {};
+  for (const r of records) {
+    const key = `${r.name}_${r.mobile || ''}`;
+    if (!peopleGroups[key]) {
+      peopleGroups[key] = { name: r.name, mobile: r.mobile || '', debit: 0, credit: 0, latest: new Date(r.date), ignored: !!r.ignored };
+    }
+    if (r.type === 'debit') peopleGroups[key].debit += (r.amount || 0);
+    else if (r.type === 'credit') peopleGroups[key].credit += (r.amount || 0);
+    
+    if (r.ignored !== undefined) {
+      peopleGroups[key].ignored = r.ignored;
+    }
+  }
+
+  let peopleList = Object.values(peopleGroups);
+  
+  if (options.search) {
+    const searchLower = options.search.toLowerCase();
+    peopleList = peopleList.filter(p => p.name.toLowerCase().includes(searchLower) || p.mobile.includes(searchLower));
+  }
+
+  // Sort by latest date descending
+  peopleList.sort((a, b) => b.latest.getTime() - a.latest.getTime());
+
+  // Calculate overall totals (excluding ignored)
+  let totalDebit = 0;
+  let totalCredit = 0;
+  for (const p of peopleList) {
+    if (p.ignored) continue;
+    const diffGet = p.debit - p.credit;
+    if (diffGet > 0) totalDebit += diffGet;
+    const diffGive = p.credit - p.debit;
+    if (diffGive > 0) totalCredit += diffGive;
+  }
+
+  const hasMore = peopleList.length > skip + limit;
+  const paginatedPeople = peopleList.slice(skip, skip + limit);
+
+  return {
+    people: paginatedPeople,
+    totalDebit,
+    totalCredit,
+    netBalance: totalDebit - totalCredit,
+    hasMore
+  };
 }
 
 
 /**
  * Fetches marriage/vayvhar records for the authenticated user's space.
  */
-export async function getMarriageRecords(): Promise<MarriageRecord[] | null> {
+export async function getMarriageRecords(options: {
+  page?: number;
+  limit?: number;
+} = {}): Promise<{ records: MarriageRecord[]; totalGiven: number; totalReceived: number; netBalance: number; hasMore: boolean } | null> {
   const user = await getAuthenticatedUser();
   if (!user) return null;
 
   const db = await getDb();
   const spaceId = user.space_id;
+  
+  const page = options.page || 1;
+  const limit = options.limit || 50;
+  const skip = (page - 1) * limit;
 
-  const records = await db
-    .collection('marriage_hisab')
-    .find({ space_id: spaceId }, { projection: { _id: 0 } })
-    .sort({ date: -1 })
-    .toArray();
+  const [records, agg] = await Promise.all([
+    db.collection('marriage_hisab')
+      .find({ space_id: spaceId }, { projection: { _id: 0 } })
+      .sort({ date: -1 })
+      .skip(skip)
+      .limit(limit + 1)
+      .toArray(),
+    db.collection('marriage_hisab').aggregate([
+      { $match: { space_id: spaceId } },
+      { $group: {
+          _id: null,
+          totalGiven: { $sum: { $cond: [{ $gte: ['$amount', 0] }, '$amount', 0] } },
+          totalReceived: { $sum: { $cond: [{ $lt: ['$amount', 0] }, { $abs: '$amount' }, 0] } }
+      }}
+    ]).toArray()
+  ]);
 
-  return records as unknown as MarriageRecord[];
+  const hasMore = records.length > limit;
+  const pagedRecords = hasMore ? records.slice(0, limit) : records;
+  
+  const totalGiven = agg[0]?.totalGiven || 0;
+  const totalReceived = agg[0]?.totalReceived || 0;
+
+  return {
+    records: pagedRecords as unknown as MarriageRecord[],
+    totalGiven,
+    totalReceived,
+    netBalance: totalGiven - totalReceived,
+    hasMore
+  };
 }
 
 export async function getDashboardStats(): Promise<DashboardStats | null> {

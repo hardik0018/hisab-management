@@ -63,23 +63,36 @@ export default function BackupReminder({ settings }: BackupReminderProps) {
   };
 
   return (
-    <div className="bg-gradient-to-r from-amber-500/10 to-orange-500/5 border border-amber-500/20 rounded-3xl p-5 space-y-3 relative">
+    <div
+      className="rounded-[1.125rem] p-4 space-y-3 relative"
+      style={{
+        background: 'var(--warning-soft)',
+        border: '1px solid var(--amber)',
+      }}
+    >
       <button
         type="button"
         onClick={handleDismiss}
-        className="absolute top-4 right-4 p-1.5 rounded-xl text-amber-650/60 dark:text-amber-400/60 hover:text-amber-700 dark:hover:text-amber-300 hover:bg-amber-500/10 transition-all cursor-pointer"
+        className="absolute top-3 right-3 p-1.5 rounded-xl active:scale-95 transition-all cursor-pointer"
+        style={{ color: 'var(--warning-foreground)' }}
         title="Dismiss reminder"
+        aria-label="Dismiss backup reminder"
       >
         <X className="w-4 h-4" />
       </button>
 
       <div className="flex gap-3 pr-6">
-        <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-600 dark:text-amber-400 shrink-0">
+        <div
+          className="tile w-10 h-10 shrink-0"
+          style={{ background: 'var(--amber-soft)', color: 'var(--amber)' }}
+        >
           <BadgeAlert className="w-5 h-5 animate-pulse" />
         </div>
         <div className="space-y-1">
-          <h3 className="text-sm font-bold text-amber-650 dark:text-amber-400">Backup Recommended</h3>
-          <p className="text-xs text-muted-foreground leading-relaxed">
+          <h3 className="text-sm font-bold" style={{ color: 'var(--warning-foreground)' }}>
+            Backup Recommended
+          </h3>
+          <p className="text-xs leading-relaxed" style={{ color: 'var(--muted-foreground)' }}>
             You haven't exported your expense data in over a month. Take a quick backup now to keep your records safe!
           </p>
         </div>
@@ -87,7 +100,12 @@ export default function BackupReminder({ settings }: BackupReminderProps) {
 
       <Link
         href="/expenses/settings"
-        className="flex items-center justify-center gap-1.5 text-xs font-bold text-amber-650 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300 bg-amber-500/10 hover:bg-amber-500/15 py-2.5 rounded-xl border border-amber-500/10 transition-all text-center w-full block cursor-pointer"
+        className="flex items-center justify-center gap-1.5 text-xs font-bold py-2.5 rounded-xl transition-all text-center w-full block cursor-pointer active:scale-95"
+        style={{
+          background: 'var(--amber-soft)',
+          color: 'var(--warning-foreground)',
+          border: '1px solid var(--amber)',
+        }}
       >
         <Download className="w-4 h-4" />
         Go to Export Backups

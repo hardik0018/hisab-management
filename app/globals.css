@@ -2,114 +2,192 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ── Vivid Cards Design Tokens ─────────────────────────────────────────────── */
 @layer base {
   :root {
-    --background: 210 40% 98%;
-    --foreground: 222.2 84% 4.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-    --primary: 221.2 83.2% 53.3%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 221.2 83.2% 53.3%;
-    --radius: 0.75rem;
-  }
+    --radius: 1.125rem;
 
-  .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 217.2 91.2% 59.8%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 224.3 76.3% 48%;
+    --background: oklch(0.976 0.004 265);
+    --foreground: oklch(0.19 0.03 268);
+    --card: oklch(1 0 0);
+    --card-foreground: oklch(0.19 0.03 268);
+    --popover: oklch(1 0 0);
+    --popover-foreground: oklch(0.19 0.03 268);
+
+    --primary: oklch(0.53 0.24 276);
+    --primary-foreground: oklch(1 0 0);
+    --secondary: oklch(0.965 0.008 268);
+    --secondary-foreground: oklch(0.29 0.03 268);
+    --muted: oklch(0.965 0.008 268);
+    --muted-foreground: oklch(0.53 0.028 262);
+    --accent: oklch(0.955 0.03 285);
+    --accent-foreground: oklch(0.43 0.19 280);
+    --border: oklch(0.925 0.01 265);
+    --input: oklch(0.925 0.01 265);
+    --ring: oklch(0.53 0.24 276);
+
+    --destructive: oklch(0.6 0.22 22);
+    --destructive-foreground: oklch(1 0 0);
+
+    /* Semantic colours */
+    --success: oklch(0.575 0.16 150);
+    --success-foreground: oklch(1 0 0);
+    --success-soft: oklch(0.955 0.05 152);
+    --danger: oklch(0.6 0.22 22);
+    --danger-foreground: oklch(1 0 0);
+    --danger-soft: oklch(0.955 0.04 22);
+    --warning: oklch(0.75 0.17 72);
+    --warning-foreground: oklch(0.34 0.1 62);
+    --warning-soft: oklch(0.965 0.05 82);
+
+    --surface: oklch(1 0 0);
+    --surface-muted: oklch(0.968 0.006 268);
+
+    /* Pastel category accents */
+    --violet: oklch(0.55 0.24 296);
+    --violet-soft: oklch(0.95 0.045 296);
+    --sky: oklch(0.6 0.16 240);
+    --sky-soft: oklch(0.955 0.04 240);
+    --pink: oklch(0.62 0.21 350);
+    --pink-soft: oklch(0.955 0.04 350);
+    --teal: oklch(0.62 0.12 190);
+    --teal-soft: oklch(0.955 0.04 190);
+    --amber: oklch(0.75 0.16 75);
+    --amber-soft: oklch(0.96 0.05 82);
+
+    /* Gradients */
+    --gradient-hero: linear-gradient(135deg, oklch(0.5 0.24 268) 0%, oklch(0.52 0.25 296) 55%, oklch(0.58 0.23 322) 100%);
+    --gradient-in:   linear-gradient(140deg, oklch(0.63 0.17 152) 0%, oklch(0.55 0.16 158) 100%);
+    --gradient-out:  linear-gradient(140deg, oklch(0.65 0.21 22) 0%, oklch(0.57 0.22 18) 100%);
+
+    /* Shadows */
+    --shadow-card: 0 1px 2px oklch(0.19 0.03 268 / 0.04), 0 6px 20px oklch(0.19 0.03 268 / 0.07);
+    --shadow-lift: 0 10px 34px oklch(0.19 0.03 268 / 0.14);
+    --shadow-glow: 0 12px 32px -10px oklch(0.53 0.24 276 / 0.55);
   }
 }
 
+/* ── Base resets ────────────────────────────────────────────────────────────── */
 @layer base {
   * {
-    @apply border-border outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 transition-all duration-200;
+    @apply border-border outline-none;
+    transition-property: color, background-color, border-color, box-shadow, transform, opacity;
+    transition-duration: 200ms;
+    transition-timing-function: ease;
+  }
+  *:focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
   }
   body {
-    @apply bg-background text-foreground selection:bg-primary/20;
-    font-feature-settings:
-      "rlig" 1,
-      "calt" 1;
+    background-color: var(--background);
+    color: var(--foreground);
+    font-feature-settings: "rlig" 1, "calt" 1;
   }
 }
 
-.glass {
-  @apply bg-white/70 backdrop-blur-md border border-white/20 shadow-xl;
+/* ── Vivid Cards utility classes ────────────────────────────────────────────── */
+
+/* White card with shadow */
+.card-surface {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 1.125rem;
+  box-shadow: var(--shadow-card);
 }
 
-.glass-dark {
-  @apply bg-black/50 backdrop-blur-md border border-white/10 shadow-xl;
+/* Purple → pink hero gradient card */
+.hero-gradient {
+  background-image: var(--gradient-hero);
+  color: oklch(1 0 0);
+  border-radius: 1.5rem;
+  box-shadow: var(--shadow-glow);
 }
 
-/* Custom Scrollbar */
+/* Green gradient (money-in) */
+.in-gradient {
+  background-image: var(--gradient-in);
+  color: oklch(1 0 0);
+  border-radius: 1.25rem;
+}
+
+/* Red/orange gradient (money-out) */
+.out-gradient {
+  background-image: var(--gradient-out);
+  color: oklch(1 0 0);
+  border-radius: 1.25rem;
+}
+
+/* Frosted floating pill nav */
+.nav-float {
+  background: color-mix(in oklab, var(--card) 88%, transparent);
+  border: 1px solid var(--border);
+  border-radius: 1.5rem;
+  box-shadow: var(--shadow-lift);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+/* Square icon tile */
+.tile {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.9rem;
+}
+
+/* Gradient text — page titles */
+.gradient-text {
+  background-image: var(--gradient-hero);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+}
+
+/* Tabular numerals for money */
+.tnum,
+.amount {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Hide scrollbar */
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Scrollbar styling for non-hidden scrollbars */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 4px;
+  height: 4px;
 }
-
 ::-webkit-scrollbar-track {
-  @apply bg-transparent;
+  background: transparent;
 }
-
 ::-webkit-scrollbar-thumb {
-  @apply bg-muted-foreground/20 rounded-full hover:bg-muted-foreground/30 transition-colors;
+  background: var(--border);
+  border-radius: 999px;
 }
 
-/* Page Transitions */
+/* ── Page Transitions ───────────────────────────────────────────────────────── */
 .page-enter {
   opacity: 0;
   transform: translateY(8px);
 }
-
 .page-enter-active {
   opacity: 1;
   transform: translateY(0);
-  transition:
-    opacity 300ms,
-    transform 300ms;
+  transition: opacity 300ms, transform 300ms;
 }
-
 .page-exit {
   opacity: 1;
   transform: translateY(0);
 }
-
 .page-exit-active {
   opacity: 0;
   transform: translateY(-8px);
-  transition:
-    opacity 300ms,
-    transform 300ms;
+  transition: opacity 300ms, transform 300ms;
 }
-
-.perspective-2000 { perspective: 2000px; }
-.perspective-500 { perspective: 500px; }
-.rotate-y-12 { transform: rotateY(12deg); }

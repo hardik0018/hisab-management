@@ -2,16 +2,12 @@
 
 import React, { useState, useEffect, useRef, useTransition } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import PageWrapper from '@/components/PageWrapper';
-import ExpenseTopTabs from '@/components/expense/ExpenseTopTabs';
+import AppShell from '@/components/AppShell';
 import ExpenseList from '@/components/expense/ExpenseList';
 import ExpenseEditModal from '@/components/expense/ExpenseEditModal';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { Expense, User } from '@/types';
 import { Search, SlidersHorizontal, X } from 'lucide-react';
-import { cn } from '@/lib/utils';
 
 interface HistoryClientProps {
   initialExpenses: Expense[];
@@ -61,12 +57,18 @@ export default function HistoryClient({ initialExpenses, searchParams, collabora
 
   // Clean up debounce timeout on unmount
   useEffect(() => {
+    const refreshHandler = () => {
+      router.refresh();
+    };
+    window.addEventListener('expense_added', refreshHandler);
+
     return () => {
       if (debounceTimeoutRef.current) {
         clearTimeout(debounceTimeoutRef.current);
       }
+      window.removeEventListener('expense_added', refreshHandler);
     };
-  }, []);
+  }, [router]);
 
   const loadMore = async () => {
     if (isLoadingMore || !hasMore) return;
@@ -231,90 +233,118 @@ export default function HistoryClient({ initialExpenses, searchParams, collabora
   };
 
   const isFilterActive = search || dateFilter || monthFilter;
-  const filteredTotal = expenses.reduce((sum, e) => sum + e.amount, 0); return (
-    <PageWrapper>
-      <ExpenseTopTabs />
-      <div className="max-w-7xl mx-auto p-4 space-y-4 pb-32">
-        <div className="space-y-1">
-          <h2 className="text-2xl font-black text-foreground">Expense History</h2>
-          <p className="text-xs text-muted-foreground font-medium">View and manage collaborative outflows in this space.</p>
-        </div>
+  const filteredTotal = expenses.reduce((sum, e) => sum + e.amount, 0);
 
-        {/* Search Bar & Toggle */}
+  return (
+    <AppShell>
+      <div className="space-y-4">
+
+        {/* Search Bar & Filter Toggle */}
         <div className="flex gap-2">
-          <div className="relative flex-1">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/85" />
-            <Input
-              type="text"
-              placeholder="Search items or notes..."
-              value={search}
-              onChange={(e) => handleSearchChange(e.target.value)}
-              className="pl-10 bg-background border-input text-foreground text-xs rounded-2xl h-11 focus-visible:ring-ring"
-            />
-            {search && (
-              <button
-                onClick={handleClearSearch}
-                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            )}
+          <div className="flex-1">
+            <div className="flex items-center gap-2 card-surface px-3" style={{ height: '44px' }}>
+              <Search className="w-4 h-4 shrink-0" style={{ color: 'var(--muted-foreground)' }} />
+              <input
+                value={search}
+                onChange={(e) => handleSearchChange(e.target.value)}
+                placeholder="Search expenses..."
+                className="flex-1 bg-transparent text-sm outline-none"
+                style={{ color: 'var(--foreground)', fontSize: '16px' }}
+              />
+              {search && (
+                <button
+                  onClick={handleClearSearch}
+                  className="shrink-0 active:scale-95 transition-all"
+                  style={{ color: 'var(--muted-foreground)' }}
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+            </div>
           </div>
-          <Button
+
+          {/* Filter toggle button */}
+          <button
             type="button"
-            variant="outline"
             onClick={() => setShowFilters(!showFilters)}
-            className={cn(
-              "w-11 h-11 border-input rounded-2xl bg-background transition-all p-0 flex items-center justify-center cursor-pointer",
-              showFilters ? "text-primary border-primary/20 bg-primary/10" : "text-muted-foreground"
-            )}
+            className="w-11 h-11 card-surface flex items-center justify-center active:scale-95 transition-all"
+            style={{
+              color: showFilters ? 'var(--primary)' : 'var(--muted-foreground)',
+              background: showFilters ? 'var(--violet-soft)' : undefined,
+            }}
           >
             <SlidersHorizontal className="w-4 h-4" />
-          </Button>
+          </button>
         </div>
 
         {/* Collapsible Filters Section */}
         {showFilters && (
-          <div className="bg-card border border-border rounded-3xl p-4 space-y-4 shadow-sm">
-            <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Advanced Filters</h3>
+          <div className="card-surface p-4 space-y-4">
+            <h3
+              className="text-xs font-bold uppercase tracking-wider"
+              style={{ color: 'var(--muted-foreground)' }}
+            >
+              Advanced Filters
+            </h3>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-muted-foreground uppercase">Specific Date</label>
-                <Input
+                <label
+                  className="text-[10px] font-bold uppercase"
+                  style={{ color: 'var(--muted-foreground)' }}
+                >
+                  Specific Date
+                </label>
+                <input
                   type="date"
                   value={dateFilter}
                   onChange={(e) => handleDateChange(e.target.value)}
-                  className="bg-background border-input text-foreground text-xs rounded-xl h-9"
+                  className="card-surface px-3 h-11 rounded-xl text-sm outline-none w-full"
+                  style={{ color: 'var(--foreground)' }}
                 />
               </div>
               <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-muted-foreground uppercase">Specific Month</label>
-                <Input
+                <label
+                  className="text-[10px] font-bold uppercase"
+                  style={{ color: 'var(--muted-foreground)' }}
+                >
+                  Specific Month
+                </label>
+                <input
                   type="month"
                   value={monthFilter}
                   onChange={(e) => handleMonthChange(e.target.value)}
-                  className="bg-background border-input text-foreground text-xs rounded-xl h-9"
+                  className="card-surface px-3 h-11 rounded-xl text-sm outline-none w-full"
+                  style={{ color: 'var(--foreground)' }}
                 />
               </div>
             </div>
             {isFilterActive && (
-              <Button
+              <button
                 type="button"
-                variant="ghost"
                 onClick={handleClearFilters}
-                className="w-full text-xs text-destructive hover:text-destructive hover:bg-destructive/10 rounded-xl h-9 border border-destructive/10 cursor-pointer"
+                className="w-full h-9 rounded-xl text-xs font-semibold border active:scale-95 transition-all"
+                style={{
+                  color: 'var(--danger)',
+                  background: 'var(--danger-soft)',
+                  borderColor: 'var(--danger)',
+                }}
               >
                 Clear All Filters
-              </Button>
+              </button>
             )}
           </div>
         )}
 
         {/* Filter Summary Banner */}
         {isFilterActive && (
-          <div className="bg-primary/5 dark:bg-primary/10 border border-primary/10 rounded-2xl p-4 flex justify-between items-center text-xs">
-            <span className="text-muted-foreground font-medium">Filtered Outflow:</span>
-            <span className="font-black text-primary text-sm">
+          <div
+            className="card-surface p-4 flex justify-between items-center text-xs"
+            style={{ background: 'var(--violet-soft)' }}
+          >
+            <span className="font-medium" style={{ color: 'var(--muted-foreground)' }}>
+              Filtered Outflow:
+            </span>
+            <span className="font-black text-sm" style={{ color: 'var(--primary)' }}>
               ₹{filteredTotal.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
             </span>
           </div>
@@ -322,8 +352,11 @@ export default function HistoryClient({ initialExpenses, searchParams, collabora
 
         {/* Grouped list of expenses */}
         {isPending ? (
-          <div className="flex justify-center items-center py-20 text-primary">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+          <div className="flex justify-center items-center py-20">
+            <div
+              className="animate-spin rounded-full h-8 w-8 border-b-2"
+              style={{ borderColor: 'var(--primary)' }}
+            />
           </div>
         ) : (
           <>
@@ -334,22 +367,32 @@ export default function HistoryClient({ initialExpenses, searchParams, collabora
               collaborators={collaborators}
               currentUserId={currentUserId}
             />
-            
+
             {/* Infinite Scroll Loader */}
             {hasMore && (
               <div ref={loaderRef} className="flex justify-center items-center py-8">
                 {isLoadingMore ? (
-                  <div className="flex items-center gap-2 text-muted-foreground text-sm font-medium">
-                    <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                  <div
+                    className="flex items-center gap-2 text-sm font-medium"
+                    style={{ color: 'var(--muted-foreground)' }}
+                  >
+                    <div
+                      className="w-4 h-4 border-2 border-t-transparent rounded-full animate-spin"
+                      style={{ borderColor: 'var(--primary)', borderTopColor: 'transparent' }}
+                    />
                     Loading more...
                   </div>
                 ) : (
-                  <div className="h-4" /> 
+                  <div className="h-4" />
                 )}
               </div>
             )}
+
             {!hasMore && expenses.length > 0 && (
-              <div className="text-center py-8 text-xs font-bold text-muted-foreground uppercase tracking-widest">
+              <div
+                className="text-center py-8 text-xs font-bold uppercase tracking-widest"
+                style={{ color: 'var(--muted-foreground)' }}
+              >
                 End of History
               </div>
             )}
@@ -366,6 +409,6 @@ export default function HistoryClient({ initialExpenses, searchParams, collabora
         collaborators={collaborators}
         currentUserId={currentUserId}
       />
-    </PageWrapper>
+    </AppShell>
   );
 }

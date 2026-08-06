@@ -1,50 +1,33 @@
 import { Skeleton } from "@/components/ui/skeleton";
-import PageWrapper from "@/components/PageWrapper";
-import { Card, CardContent } from "@/components/ui/card";
+import AppShell from "@/components/AppShell";
 
-export default function ExpensesLoading() {
+export default function Loading() {
   return (
-    <PageWrapper>
-      {/* Tab bar skeleton matching ExpenseTopTabs */}
-      <div className="flex border-b border-border bg-card sticky top-0 z-50 justify-center w-full">
-        <div className="flex w-full max-w-md justify-between px-4 h-12">
-          {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="flex items-center gap-1.5 px-3 h-full border-b-2 border-transparent">
-              <Skeleton className="w-3.5 h-3.5 rounded-full" />
-              <Skeleton className="h-3 w-10 rounded-md" />
+    <AppShell>
+      <div className="space-y-6 animate-in fade-in duration-500">
+        <div className="space-y-2">
+          <Skeleton className="h-10 w-48 rounded-xl" />
+          <Skeleton className="h-4 w-72 rounded-xl" />
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <Skeleton className="h-28 w-full rounded-2xl" />
+          <Skeleton className="h-28 w-full rounded-2xl" />
+          <Skeleton className="h-28 w-full rounded-2xl" />
+        </div>
+        <div className="space-y-3 pt-4">
+          <Skeleton className="h-6 w-32 rounded-md mb-4" />
+          {[1, 2, 3, 4, 5].map((i) => (
+            <div key={i} className="card-surface p-4 flex items-center gap-4">
+              <Skeleton className="w-12 h-12 rounded-2xl shrink-0" />
+              <div className="space-y-2 flex-1">
+                <Skeleton className="h-5 w-1/3 rounded-md" />
+                <Skeleton className="h-3 w-1/4 rounded-md" />
+              </div>
+              <Skeleton className="h-6 w-16 rounded-md shrink-0" />
             </div>
           ))}
         </div>
       </div>
-
-      <div className="max-w-7xl mx-auto p-4 space-y-5">
-        <div className="space-y-2">
-          <Skeleton className="h-8 w-40 rounded-md" />
-          <Skeleton className="h-4 w-72 rounded-md" />
-        </div>
-
-        {/* Backup reminder skeleton */}
-        <Card className="border-none shadow-md rounded-[1.5rem] bg-amber-50/50 p-4 border border-amber-100/50">
-          <div className="flex items-center gap-3">
-            <Skeleton className="w-8 h-8 rounded-full" />
-            <Skeleton className="h-4 w-60 rounded-md" />
-          </div>
-        </Card>
-
-        {/* Expense entry box skeleton */}
-        <Card className="border-none shadow-lg rounded-[2rem] bg-white p-5">
-          <CardContent className="space-y-6 p-0">
-            <div className="space-y-2">
-              <Skeleton className="h-4 w-32 rounded-md" />
-              <Skeleton className="h-32 w-full rounded-2xl" />
-            </div>
-            <div className="flex justify-between items-center">
-              <Skeleton className="h-4 w-48 rounded-md" />
-              <Skeleton className="h-12 w-28 rounded-xl" />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    </PageWrapper>
+    </AppShell>
   );
 }

@@ -17,7 +17,13 @@ export default async function MarriagePage() {
     redirect('/login');
   }
 
-  const records = await getMarriageRecords();
+  const data = await getMarriageRecords();
 
-  return <MarriageClient initialRecords={records || []} />;
+  return <MarriageClient 
+    initialRecords={data?.records || []} 
+    initialTotalGiven={data?.totalGiven || 0}
+    initialTotalReceived={data?.totalReceived || 0}
+    initialNetBalance={data?.netBalance || 0}
+    initialHasMore={data?.hasMore || false}
+  />;
 }

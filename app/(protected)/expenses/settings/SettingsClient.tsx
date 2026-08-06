@@ -1,8 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import PageWrapper from '@/components/PageWrapper';
-import ExpenseTopTabs from '@/components/expense/ExpenseTopTabs';
+import AppShell from '@/components/AppShell';
 import ClearAllData from '@/components/settings/ClearAllData';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -129,13 +128,9 @@ export default function SettingsClient({ initialSettings }: SettingsClientProps)
   };
 
   return (
-    <PageWrapper>
-      <ExpenseTopTabs />
-      <div className="max-w-7xl mx-auto p-4 space-y-3 pb-32">
-        <div className="space-y-1">
-          <h2 className="text-2xl font-black text-foreground">Settings</h2>
-          <p className="text-xs text-muted-foreground font-medium">Configure warnings, exports, and backup alerts for this space.</p>
-        </div>
+    <AppShell>
+      <div className="space-y-3">
+        {/* Preferences Form */}
 
         {/* Preferences Form */}
         {isLoading ? (
@@ -266,7 +261,7 @@ export default function SettingsClient({ initialSettings }: SettingsClientProps)
                 onClick={() => handleExport('csv')}
                 className="bg-background border border-input text-foreground hover:bg-muted h-11 rounded-xl font-bold flex flex-col gap-0.5 justify-center items-center cursor-pointer"
               >
-                <Table className="w-4 h-4 text-emerald-500" />
+                <Table className="w-4 h-4" style={{ color: 'var(--success)' }} />
                 <span className="text-[9px] uppercase font-black">CSV</span>
               </Button>
               <Button
@@ -292,6 +287,6 @@ export default function SettingsClient({ initialSettings }: SettingsClientProps)
         {/* Danger Zone */}
         {/* <ClearAllData /> */}
               </div>
-    </PageWrapper>
+    </AppShell>
   );
 }

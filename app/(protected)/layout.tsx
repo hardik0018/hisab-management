@@ -1,7 +1,6 @@
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import BottomNav from '@/components/BottomNav';
-import QuickAddSheet from '@/components/QuickAddSheet';
 import { ReactNode } from 'react';
 
 interface ProtectedLayoutProps {
@@ -10,9 +9,8 @@ interface ProtectedLayoutProps {
 
 /**
  * SSR Protected Layout.
- * Performs server-side authentication check before rendering any protected content.
- * Justification for SSR: Security and speed. By checking auth on the server, we prevent
- * the client from seeing protected UI even for a split second before redirecting.
+ * Checks auth server-side, renders BottomNav.
+ * QuickAddSheet removed — replaced by inline QuickAddBar on each screen.
  */
 export default async function ProtectedLayout({ children }: ProtectedLayoutProps) {
   const session = await auth();
@@ -22,9 +20,11 @@ export default async function ProtectedLayout({ children }: ProtectedLayoutProps
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-20">
+    <div
+      className="min-h-screen"
+      style={{ background: 'var(--background)' }}
+    >
       {children}
-      <QuickAddSheet />
       <BottomNav />
     </div>
   );
