@@ -42,7 +42,7 @@ export async function PATCH(
     });
 
     if (!existing) {
-      return Response.json({ error: 'Not Found', message: 'Recurring template not found' }, { status: 404 });
+      return Response.json({ error: 'Not Found', message: 'Auto template not found' }, { status: 404 });
     }
 
     const updates: any = {};
@@ -151,7 +151,7 @@ export async function DELETE(
     });
 
     if (result.deletedCount === 0) {
-      return Response.json({ error: 'Not Found', message: 'Recurring template not found' }, { status: 404 });
+      return Response.json({ error: 'Not Found', message: 'Auto template not found' }, { status: 404 });
     }
 
     return Response.json({ success: true });

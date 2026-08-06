@@ -1,14 +1,21 @@
 export const dynamic = 'force-dynamic';
 
-import React from 'react';
-import PageWrapper from '@/components/PageWrapper';
-import ExpenseTopTabs from '@/components/expense/ExpenseTopTabs';
 import TaxDashboardClient from '@/components/expense/TaxDashboardClient';
 import { getFinancialYearSummary } from '@/lib/data-fetching';
 import { redirect } from 'next/navigation';
 import { getAuthenticatedUser } from '@/lib/auth';
-
 import { currentFy } from '@/lib/tax/india';
+import SegmentedTabs from '@/components/SegmentedTabs';
+import AppShell from '@/components/AppShell';
+
+const EXPENSE_TABS = [
+  { label: 'Today', href: '/expenses' },
+  { label: 'History', href: '/expenses/history' },
+  { label: 'Auto', href: '/expenses/recurring' },
+  { label: 'Report', href: '/expenses/summary' },
+  { label: 'Tax', href: '/expenses/tax' },
+  { label: 'Settings', href: '/expenses/settings' },
+];
 
 export default async function TaxPage() {
   const user = await getAuthenticatedUser();
@@ -25,20 +32,11 @@ export default async function TaxPage() {
   }
 
   return (
-    <PageWrapper>
-      <ExpenseTopTabs />
-      <div className="max-w-4xl mx-auto p-4 space-y-6 pb-32">
-        <div className="space-y-1">
-          <h2 className="text-2xl font-black text-foreground font-sans tracking-tight flex items-center gap-2">
-            💡 Simple Income Tax Check (This Year)
-          </h2>
-          <p className="text-xs text-muted-foreground font-medium">
-            We automatically check your earnings and spending to tell you in plain words if you owe any tax.
-          </p>
-        </div>
-
+    <>
+      <SegmentedTabs tabs={EXPENSE_TABS} />
+      <AppShell>
         <TaxDashboardClient initialSummary={summary} />
-      </div>
-    </PageWrapper>
+      </AppShell>
+    </>
   );
 }

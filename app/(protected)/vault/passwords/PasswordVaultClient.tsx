@@ -6,31 +6,24 @@ import { generatePassword, scorePassword } from "@/lib/passwordUtils";
 import type { PasswordEntryPublic, PasswordCategory } from "@/types/passwordVault";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Eye, EyeOff, Dices, Copy, Check, ArrowLeft, Plus, Search, Star, Globe, Shield, ShieldAlert, ChevronRight, KeyRound, BarChart2 } from "lucide-react";
+import { Eye, EyeOff, Dices, Copy, Check, Plus, Search, Star, Globe, Shield, ShieldAlert, KeyRound, BarChart2, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import AppShell from "@/components/AppShell";
+import PageHeader from "@/components/PageHeader";
+import EmptyState from "@/components/EmptyState";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 
 const CATS: PasswordCategory[] = ["Bank", "Social", "Work", "Shopping", "Email", "Utility", "Other"];
 
-const CAT_AVATAR: Record<string, string> = {
-  Bank:     "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300",
-  Social:   "bg-sky-100 text-sky-700 dark:bg-sky-900/50 dark:text-sky-300",
-  Work:     "bg-violet-100 text-violet-700 dark:bg-violet-900/50 dark:text-violet-300",
-  Shopping: "bg-orange-100 text-orange-700 dark:bg-orange-900/50 dark:text-orange-300",
-  Email:    "bg-rose-100 text-rose-700 dark:bg-rose-900/50 dark:text-rose-300",
-  Utility:  "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300",
-  Other:    "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400",
-};
-
-const CAT_BADGE: Record<string, string> = {
-  Bank:     "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300",
-  Social:   "bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300",
-  Work:     "bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300",
-  Shopping: "bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300",
-  Email:    "bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300",
-  Utility:  "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300",
-  Other:    "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400",
+const CAT_COLORS: Record<string, { bg: string, color: string }> = {
+  Bank:     { bg: "var(--success-soft)", color: "var(--success)" },
+  Social:   { bg: "var(--sky-soft)", color: "var(--sky)" },
+  Work:     { bg: "var(--violet-soft)", color: "var(--violet)" },
+  Shopping: { bg: "var(--amber-soft)", color: "var(--amber)" },
+  Email:    { bg: "var(--pink-soft)", color: "var(--pink)" },
+  Utility:  { bg: "var(--teal-soft)", color: "var(--teal)" },
+  Other:    { bg: "var(--surface-muted)", color: "var(--muted-foreground)" },
 };
 
 export default function PasswordVaultClient() {
@@ -67,178 +60,183 @@ export default function PasswordVaultClient() {
   }
 
   return (
-    <div className="max-w-3xl mx-auto pb-32 space-y-5">
-      {/* Header with back button */}
-      <div className="flex items-center gap-3">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => router.push("/vault")}
-          className="rounded-xl h-9 w-9 shrink-0 hover:bg-muted"
-        >
-          <ArrowLeft className="h-5 w-5" />
-        </Button>
-        <div className="flex-1 min-w-0">
-          <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-            <KeyRound className="h-6 w-6 text-primary" />
-            Password Vault
-          </h1>
-          <p className="text-sm text-muted-foreground">{items.length} saved credential{items.length !== 1 ? "s" : ""}</p>
+    <AppShell>
+      <PageHeader
+        title="Password Vault"
+        subtitle={`${items.length} saved credential${items.length !== 1 ? "s" : ""}`}
+        right={
+          <Button onClick={() => setEditing({})} className="shrink-0 rounded-xl" style={{ background: 'var(--primary)', color: 'white' }}>
+            <Plus className="h-4 w-4 mr-1.5" />
+            New
+          </Button>
+        }
+      />
+
+      <div className="space-y-5">
+        {/* Tabs */}
+        <div className="flex gap-1 p-1 rounded-xl w-full" style={{ background: 'var(--surface-muted)' }}>
+          <button
+            onClick={() => setTab("list")}
+            className={cn(
+              "flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium transition-all duration-200"
+            )}
+            style={{
+              background: tab === "list" ? 'var(--card)' : 'transparent',
+              color: tab === "list" ? 'var(--primary)' : 'var(--muted-foreground)',
+              boxShadow: tab === "list" ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
+            }}
+          >
+            <Shield className="h-4 w-4" />
+            All Passwords
+          </button>
+          <button
+            onClick={() => setTab("audit")}
+            className={cn(
+              "flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium transition-all duration-200"
+            )}
+            style={{
+              background: tab === "audit" ? 'var(--card)' : 'transparent',
+              color: tab === "audit" ? 'var(--primary)' : 'var(--muted-foreground)',
+              boxShadow: tab === "audit" ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
+            }}
+          >
+            <BarChart2 className="h-4 w-4" />
+            Security Audit
+          </button>
         </div>
-        <Button onClick={() => setEditing({})} className="shrink-0 rounded-xl">
-          <Plus className="h-4 w-4 mr-1.5" />
-          New
-        </Button>
-      </div>
 
-      {/* Tabs */}
-      <div className="flex gap-1 p-1 bg-muted/50 rounded-xl w-full">
-        <button
-          onClick={() => setTab("list")}
-          className={cn(
-            "flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium transition-all duration-200",
-            tab === "list" ? "bg-background shadow text-primary" : "text-muted-foreground hover:text-foreground hover:bg-background/50"
-          )}
-        >
-          <Shield className="h-4 w-4" />
-          All Passwords
-        </button>
-        <button
-          onClick={() => setTab("audit")}
-          className={cn(
-            "flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium transition-all duration-200",
-            tab === "audit" ? "bg-background shadow text-primary" : "text-muted-foreground hover:text-foreground hover:bg-background/50"
-          )}
-        >
-          <BarChart2 className="h-4 w-4" />
-          Security Audit
-        </button>
-      </div>
+        {/* Search */}
+        {tab === "list" && (
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4" style={{ color: 'var(--muted-foreground)' }} />
+            <Input
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="Search title, username, site…"
+              className="pl-9 rounded-xl"
+              style={{ background: 'var(--card)', color: 'var(--foreground)', border: '1px solid var(--border)' }}
+            />
+          </div>
+        )}
 
-      {/* Search */}
-      {tab === "list" && (
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder="Search title, username, site…"
-            className="pl-9 rounded-xl"
-          />
-        </div>
-      )}
-
-      {/* List */}
-      {tab === "list" && (
-        <div className="space-y-2.5 animate-in fade-in slide-in-from-bottom-2 duration-300">
-          {items.length === 0 && (
-            <div className="flex flex-col items-center justify-center py-20 text-center space-y-4">
-              <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
-                <KeyRound className="h-10 w-10 text-primary" />
-              </div>
-              <div className="space-y-1">
-                <p className="font-semibold text-base">No passwords yet</p>
-                <p className="text-sm text-muted-foreground">Tap <strong>+ New</strong> to save your first credential.</p>
-              </div>
-            </div>
-          )}
-          {items.map((it) => {
-            const colorPair = CAT_AVATAR[it.category] ?? CAT_AVATAR.Other;
-            return (
-              <div
-                key={String(it._id)}
-                className="flex items-center gap-3.5 p-4 bg-card border border-border rounded-2xl hover:shadow-md hover:border-primary/20 transition-all duration-200 group cursor-pointer"
-                onClick={() => setEditing(it)}
-              >
-                {/* Avatar */}
-                <div className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 text-base font-bold ${colorPair}`}>
-                  {it.title.charAt(0).toUpperCase()}
-                </div>
-
-                {/* Info */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-1.5">
-                    <span className="font-semibold text-sm leading-tight truncate">{it.title}</span>
-                    {it.favorite && <Star className="h-3.5 w-3.5 text-amber-400 fill-amber-400 shrink-0" />}
-                    {it.space_id && <Globe className="h-3 w-3 text-muted-foreground/60 shrink-0" aria-label="Shared" />}
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-0.5 truncate">{it.username}</p>
-                  <span className={cn("text-[10px] font-semibold px-1.5 py-0.5 rounded-full mt-1.5 inline-block", CAT_BADGE[it.category] ?? CAT_BADGE.Other)}>
-                    {it.category}
-                  </span>
-                </div>
-
-                {/* Copy action */}
-                <button
-                  className="h-8 w-8 rounded-xl bg-muted/60 hover:bg-primary/10 hover:text-primary flex items-center justify-center shrink-0 transition-colors"
-                  onClick={(e) => { e.stopPropagation(); copyPassword(String(it._id)); }}
-                  title="Copy password"
+        {/* List */}
+        {tab === "list" && (
+          <div className="space-y-2.5 animate-in fade-in slide-in-from-bottom-2 duration-300">
+            {items.length === 0 && (
+              <EmptyState 
+                icon={KeyRound} 
+                title="No passwords yet" 
+                hint="Tap + New to save your first credential." 
+              />
+            )}
+            {items.map((it) => {
+              const colors = CAT_COLORS[it.category] ?? CAT_COLORS.Other;
+              return (
+                <div
+                  key={String(it._id)}
+                  className="card-surface p-4 flex gap-3 items-center group cursor-pointer active:scale-95 transition-all"
+                  onClick={() => setEditing(it)}
                 >
-                  {copiedId === String(it._id)
-                    ? <Check className="h-3.5 w-3.5 text-green-500" />
-                    : <Copy className="h-3.5 w-3.5" />
-                  }
-                </button>
-              </div>
-            );
-          })}
-        </div>
-      )}
+                  {/* Avatar */}
+                  <div 
+                    className="tile w-11 h-11 shrink-0 text-base font-bold"
+                    style={{ background: colors.bg, color: colors.color }}
+                  >
+                    {it.title.charAt(0).toUpperCase()}
+                  </div>
 
+                  {/* Info */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-semibold text-sm leading-tight truncate" style={{ color: 'var(--foreground)' }}>
+                        {it.title}
+                      </span>
+                      {it.favorite && <Star className="h-3.5 w-3.5 shrink-0" style={{ color: 'var(--amber)', fill: 'var(--amber)' }} />}
+                      {it.space_id && <Globe className="h-3 w-3 shrink-0" style={{ color: 'var(--muted-foreground)' }} aria-label="Shared" />}
+                    </div>
+                    <p className="text-xs mt-0.5 truncate" style={{ color: 'var(--muted-foreground)' }}>{it.username}</p>
+                    <span 
+                      className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full mt-1.5 inline-block"
+                      style={{ background: colors.bg, color: colors.color }}
+                    >
+                      {it.category}
+                    </span>
+                  </div>
 
-      {/* Audit */}
-      {tab === "audit" && audit && (
-        <div className="space-y-3 animate-in fade-in slide-in-from-bottom-2 duration-300">
-          <AuditCard
-            icon={<ShieldAlert className="h-5 w-5 text-red-500" />}
-            title="Weak passwords"
-            subtitle="Less than 10 characters"
-            rows={audit.weak}
-            color="border-red-200 dark:border-red-900/40 bg-red-50/50 dark:bg-red-950/20"
-          />
-          <AuditCard
-            icon={<Copy className="h-5 w-5 text-orange-500" />}
-            title="Reused passwords"
-            subtitle="Same password used in multiple entries"
-            rows={audit.reused}
-            color="border-orange-200 dark:border-orange-900/40 bg-orange-50/50 dark:bg-orange-950/20"
-          />
-          <AuditCard
-            icon={<BarChart2 className="h-5 w-5 text-slate-500" />}
-            title="Stale passwords"
-            subtitle="Not changed in over 1 year"
-            rows={audit.stale}
-            color="border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/30"
-          />
-        </div>
-      )}
-      {tab === "audit" && !audit && (
-        <div className="py-12 flex items-center justify-center text-muted-foreground text-sm">Loading audit…</div>
-      )}
+                  {/* Copy action */}
+                  <button
+                    className="h-10 w-10 rounded-xl flex items-center justify-center shrink-0 transition-colors"
+                    style={{ background: 'var(--surface-muted)' }}
+                    onClick={(e) => { e.stopPropagation(); copyPassword(String(it._id)); }}
+                    title="Copy password"
+                  >
+                    {copiedId === String(it._id)
+                      ? <Check className="h-4 w-4" style={{ color: 'var(--success)' }} />
+                      : <Copy className="h-4 w-4" style={{ color: 'var(--foreground)' }} />
+                    }
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Audit */}
+        {tab === "audit" && audit && (
+          <div className="space-y-3 animate-in fade-in slide-in-from-bottom-2 duration-300">
+            <AuditCard
+              icon={<ShieldAlert className="h-5 w-5" style={{ color: 'var(--danger)' }} />}
+              title="Weak passwords"
+              subtitle="Less than 10 characters"
+              rows={audit.weak}
+              colorVars={{ bg: 'var(--danger-soft)', border: 'var(--danger)' }}
+            />
+            <AuditCard
+              icon={<Copy className="h-5 w-5" style={{ color: 'var(--warning)' }} />}
+              title="Reused passwords"
+              subtitle="Same password used in multiple entries"
+              rows={audit.reused}
+              colorVars={{ bg: 'var(--warning-soft)', border: 'var(--warning)' }}
+            />
+            <AuditCard
+              icon={<BarChart2 className="h-5 w-5" style={{ color: 'var(--muted-foreground)' }} />}
+              title="Stale passwords"
+              subtitle="Not changed in over 1 year"
+              rows={audit.stale}
+              colorVars={{ bg: 'var(--surface-muted)', border: 'var(--border)' }}
+            />
+          </div>
+        )}
+        {tab === "audit" && !audit && (
+          <div className="py-12 flex items-center justify-center text-sm" style={{ color: 'var(--muted-foreground)' }}>Loading audit…</div>
+        )}
+      </div>
 
       {editing && <EditorModal initial={editing} onClose={() => { setEditing(null); load(); }} />}
-    </div>
+    </AppShell>
   );
 }
 
-function AuditCard({ icon, title, subtitle, rows, color }: { icon: React.ReactNode; title: string; subtitle: string; rows: any[]; color: string }) {
+function AuditCard({ icon, title, subtitle, rows, colorVars }: { icon: React.ReactNode; title: string; subtitle: string; rows: any[]; colorVars: { bg: string, border: string } }) {
   return (
-    <div className={cn("border rounded-2xl p-4 space-y-3", color)}>
+    <div className="border rounded-2xl p-4 space-y-3" style={{ background: colorVars.bg, borderColor: colorVars.border }}>
       <div className="flex items-center gap-3">
         {icon}
         <div>
-          <div className="font-semibold text-sm">{title} <span className="font-normal text-muted-foreground">({rows.length})</span></div>
-          <div className="text-xs text-muted-foreground">{subtitle}</div>
+          <div className="font-semibold text-sm" style={{ color: 'var(--foreground)' }}>
+            {title} <span className="font-normal" style={{ color: 'var(--muted-foreground)' }}>({rows.length})</span>
+          </div>
+          <div className="text-xs" style={{ color: 'var(--muted-foreground)' }}>{subtitle}</div>
         </div>
       </div>
       {rows.length === 0
-        ? <p className="text-sm text-green-600 dark:text-green-400 font-medium">✓ All good!</p>
+        ? <p className="text-sm font-medium" style={{ color: 'var(--success)' }}>✓ All good!</p>
         : <ul className="space-y-1.5">
             {rows.map((r) => (
               <li key={String(r._id)} className="text-sm flex items-center gap-2">
-                <span className="w-1.5 h-1.5 rounded-full bg-current opacity-40 shrink-0" />
-                <span className="font-medium">{r.title}</span>
-                <span className="text-muted-foreground truncate">— {r.username}</span>
+                <span className="w-1.5 h-1.5 rounded-full bg-current opacity-40 shrink-0" style={{ color: 'var(--foreground)' }} />
+                <span className="font-medium" style={{ color: 'var(--foreground)' }}>{r.title}</span>
+                <span className="truncate" style={{ color: 'var(--muted-foreground)' }}>— {r.username}</span>
               </li>
             ))}
           </ul>
@@ -297,26 +295,34 @@ function EditorModal({ initial, onClose }: { initial: any; onClose: () => void }
     onClose();
   }
 
-  const strengthColor = { weak: "bg-red-500", fair: "bg-yellow-500", good: "bg-blue-500", strong: "bg-green-500" }[strength.label] ?? "bg-gray-300";
+  const strengthColorMap: Record<string, string> = { 
+    weak: "var(--danger)", 
+    fair: "var(--warning)", 
+    good: "var(--sky)", 
+    strong: "var(--success)" 
+  };
+  const strengthColor = strengthColorMap[strength.label] ?? "var(--muted-foreground)";
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm grid place-items-center p-4 z-[200]">
-      <div className="bg-white dark:bg-gray-900 rounded-2xl w-full max-w-md shadow-2xl border border-gray-200 dark:border-gray-800 max-h-[92vh] flex flex-col">
+    <div className="fixed inset-0 grid place-items-center p-4 z-[200]" style={{ background: 'oklch(0.19 0.03 268 / 0.5)', backdropFilter: 'blur(4px)' }}>
+      <div className="card-surface rounded-2xl w-full max-w-md max-h-[92vh] flex flex-col border" style={{ borderColor: 'var(--border)' }}>
         {/* Modal header */}
-        <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-100 dark:border-gray-800 shrink-0">
+        <div className="flex items-center gap-3 px-5 py-4 border-b shrink-0" style={{ borderColor: 'var(--border)' }}>
           <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg shrink-0" type="button" onClick={onClose}>
-            <ArrowLeft className="h-4 w-4" />
+            <ArrowLeft className="h-4 w-4" style={{ color: 'var(--foreground)' }} />
           </Button>
-          <h2 className="text-lg font-semibold">{isEdit ? "Edit entry" : "New entry"}</h2>
+          <h2 className="text-lg font-semibold" style={{ color: 'var(--foreground)' }}>{isEdit ? "Edit entry" : "New entry"}</h2>
         </div>
 
         {/* Scrollable body */}
         <div className="overflow-y-auto flex-1 px-5 py-4">
           <form autoComplete="off" onSubmit={(e) => e.preventDefault()} className="space-y-3">
             <Input placeholder="Title (e.g. HDFC Netbanking)" autoFocus autoComplete="off"
-              value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} className="rounded-xl" />
+              value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} 
+              className="rounded-xl" style={{ background: 'var(--secondary)', color: 'var(--foreground)', border: '1px solid var(--border)' }} />
             <Input placeholder="Username / email" autoComplete="off"
-              value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} className="rounded-xl" />
+              value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} 
+              className="rounded-xl" style={{ background: 'var(--secondary)', color: 'var(--foreground)', border: '1px solid var(--border)' }} />
 
             {/* Password row */}
             <div className="flex gap-2">
@@ -324,45 +330,51 @@ function EditorModal({ initial, onClose }: { initial: any; onClose: () => void }
                 <Input type={showPw ? "text" : "password"} className="w-full pr-9 rounded-xl"
                   autoComplete="new-password"
                   placeholder={isEdit ? "Leave blank to keep" : "Password"}
-                  value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} />
+                  value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} 
+                  style={{ background: 'var(--secondary)', color: 'var(--foreground)', border: '1px solid var(--border)' }} />
                 {form.password && (
                   <button type="button"
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 transition-colors"
+                    style={{ color: 'var(--muted-foreground)' }}
                     onClick={handleCopy} title="Copy password"
                   >
-                    {copied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
+                    {copied ? <Check className="w-4 h-4" style={{ color: 'var(--success)' }} /> : <Copy className="w-4 h-4" />}
                   </button>
                 )}
               </div>
-              <Button variant="outline" size="icon" type="button" className="rounded-xl shrink-0"
+              <Button variant="outline" size="icon" type="button" className="rounded-xl shrink-0 h-10 w-10"
+                style={{ background: 'var(--surface-muted)', border: '1px solid var(--border)' }}
                 onClick={() => setShowPw((v) => !v)} title={showPw ? "Hide" : "Show"}>
-                {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                {showPw ? <EyeOff className="w-4 h-4" style={{ color: 'var(--foreground)' }} /> : <Eye className="w-4 h-4" style={{ color: 'var(--foreground)' }} />}
               </Button>
-              <Button variant="secondary" size="icon" type="button" className="rounded-xl shrink-0"
+              <Button variant="secondary" size="icon" type="button" className="rounded-xl shrink-0 h-10 w-10"
+                style={{ background: 'var(--surface-muted)', border: '1px solid var(--border)' }}
                 onClick={() => setForm({ ...form, password: generatePassword({ length: 18 }) })} title="Generate">
-                <Dices className="w-4 h-4" />
+                <Dices className="w-4 h-4" style={{ color: 'var(--foreground)' }} />
               </Button>
             </div>
 
             {/* Strength bar */}
             {form.password && (
               <div className="space-y-1">
-                <div className="h-1.5 bg-gray-200 dark:bg-gray-800 rounded-full overflow-hidden">
-                  <div className={cn("h-full rounded-full transition-all duration-300", strengthColor)}
-                    style={{ width: `${strength.score}%` }} />
+                <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--surface-muted)' }}>
+                  <div className="h-full rounded-full transition-all duration-300"
+                    style={{ width: `${strength.score}%`, background: strengthColor }} />
                 </div>
-                <div className="text-xs text-muted-foreground font-medium">
+                <div className="text-xs font-medium" style={{ color: 'var(--muted-foreground)' }}>
                   Strength: <span className="capitalize font-semibold">{strength.label}</span>
-                  <span className="ml-1 text-muted-foreground/70">({Math.round(strength.entropy)} bits)</span>
+                  <span className="ml-1 opacity-70">({Math.round(strength.entropy)} bits)</span>
                 </div>
               </div>
             )}
 
             <Input placeholder="Website (optional)" autoComplete="off"
-              value={form.website || ""} onChange={(e) => setForm({ ...form, website: e.target.value })} className="rounded-xl" />
+              value={form.website || ""} onChange={(e) => setForm({ ...form, website: e.target.value })} 
+              className="rounded-xl" style={{ background: 'var(--secondary)', color: 'var(--foreground)', border: '1px solid var(--border)' }} />
 
             <select
-              className="flex h-10 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-950 dark:border-slate-800 dark:bg-slate-950 dark:focus:ring-slate-300"
+              className="flex h-10 w-full rounded-xl border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+              style={{ background: 'var(--secondary)', color: 'var(--foreground)', borderColor: 'var(--border)' }}
               value={form.category}
               onChange={(e) => setForm({ ...form, category: e.target.value })}
             >
@@ -370,27 +382,28 @@ function EditorModal({ initial, onClose }: { initial: any; onClose: () => void }
             </select>
 
             <textarea
-              className="flex min-h-[72px] w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 dark:border-slate-800 dark:bg-slate-950 dark:focus-visible:ring-slate-300 resize-none"
+              className="flex min-h-[72px] w-full rounded-xl border px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary resize-none"
+              style={{ background: 'var(--secondary)', color: 'var(--foreground)', borderColor: 'var(--border)' }}
               placeholder="Notes (optional)"
               value={form.notes || ""} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
 
             {/* Toggles */}
             <div className="flex items-center justify-between py-1">
-              <span className="font-medium text-sm">Favorite</span>
+              <span className="font-medium text-sm" style={{ color: 'var(--foreground)' }}>Favorite</span>
               <button type="button" onClick={() => setForm({ ...form, favorite: !form.favorite })}
-                className={cn("relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2",
-                  form.favorite ? "bg-primary" : "bg-gray-200 dark:bg-gray-700")}>
+                className="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2"
+                style={{ background: form.favorite ? 'var(--primary)' : 'var(--surface-muted)' }}>
                 <span className={cn("inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform",
                   form.favorite ? "translate-x-6" : "translate-x-1")} />
               </button>
             </div>
 
             <div className="flex items-center justify-between py-1">
-              <span className="font-medium text-sm">Share with workspace</span>
+              <span className="font-medium text-sm" style={{ color: 'var(--foreground)' }}>Share with workspace</span>
               <button type="button"
                 onClick={() => setForm({ ...form, space_id: !form.space_id ? ((window as any).__activeSpaceId ?? null) : null })}
-                className={cn("relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2",
-                  form.space_id ? "bg-primary" : "bg-gray-200 dark:bg-gray-700")}>
+                className="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2"
+                style={{ background: form.space_id ? 'var(--primary)' : 'var(--surface-muted)' }}>
                 <span className={cn("inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform",
                   form.space_id ? "translate-x-6" : "translate-x-1")} />
               </button>
@@ -399,29 +412,27 @@ function EditorModal({ initial, onClose }: { initial: any; onClose: () => void }
         </div>
 
         {/* Footer */}
-        <div className="flex justify-between items-center px-5 py-4 border-t border-gray-100 dark:border-gray-800 shrink-0">
+        <div className="flex justify-between items-center px-5 py-4 border-t shrink-0" style={{ borderColor: 'var(--border)' }}>
           {isEdit ? (
-            <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
-              <AlertDialogTrigger asChild>
-                <Button variant="destructive" type="button" size="sm">Delete</Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Delete this entry?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    This will permanently delete &quot;{form.title}&quot;. This action cannot be undone.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction onClick={remove} className="bg-red-600 hover:bg-red-700 text-white">Delete</AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
+            <>
+              <Button variant="destructive" type="button" size="sm" onClick={() => setDeleteOpen(true)}
+                style={{ background: 'var(--danger)', color: 'white' }}>Delete</Button>
+              <ConfirmDialog
+                open={deleteOpen}
+                onOpenChange={setDeleteOpen}
+                title="Delete this entry?"
+                description={`This will permanently delete "${form.title}". This action cannot be undone.`}
+                onConfirm={remove}
+                confirmText="Delete"
+                variant="destructive"
+              />
+            </>
           ) : <span />}
           <div className="flex gap-2">
-            <Button variant="outline" type="button" size="sm" onClick={onClose}>Cancel</Button>
-            <Button size="sm" onClick={save} disabled={saving}>
+            <Button variant="outline" type="button" size="sm" onClick={onClose}
+              style={{ background: 'var(--surface-muted)', color: 'var(--foreground)', border: 'none' }}>Cancel</Button>
+            <Button size="sm" onClick={save} disabled={saving}
+              style={{ backgroundImage: 'var(--gradient-hero)', color: 'white', border: 'none' }}>
               {saving ? "Saving…" : "Save"}
             </Button>
           </div>

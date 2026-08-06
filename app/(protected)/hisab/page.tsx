@@ -17,7 +17,13 @@ export default async function HisabPage() {
     redirect('/login');
   }
 
-  const records = await getHisabRecords();
+  const data = await getHisabRecords();
 
-  return <HisabClient initialRecords={records || []} />;
+  return <HisabClient 
+    initialPeople={data?.people || []} 
+    initialTotalDebit={data?.totalDebit || 0}
+    initialTotalCredit={data?.totalCredit || 0}
+    initialNetBalance={data?.netBalance || 0}
+    initialHasMore={data?.hasMore || false}
+  />;
 }

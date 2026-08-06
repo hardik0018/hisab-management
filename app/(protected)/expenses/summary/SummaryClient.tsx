@@ -2,20 +2,21 @@
 
 import React, { useState, useEffect, useRef, useTransition } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import PageWrapper from '@/components/PageWrapper';
-import ExpenseTopTabs from '@/components/expense/ExpenseTopTabs';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Button } from '@/components/ui/button';
+import AppShell from '@/components/AppShell';
+import StatCard from '@/components/StatCard';
+import PageHeader from '@/components/PageHeader';
+import SectionTitle from '@/components/SectionTitle';
+import EmptyState from '@/components/EmptyState';
+import QuickAddBar from '@/components/QuickAddBar';
 import dynamic from 'next/dynamic';
 
 const SummaryChart = dynamic(() => import('@/components/expense/SummaryChart'), {
   ssr: false,
   loading: () => (
-    <div className="h-[200px] w-full flex items-center justify-center bg-slate-50 dark:bg-slate-900/50 animate-pulse rounded-2xl">
+    <div className="h-[200px] w-full flex items-center justify-center animate-pulse rounded-2xl" style={{ background: 'var(--surface-muted)' }}>
       <div className="flex flex-col items-center gap-2">
-        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary" />
-        <span className="text-xs text-muted-foreground font-medium">Loading Outflow Graph...</span>
+        <div className="animate-spin rounded-full h-6 w-6 border-b-2" style={{ borderColor: 'var(--primary)' }} />
+        <span className="text-xs font-medium" style={{ color: 'var(--muted-foreground)' }}>Loading Outflow Graph...</span>
       </div>
     </div>
   ),
@@ -24,10 +25,10 @@ const SummaryChart = dynamic(() => import('@/components/expense/SummaryChart'), 
 const CategoryBreakdownChart = dynamic(() => import('@/components/expense/CategoryBreakdownChart'), {
   ssr: false,
   loading: () => (
-    <div className="h-[200px] w-full flex items-center justify-center bg-slate-50 dark:bg-slate-900/50 animate-pulse rounded-2xl">
+    <div className="h-[200px] w-full flex items-center justify-center animate-pulse rounded-2xl" style={{ background: 'var(--surface-muted)' }}>
       <div className="flex flex-col items-center gap-2">
-        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary" />
-        <span className="text-xs text-muted-foreground font-medium">Loading Donut Chart...</span>
+        <div className="animate-spin rounded-full h-6 w-6 border-b-2" style={{ borderColor: 'var(--primary)' }} />
+        <span className="text-xs font-medium" style={{ color: 'var(--muted-foreground)' }}>Loading Donut Chart...</span>
       </div>
     </div>
   ),
@@ -211,134 +212,123 @@ export default function SummaryClient({
     return `${months[parseInt(mon, 10) - 1]} ${year}`;
   };
 
-  return (
-    <PageWrapper>
-      <ExpenseTopTabs />
-      <div className="max-w-7xl mx-auto p-4 space-y-5 pb-32">
-        <div className="space-y-1">
-          <h2 className="text-2xl font-black text-foreground">Analysis & Summary</h2>
-          <p className="text-xs text-muted-foreground font-medium">Evaluate spending metrics and trends in this space.</p>
-        </div>
+  const overallTotalBalance = memberBalances.reduce((sum, mb) => sum + mb.total_balance, 0);
 
+  return (
+    <AppShell>
+      <PageHeader title="Report" subtitle="Monthly breakdown" />
+      <div className="max-w-xl mx-auto pb-24 space-y-6">
         {/* Month Selector Carousel Row */}
-        <div className="bg-card border border-border rounded-3xl p-4 flex items-center justify-between shadow-sm">
-          <Button
+        <div className="card-surface p-2 flex items-center justify-between">
+          <button
             type="button"
-            variant="ghost"
             onClick={handlePrevMonth}
-            className="w-10 h-10 rounded-xl p-0 hover:bg-muted text-muted-foreground cursor-pointer"
+            className="w-12 h-12 flex items-center justify-center rounded-xl active:scale-95 transition-all"
+            style={{ background: 'var(--surface-muted)', color: 'var(--foreground)' }}
           >
-            <ArrowLeft className="w-4 h-4" />
-          </Button>
+            <ArrowLeft className="w-5 h-5" />
+          </button>
 
           <div className="flex flex-col items-center select-none">
-            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Active Period</span>
-            <span className="text-sm font-black text-foreground mt-0.5">{getMonthName()}</span>
+            <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--muted-foreground)' }}>Active Period</span>
+            <span className="text-sm font-black mt-0.5" style={{ color: 'var(--foreground)' }}>{getMonthName()}</span>
           </div>
 
-          <Button
+          <button
             type="button"
-            variant="ghost"
             onClick={handleNextMonth}
-            className="w-10 h-10 rounded-xl p-0 hover:bg-muted text-muted-foreground cursor-pointer"
+            className="w-12 h-12 flex items-center justify-center rounded-xl active:scale-95 transition-all"
+            style={{ background: 'var(--surface-muted)', color: 'var(--foreground)' }}
           >
-            <ArrowRight className="w-4 h-4" />
-          </Button>
+            <ArrowRight className="w-5 h-5" />
+          </button>
         </div>
 
         {/* Totals Cards Matrix */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
-          <div className="bg-card border border-border rounded-3xl p-5 flex flex-col gap-1 shadow-sm">
-            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Today's Total</span>
-            <span className="text-lg font-black text-foreground">₹{formatCurrency(todayTotal)}</span>
-            <span className="text-[9px] text-muted-foreground mt-1 truncate">
-              {formatDisplayDate(new Date().toISOString().split('T')[0])}
-            </span>
-          </div>
-
-          <div className="bg-primary/5 dark:bg-primary/10 border border-primary/20 rounded-3xl p-5 flex flex-col gap-1 relative overflow-hidden">
-            <div className="absolute right-0 bottom-0 translate-x-1 translate-y-1 opacity-5 text-primary">
-              <TrendingDown className="w-20 h-20" />
-            </div>
-            <span className="text-[10px] font-bold text-primary uppercase tracking-wider">Month Expense</span>
-            <span className="text-lg font-black text-primary font-sans">₹{formatCurrency(monthlyTotal)}</span>
-            <span className="text-[9px] text-primary/80 mt-1 truncate">
-              Full period aggregates
-            </span>
-          </div>
-
-          <div className="bg-green-500/5 dark:bg-green-500/10 border border-green-500/20 rounded-3xl p-5 flex flex-col gap-1 relative overflow-hidden">
-            <span className="text-[10px] font-bold text-green-600 dark:text-green-400 uppercase tracking-wider">Month Income</span>
-            <span className="text-lg font-black text-green-600 dark:text-green-400 font-sans">₹{formatCurrency(monthlyIncome)}</span>
-            <span className="text-[9px] text-green-600/80 mt-1 truncate">
-              Full period aggregates
-            </span>
-          </div>
-
-          <div className="bg-card border border-border rounded-3xl p-5 flex flex-col gap-1 shadow-sm">
-            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Net Savings</span>
-            <span className={`text-lg font-black font-sans ${monthlyIncome - monthlyTotal >= 0 ? 'text-emerald-600' : 'text-destructive'}`}>
-              ₹{formatCurrency(monthlyIncome - monthlyTotal)}
-            </span>
-            <span className="text-[9px] text-muted-foreground mt-1 truncate">
-              Income - Expense
-            </span>
-          </div>
+        <div className="grid grid-cols-2 gap-3.5">
+          <StatCard
+            label="Total Balance"
+            amount={overallTotalBalance}
+            caption="Across all collaborators"
+            variant="surface"
+            className="col-span-2"
+          />
+          <StatCard
+            label="Month Expense"
+            amount={monthlyTotal}
+            caption="Full period aggregates"
+            variant="hero"
+          />
+          <StatCard
+            label="Today's Total"
+            amount={todayTotal}
+            caption={formatDisplayDate(new Date().toISOString().split('T')[0])}
+            variant="surface"
+          />
+          <StatCard
+            label="Month Income"
+            amount={monthlyIncome}
+            caption="Full period aggregates"
+            variant="in"
+          />
+          <StatCard
+            label="Net Savings"
+            amount={monthlyIncome - monthlyTotal}
+            caption="Income - Expense"
+            variant={monthlyIncome - monthlyTotal >= 0 ? 'in' : 'out'}
+          />
         </div>
 
         {/* Collaborator Balances */}
         {memberBalances.length > 0 && (
-          <div className="bg-card border border-border rounded-3xl p-5 space-y-4 shadow-sm">
-            <div className="flex items-center gap-2 text-primary">
-              <Users className="w-4 h-4" />
-              <h3 className="text-xs font-bold text-card-foreground uppercase tracking-wider">Collaborator Balances</h3>
-            </div>
+          <div className="card-surface p-4 space-y-4">
+            <SectionTitle>Collaborator Balances</SectionTitle>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
               {memberBalances.map((mb) => (
-                <div key={mb.user_id} className="bg-muted/30 border border-border rounded-2xl p-4 flex flex-col gap-2">
-                  <div className="flex items-center gap-2">
-                    <div className="bg-primary/10 p-1.5 rounded-full text-primary">
-                      <User className="w-4 h-4" />
+                <div key={mb.user_id} className="rounded-2xl p-4 flex flex-col gap-2" style={{ background: 'var(--surface-muted)' }}>
+                  <div className="flex items-center gap-3">
+                    <div className="tile w-10 h-10" style={{ background: 'var(--violet-soft)', color: 'var(--violet)' }}>
+                      <User className="w-5 h-5" />
                     </div>
-                    <span className="font-bold text-sm text-foreground truncate">{mb.name}</span>
+                    <span className="font-bold text-sm truncate" style={{ color: 'var(--foreground)' }}>{mb.name}</span>
                   </div>
                   {mb.previous_balance !== 0 && (
-                    <div className="flex justify-between items-center text-xs pb-1 mb-1 border-b border-border/50">
-                      <span className="text-muted-foreground font-medium">Brought Forward:</span>
-                      <span className={`font-bold ${mb.previous_balance >= 0 ? 'text-emerald-600' : 'text-destructive'}`}>
+                    <div className="flex justify-between items-center text-xs pb-1 mb-1" style={{ borderBottom: '1px solid var(--border)' }}>
+                      <span className="font-medium" style={{ color: 'var(--muted-foreground)' }}>Brought Forward:</span>
+                      <span className="font-bold" style={{ color: mb.previous_balance >= 0 ? 'var(--success)' : 'var(--danger)' }}>
                         ₹{formatCurrency(mb.previous_balance)}
                       </span>
                     </div>
                   )}
                   <div className="flex justify-between items-center text-xs mt-1">
-                    <span className="text-muted-foreground font-medium">Income:</span>
-                    <span className="font-bold text-green-600 dark:text-green-400">₹{formatCurrency(mb.income)}</span>
+                    <span className="font-medium" style={{ color: 'var(--muted-foreground)' }}>Income:</span>
+                    <span className="font-bold" style={{ color: 'var(--success)' }}>₹{formatCurrency(mb.income)}</span>
                   </div>
                   {mb.transfer_in > 0 && (
                     <div className="flex justify-between items-center text-xs">
-                      <span className="text-muted-foreground font-medium">Transfer In:</span>
-                      <span className="font-bold text-green-600 dark:text-green-400">+₹{formatCurrency(mb.transfer_in)}</span>
+                      <span className="font-medium" style={{ color: 'var(--muted-foreground)' }}>Transfer In:</span>
+                      <span className="font-bold" style={{ color: 'var(--success)' }}>+₹{formatCurrency(mb.transfer_in)}</span>
                     </div>
                   )}
                   <div className="flex justify-between items-center text-xs">
-                    <span className="text-muted-foreground font-medium">Expense:</span>
-                    <span className="font-bold text-destructive">₹{formatCurrency(mb.expense)}</span>
+                    <span className="font-medium" style={{ color: 'var(--muted-foreground)' }}>Expense:</span>
+                    <span className="font-bold" style={{ color: 'var(--danger)' }}>₹{formatCurrency(mb.expense)}</span>
                   </div>
                   {mb.transfer_out > 0 && (
                     <div className="flex justify-between items-center text-xs">
-                      <span className="text-muted-foreground font-medium">Transfer Out:</span>
-                      <span className="font-bold text-destructive">-₹{formatCurrency(mb.transfer_out)}</span>
+                      <span className="font-medium" style={{ color: 'var(--muted-foreground)' }}>Transfer Out:</span>
+                      <span className="font-bold" style={{ color: 'var(--danger)' }}>-₹{formatCurrency(mb.transfer_out)}</span>
                     </div>
                   )}
                   <div className="flex justify-between items-center text-xs mt-1">
-                    <span className="text-muted-foreground font-medium">Month Net:</span>
-                    <span className={`font-bold ${mb.month_balance >= 0 ? 'text-emerald-600' : 'text-destructive'}`}>
+                    <span className="font-medium" style={{ color: 'var(--muted-foreground)' }}>Month Net:</span>
+                    <span className="font-bold" style={{ color: mb.month_balance >= 0 ? 'var(--success)' : 'var(--danger)' }}>
                       ₹{formatCurrency(mb.month_balance)}
                     </span>
                   </div>
-                  <div className="pt-2 mt-1 border-t border-border flex justify-between items-center bg-background/50 p-2 rounded-lg">
-                    <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Total Balance</span>
-                    <span className={`font-black text-sm ${mb.total_balance >= 0 ? 'text-emerald-600' : 'text-destructive'}`}>
+                  <div className="pt-2 mt-1 flex justify-between items-center p-2 rounded-lg" style={{ background: 'var(--background)' }}>
+                    <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--muted-foreground)' }}>Total Balance</span>
+                    <span className="font-black text-sm" style={{ color: mb.total_balance >= 0 ? 'var(--success)' : 'var(--danger)' }}>
                       ₹{formatCurrency(mb.total_balance)}
                     </span>
                   </div>
@@ -351,18 +341,20 @@ export default function SummaryClient({
         {/* Search / Filter inside summary */}
         <div className="space-y-3">
           <div className="relative">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/80" />
-            <Input
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: 'var(--muted-foreground)' }} />
+            <input
               type="text"
               placeholder="Filter summary by item/note..."
               value={search}
               onChange={(e) => handleSearchChange(e.target.value)}
-              className="pl-10 bg-background border-input text-foreground text-xs rounded-2xl h-11 focus-visible:ring-ring"
+              className="w-full pl-11 pr-10 card-surface h-12 text-sm focus:outline-none"
+              style={{ color: 'var(--foreground)' }}
             />
             {search && (
               <button
                 onClick={handleClearSearch}
-                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                className="absolute right-4 top-1/2 -translate-y-1/2 active:scale-95 transition-all"
+                style={{ color: 'var(--muted-foreground)' }}
               >
                 <X className="w-4 h-4" />
               </button>
@@ -370,9 +362,9 @@ export default function SummaryClient({
           </div>
 
           {search.trim() && (
-            <div className="bg-accent/50 border border-accent/80 rounded-3xl p-4 flex justify-between items-center text-xs">
-              <span className="text-muted-foreground font-medium">Filtered Summary Total:</span>
-              <span className="font-black text-foreground text-base">
+            <div className="rounded-3xl p-4 flex justify-between items-center text-sm" style={{ background: 'var(--amber-soft)', color: 'var(--amber)' }}>
+              <span className="font-medium">Filtered Summary Total:</span>
+              <span className="font-black text-lg">
                 ₹{formatCurrency(filteredTotal)}
               </span>
             </div>
@@ -382,49 +374,42 @@ export default function SummaryClient({
         {/* Analytics Charts Suite */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
           {/* Left Chart: Daily Outflow Area Chart */}
-          <div className="bg-card border border-border rounded-3xl p-5 space-y-4 shadow-sm flex flex-col justify-between">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 text-primary">
-                <CalendarDays className="w-4 h-4" />
-                <h3 className="text-xs font-bold text-card-foreground uppercase tracking-wider">Outflow Graph (Daily)</h3>
-              </div>
-              <span className="text-[10px] font-bold bg-primary/10 text-primary px-2.5 py-1 rounded-full">Trend</span>
+          <div className="card-surface p-4 flex flex-col justify-between">
+            <div className="flex items-center justify-between mb-4">
+              <SectionTitle>Outflow Graph (Daily)</SectionTitle>
             </div>
 
             {!isMountedState || isPending ? (
-              <div className="h-[200px] flex items-center justify-center text-primary">
-                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary" />
+              <div className="h-[200px] flex items-center justify-center">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2" style={{ borderColor: 'var(--primary)' }} />
               </div>
             ) : chartData.length === 0 ? (
-              <div className="h-[200px] flex items-center justify-center text-muted-foreground text-xs font-medium italic">
-                No transactions recorded in this period.
+              <div className="h-[200px] flex items-center justify-center">
+                <EmptyState icon={CalendarDays} title="No Data" hint="No transactions recorded." />
               </div>
             ) : (
-              <div className="h-[200px] w-full pr-2">
+              <div className="h-[200px] w-full">
                 <SummaryChart data={chartData} />
               </div>
             )}
           </div>
 
           {/* Right Chart: Category Breakdown Donut Chart */}
-          <div className="bg-card border border-border rounded-3xl p-5 space-y-4 shadow-sm flex flex-col justify-between">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 text-primary">
-                <PieIcon className="w-4 h-4" />
-                <h3 className="text-xs font-bold text-card-foreground uppercase tracking-wider">Category Distribution</h3>
-              </div>
-              <span className="text-[10px] font-bold bg-primary/10 text-primary px-2.5 py-1 rounded-full">
+          <div className="card-surface p-4 flex flex-col justify-between">
+            <div className="flex items-center justify-between mb-4">
+              <SectionTitle>Category Distribution</SectionTitle>
+              <span className="text-[10px] font-bold px-2.5 py-1 rounded-full" style={{ background: 'var(--primary-soft)', color: 'var(--primary)' }}>
                 {categoryBreakdown.length} Categories
               </span>
             </div>
 
             {!isMountedState || isPending ? (
-              <div className="h-[200px] flex items-center justify-center text-primary">
-                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary" />
+              <div className="h-[200px] flex items-center justify-center">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2" style={{ borderColor: 'var(--primary)' }} />
               </div>
             ) : categoryBreakdown.length === 0 ? (
-              <div className="h-[200px] flex items-center justify-center text-muted-foreground text-xs font-medium italic">
-                No expense category data recorded.
+              <div className="h-[200px] flex items-center justify-center">
+                <EmptyState icon={PieIcon} title="No Data" hint="No expense category data." />
               </div>
             ) : (
               <div className="h-[200px] w-full">
@@ -436,13 +421,10 @@ export default function SummaryClient({
 
         {/* Category Breakdown Matrix */}
         {categoryBreakdown.length > 0 && (
-          <div className="bg-card border border-border rounded-3xl p-5 space-y-4 shadow-sm">
+          <div className="card-surface p-4 space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-              <div className="flex items-center gap-2 text-primary">
-                <Tag className="w-4 h-4" />
-                <h3 className="text-xs font-bold text-card-foreground uppercase tracking-wider">Category Breakdown</h3>
-              </div>
-              <p className="text-[11px] text-muted-foreground">Click any category card to filter summary analytics</p>
+              <SectionTitle>Category Breakdown</SectionTitle>
+              <p className="text-[11px]" style={{ color: 'var(--muted-foreground)' }}>Click any category card to filter summary analytics</p>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
@@ -453,35 +435,35 @@ export default function SummaryClient({
                   <div
                     key={cat.category}
                     onClick={() => handleCategoryClick(cat.category)}
-                    className={`border rounded-2xl p-4 flex flex-col justify-between gap-3 cursor-pointer transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 select-none ${
-                      isSelected
-                        ? 'bg-primary/10 border-primary ring-2 ring-primary/20'
-                        : 'bg-muted/20 border-border hover:bg-muted/50'
-                    }`}
+                    className="rounded-2xl p-4 flex flex-col justify-between gap-3 cursor-pointer active:scale-95 transition-all select-none border"
+                    style={{
+                      background: isSelected ? 'color-mix(in srgb, var(--primary) 10%, transparent)' : 'var(--surface-muted)',
+                      borderColor: isSelected ? 'var(--primary)' : 'transparent',
+                    }}
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex items-center gap-2 min-w-0">
                         <span className="w-3 h-3 rounded-full shrink-0 shadow-sm" style={{ backgroundColor: catColor }} />
-                        <span className="font-bold text-sm text-foreground truncate">{cat.category}</span>
+                        <span className="font-bold text-sm truncate" style={{ color: 'var(--foreground)' }}>{cat.category}</span>
                       </div>
-                      <span className="text-[10px] font-black shrink-0 px-2 py-0.5 rounded-full bg-background border border-border text-foreground">
+                      <span className="text-[10px] font-black shrink-0 px-2 py-0.5 rounded-full" style={{ background: 'var(--background)', color: 'var(--foreground)' }}>
                         {cat.percentage}%
                       </span>
                     </div>
 
                     <div className="flex items-baseline justify-between mt-1">
                       <div className="flex flex-col">
-                        <span className="text-[10px] text-muted-foreground font-medium">Spent</span>
-                        <span className="font-black text-base text-foreground">₹{formatCurrency(cat.total)}</span>
+                        <span className="text-[10px] font-medium" style={{ color: 'var(--muted-foreground)' }}>Spent</span>
+                        <span className="font-black text-base" style={{ color: 'var(--foreground)' }}>₹{formatCurrency(cat.total)}</span>
                       </div>
                       <div className="flex flex-col items-end">
-                        <span className="text-[10px] text-muted-foreground font-medium">Transactions</span>
-                        <span className="text-xs font-bold text-muted-foreground">{cat.count} items</span>
+                        <span className="text-[10px] font-medium" style={{ color: 'var(--muted-foreground)' }}>Transactions</span>
+                        <span className="text-xs font-bold" style={{ color: 'var(--muted-foreground)' }}>{cat.count} items</span>
                       </div>
                     </div>
 
                     {/* Progress Bar */}
-                    <div className="w-full bg-muted/60 rounded-full h-1.5 overflow-hidden mt-1">
+                    <div className="w-full rounded-full h-1.5 overflow-hidden mt-1" style={{ background: 'color-mix(in srgb, var(--foreground) 10%, transparent)' }}>
                       <div
                         className="h-full rounded-full transition-all duration-500"
                         style={{ width: `${Math.min(100, Math.max(2, cat.percentage))}%`, backgroundColor: catColor }}
@@ -496,42 +478,39 @@ export default function SummaryClient({
 
         {/* Category Transactions Details */}
         {categoryTransactions.length > 0 && (
-          <div className="bg-card border border-border rounded-3xl p-5 space-y-4 shadow-sm mt-5">
+          <div className="card-surface p-4 space-y-4">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 text-primary">
-                <Tag className="w-4 h-4" />
-                <h3 className="text-xs font-bold text-card-foreground uppercase tracking-wider">{category} Transactions</h3>
-              </div>
-              <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">{categoryTransactions.length} Items</span>
+              <SectionTitle>${category} Transactions</SectionTitle>
+              <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--muted-foreground)' }}>{categoryTransactions.length} Items</span>
             </div>
 
-            <div className="divide-y divide-border border border-border rounded-2xl overflow-hidden">
+            <div className="flex flex-col gap-2">
               {categoryTransactions.map((exp) => {
                 const catColor = getCategoryColor(exp.category);
                 return (
-                  <div key={exp._id} className="p-3.5 bg-background/50 hover:bg-muted/30 transition-colors flex items-center justify-between gap-3">
+                  <div key={exp._id} className="p-3 rounded-2xl flex items-center justify-between gap-3" style={{ background: 'var(--surface-muted)' }}>
                     <div className="flex items-center gap-3 min-w-0">
                       <div
-                        className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 shadow-sm text-white text-xs font-bold"
+                        className="tile w-10 h-10 shrink-0 shadow-sm text-white text-xs font-bold"
                         style={{ backgroundColor: catColor }}
                       >
                         {exp.category.substring(0, 1).toUpperCase()}
                       </div>
                       <div className="min-w-0 flex flex-col">
                         <div className="flex items-center gap-2">
-                          <span className="font-bold text-sm text-foreground truncate">{exp.itemName}</span>
+                          <span className="font-bold text-sm truncate" style={{ color: 'var(--foreground)' }}>{exp.itemName}</span>
                         </div>
                         {exp.note ? (
-                          <span className="text-xs text-muted-foreground truncate">{exp.note}</span>
+                          <span className="text-xs truncate" style={{ color: 'var(--muted-foreground)' }}>{exp.note}</span>
                         ) : (
-                          <span className="text-[11px] text-muted-foreground/60 italic">No note</span>
+                          <span className="text-[11px] italic" style={{ color: 'var(--muted-foreground)', opacity: 0.6 }}>No note</span>
                         )}
                       </div>
                     </div>
 
                     <div className="flex flex-col items-end shrink-0">
-                      <span className="font-black text-sm text-foreground">₹{formatCurrency(exp.amount)}</span>
-                      <span className="text-[10px] text-muted-foreground">{formatDisplayDate(exp.date)}</span>
+                      <span className="font-black text-sm" style={{ color: 'var(--foreground)' }}>₹{formatCurrency(exp.amount)}</span>
+                      <span className="text-[10px]" style={{ color: 'var(--muted-foreground)' }}>{formatDisplayDate(exp.date)}</span>
                     </div>
                   </div>
                 );
@@ -542,48 +521,46 @@ export default function SummaryClient({
 
         {/* Highest Spends This Month */}
         {topExpenses.length > 0 && (
-          <div className="bg-card border border-border rounded-3xl p-5 space-y-4 shadow-sm">
+          <div className="card-surface p-4 space-y-4">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 text-rose-500">
-                <Flame className="w-4 h-4" />
-                <h3 className="text-xs font-bold text-card-foreground uppercase tracking-wider">Highest Spends This Month</h3>
-              </div>
-              <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Top {topExpenses.length} Transactions</span>
+              <SectionTitle>Highest Spends This Month</SectionTitle>
+              <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--muted-foreground)' }}>Top {topExpenses.length}</span>
             </div>
 
-            <div className="divide-y divide-border border border-border rounded-2xl overflow-hidden">
+            <div className="flex flex-col gap-2">
               {topExpenses.map((exp) => {
                 const catColor = getCategoryColor(exp.category);
                 return (
-                  <div key={exp._id} className="p-3.5 bg-background/50 hover:bg-muted/30 transition-colors flex items-center justify-between gap-3">
+                  <div key={exp._id} className="p-3 rounded-2xl flex items-center justify-between gap-3" style={{ background: 'var(--surface-muted)' }}>
                     <div className="flex items-center gap-3 min-w-0">
                       <div
-                        className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 shadow-sm text-white text-xs font-bold"
+                        className="tile w-10 h-10 shrink-0 shadow-sm text-white text-xs font-bold"
                         style={{ backgroundColor: catColor }}
                       >
                         {exp.category.substring(0, 1).toUpperCase()}
                       </div>
                       <div className="min-w-0 flex flex-col">
                         <div className="flex items-center gap-2">
-                          <span className="font-bold text-sm text-foreground truncate">{exp.itemName}</span>
+                          <span className="font-bold text-sm truncate" style={{ color: 'var(--foreground)' }}>{exp.itemName}</span>
                           <span
                             onClick={() => handleSearchChange(exp.category)}
-                            className="text-[10px] font-medium px-2 py-0.5 rounded-md bg-muted text-muted-foreground hover:bg-primary/10 hover:text-primary cursor-pointer shrink-0 transition-colors"
+                            className="text-[10px] font-medium px-2 py-0.5 rounded-md cursor-pointer shrink-0 active:scale-95 transition-all"
+                            style={{ background: 'color-mix(in srgb, var(--foreground) 10%, transparent)', color: 'var(--foreground)' }}
                           >
                             {exp.category}
                           </span>
                         </div>
                         {exp.note ? (
-                          <span className="text-xs text-muted-foreground truncate">{exp.note}</span>
+                          <span className="text-xs truncate" style={{ color: 'var(--muted-foreground)' }}>{exp.note}</span>
                         ) : (
-                          <span className="text-[11px] text-muted-foreground/60 italic">No note</span>
+                          <span className="text-[11px] italic" style={{ color: 'var(--muted-foreground)', opacity: 0.6 }}>No note</span>
                         )}
                       </div>
                     </div>
 
                     <div className="flex flex-col items-end shrink-0">
-                      <span className="font-black text-sm text-foreground">₹{formatCurrency(exp.amount)}</span>
-                      <span className="text-[10px] text-muted-foreground">{formatDisplayDate(exp.date)}</span>
+                      <span className="font-black text-sm" style={{ color: 'var(--foreground)' }}>₹{formatCurrency(exp.amount)}</span>
+                      <span className="text-[10px]" style={{ color: 'var(--muted-foreground)' }}>{formatDisplayDate(exp.date)}</span>
                     </div>
                   </div>
                 );
@@ -592,6 +569,8 @@ export default function SummaryClient({
           </div>
         )}
       </div>
-    </PageWrapper>
+
+      <QuickAddBar mode="expense" />
+    </AppShell>
   );
 }

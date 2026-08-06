@@ -4,6 +4,16 @@ import { getMonthlySummary, getTodayKolkata } from '@/lib/data-fetching';
 import SummaryClient from './SummaryClient';
 import { redirect } from 'next/navigation';
 import { getAuthenticatedUser } from '@/lib/auth';
+import SegmentedTabs from '@/components/SegmentedTabs';
+
+const EXPENSE_TABS = [
+  { label: 'Today', href: '/expenses' },
+  { label: 'History', href: '/expenses/history' },
+  { label: 'Auto', href: '/expenses/recurring' },
+  { label: 'Report', href: '/expenses/summary' },
+  { label: 'Tax', href: '/expenses/tax' },
+  { label: 'Settings', href: '/expenses/settings' },
+];
 
 interface PageProps {
   searchParams: Promise<{
@@ -34,18 +44,21 @@ export default async function SummaryPage({ searchParams }: PageProps) {
   }
 
   return (
-    <SummaryClient
-      initialMonth={summary.month}
-      initialMonthlyTotal={summary.monthlyTotal}
-      initialMonthlyIncome={summary.monthlyIncome}
-      initialFilteredTotal={summary.filteredTotal}
-      initialDailyTotals={summary.dailyTotals}
-      initialTodayTotal={summary.todayTotal}
-      initialMemberBalances={summary.memberBalances}
-      initialCategoryBreakdown={summary.categoryBreakdown}
-      initialCategoryTransactions={summary.categoryTransactions}
-      initialTopExpenses={summary.topExpenses}
-      searchParams={params}
-    />
+    <>
+      <SegmentedTabs tabs={EXPENSE_TABS} />
+      <SummaryClient
+        initialMonth={summary.month}
+        initialMonthlyTotal={summary.monthlyTotal}
+        initialMonthlyIncome={summary.monthlyIncome}
+        initialFilteredTotal={summary.filteredTotal}
+        initialDailyTotals={summary.dailyTotals}
+        initialTodayTotal={summary.todayTotal}
+        initialMemberBalances={summary.memberBalances}
+        initialCategoryBreakdown={summary.categoryBreakdown}
+        initialCategoryTransactions={summary.categoryTransactions}
+        initialTopExpenses={summary.topExpenses}
+        searchParams={params}
+      />
+    </>
   );
 }

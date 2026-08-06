@@ -4,6 +4,16 @@ import { getExpenses, getCollaborationData } from '@/lib/data-fetching';
 import HistoryClient from './HistoryClient';
 import { redirect } from 'next/navigation';
 import { getAuthenticatedUser } from '@/lib/auth';
+import SegmentedTabs from '@/components/SegmentedTabs';
+
+const EXPENSE_TABS = [
+  { label: 'Today', href: '/expenses' },
+  { label: 'History', href: '/expenses/history' },
+  { label: 'Auto', href: '/expenses/recurring' },
+  { label: 'Report', href: '/expenses/summary' },
+  { label: 'Tax', href: '/expenses/tax' },
+  { label: 'Settings', href: '/expenses/settings' },
+];
 
 interface PageProps {
   searchParams: Promise<{
@@ -40,11 +50,14 @@ export default async function HistoryPage({ searchParams }: PageProps) {
   const currentUserId = collabData?.currentUserId || user.user_id;
 
   return (
-    <HistoryClient 
-      initialExpenses={initialExpenses || []} 
-      searchParams={params} 
-      collaborators={collaborators}
-      currentUserId={currentUserId}
-    />
+    <>
+      <SegmentedTabs tabs={EXPENSE_TABS} />
+      <HistoryClient 
+        initialExpenses={initialExpenses || []} 
+        searchParams={params} 
+        collaborators={collaborators}
+        currentUserId={currentUserId}
+      />
+    </>
   );
 }

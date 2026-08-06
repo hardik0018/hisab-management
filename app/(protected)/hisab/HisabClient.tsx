@@ -1,7 +1,7 @@
 'use client'
 
-import React, { useState } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { 
@@ -22,7 +22,12 @@ import {
   ChevronDown,
   ChevronUp
 } from 'lucide-react';
-import PageWrapper from '@/components/PageWrapper';
+import PageHeader from '@/components/PageHeader';
+import AppShell from '@/components/AppShell';
+import StatCard from '@/components/StatCard';
+import QuickAddBar from '@/components/QuickAddBar';
+import SectionTitle from '@/components/SectionTitle';
+import EmptyState from '@/components/EmptyState';
 import { motion, AnimatePresence } from 'framer-motion';
 import { secureFetch } from '@/lib/api-utils';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
@@ -32,7 +37,11 @@ import { toast } from 'sonner';
 import { HisabRecord, TransactionType } from '@/types';
 
 interface HisabClientProps {
-  initialRecords: HisabRecord[];
+  initialPeople: PersonSummary[];
+  initialTotalDebit: number;
+  initialTotalCredit: number;
+  initialNetBalance: number;
+  initialHasMore: boolean;
 }
 
 interface FormData {
@@ -54,8 +63,23 @@ interface PersonSummary {
   ignored?: boolean;
 }
 
-export default function HisabClient({ initialRecords }: HisabClientProps) {
-  const [records, setRecords] = useState<HisabRecord[]>(initialRecords);
+export default function HisabClient({ 
+  initialPeople, 
+  initialTotalDebit, 
+  initialTotalCredit, 
+  initialNetBalance, 
+  initialHasMore 
+}: HisabClientProps) {
+  const router = useRouter();
+  
+  const [people, setPeople] = useState<PersonSummary[]>(initialPeople);
+  const [totalDebit, setTotalDebit] = useState(initialTotalDebit);
+  const [totalCredit, setTotalCredit] = useState(initialTotalCredit);
+  const [netBalance, setNetBalance] = useState(initialNetBalance);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(initialHasMore);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+
   const [search, setSearch] = useState('');
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -64,8 +88,13 @@ export default function HisabClient({ initialRecords }: HisabClientProps) {
 
   const [selectedPerson, setSelectedPerson] = useState<{ name: string; mobile: string } | null>(null);
   const [showLedgerModal, setShowLedgerModal] = useState(false);
+  const [personRecords, setPersonRecords] = useState<HisabRecord[]>([]);
+  const [isLoadingLedger, setIsLoadingLedger] = useState(false);
+  
   const [showSettled, setShowSettled] = useState(false);
   const [showIgnored, setShowIgnored] = useState(false);
+  const [quickEntryPerson, setQuickEntryPerson] = useState<{person: PersonSummary, type: 'debit'|'credit'} | null>(null);
+  const [quickAmount, setQuickAmount] = useState('');
 
   const [formData, setFormData] = useState<FormData>({
     name: '',
@@ -77,11 +106,100 @@ export default function HisabClient({ initialRecords }: HisabClientProps) {
     logAsExpense: true,
   });
 
-  const fetchRecords = async () => {
+  const observerTarget = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setPeople(initialPeople);
+    setTotalDebit(initialTotalDebit);
+    setTotalCredit(initialTotalCredit);
+    setNetBalance(initialNetBalance);
+    setHasMore(initialHasMore);
+    setPage(1);
+  }, [initialPeople, initialTotalDebit, initialTotalCredit, initialNetBalance, initialHasMore]);
+
+  const loadMore = useCallback(async () => {
+    if (isLoadingMore || !hasMore) return;
+    setIsLoadingMore(true);
+    const nextPage = page + 1;
     try {
-      const data = await secureFetch<{ records: HisabRecord[] }>('/api/hisab');
-      setRecords(data.records || []);
-    } catch (err) {} 
+      const data = await secureFetch<{
+        people: PersonSummary[];
+        totalDebit: number;
+        totalCredit: number;
+        netBalance: number;
+        hasMore: boolean;
+      }>(`/api/hisab?page=${nextPage}&limit=50&search=${encodeURIComponent(search)}`);
+      
+      setPeople(prev => [...prev, ...data.people]);
+      setTotalDebit(data.totalDebit);
+      setTotalCredit(data.totalCredit);
+      setNetBalance(data.netBalance);
+      setHasMore(data.hasMore);
+      setPage(nextPage);
+    } catch (err) {
+      toast.error('Failed to load more');
+    } finally {
+      setIsLoadingMore(false);
+    }
+  }, [page, hasMore, isLoadingMore, search]);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      entries => {
+        if (entries[0].isIntersecting) {
+          loadMore();
+        }
+      },
+      { threshold: 0.1 }
+    );
+    if (observerTarget.current) observer.observe(observerTarget.current);
+    return () => observer.disconnect();
+  }, [loadMore]);
+
+  const openLedger = async (person: { name: string; mobile: string }) => {
+    setSelectedPerson(person);
+    setShowLedgerModal(true);
+    setIsLoadingLedger(true);
+    try {
+      const res = await secureFetch<{ records: HisabRecord[] }>(`/api/hisab/person?name=${encodeURIComponent(person.name)}&mobile=${encodeURIComponent(person.mobile)}`);
+      setPersonRecords(res.records || []);
+    } catch (err) {
+      toast.error('Failed to load ledger');
+    } finally {
+      setIsLoadingLedger(false);
+    }
+  };
+
+  const refreshData = async () => {
+    router.refresh();
+    // If ledger modal is open, re-fetch person ledger
+    if (showLedgerModal && selectedPerson) {
+      openLedger(selectedPerson);
+    }
+  };
+
+  const submitQuickEntry = async () => {
+    if (!quickEntryPerson || !quickAmount || isNaN(Number(quickAmount))) return;
+    try {
+      await secureFetch<{ record: HisabRecord }>('/api/hisab', {
+        method: 'POST',
+        body: JSON.stringify({
+          name: quickEntryPerson.person.name,
+          mobile: quickEntryPerson.person.mobile,
+          type: quickEntryPerson.type,
+          amount: parseFloat(quickAmount),
+          description: '',
+          date: new Date().toISOString().split('T')[0],
+          logAsExpense: true
+        }),
+      });
+      toast.success('Recorded successfully');
+      setQuickEntryPerson(null);
+      setQuickAmount('');
+      refreshData();
+    } catch (err) {
+      toast.error('Failed to record transaction');
+    }
   };
 
   const handleAddRecord = async (e: React.FormEvent) => {
@@ -89,19 +207,17 @@ export default function HisabClient({ initialRecords }: HisabClientProps) {
     setIsSubmitting(true);
     try {
       if (editId) {
-        const response = await secureFetch<{ record: HisabRecord }>(`/api/hisab/${editId}`, {
+        await secureFetch<{ record: HisabRecord }>(`/api/hisab/${editId}`, {
           method: 'PUT',
           body: JSON.stringify({ ...formData, amount: parseFloat(formData.amount) }),
         });
         toast.success('Updated successfully');
-        setRecords(prev => prev.map(r => r.hisab_id === editId ? response.record : r));
       } else {
-        const response = await secureFetch<{ record: HisabRecord }>('/api/hisab', {
+        await secureFetch<{ record: HisabRecord }>('/api/hisab', {
           method: 'POST',
           body: JSON.stringify({ ...formData, amount: parseFloat(formData.amount) }),
         });
         toast.success('Recorded successfully');
-        setRecords(prev => [response.record, ...prev]);
       }
       setFormData({ 
         name: selectedPerson?.name || '', 
@@ -114,6 +230,7 @@ export default function HisabClient({ initialRecords }: HisabClientProps) {
       });
       setEditId(null);
       setShowAddDialog(false);
+      refreshData();
     } catch (err) {} 
     finally { setIsSubmitting(false); }
   };
@@ -123,38 +240,25 @@ export default function HisabClient({ initialRecords }: HisabClientProps) {
     try {
       await secureFetch(`/api/hisab/${deleteConfirm}`, { method: 'DELETE' });
       toast.success('Deleted successfully');
-      setRecords(prev => prev.filter(r => r.hisab_id !== deleteConfirm));
+      refreshData();
     } catch (err) {} 
     finally { setDeleteConfirm(null); }
   };
 
-
-  // Filter records matching general search or selected person ledger
-  const filteredRecords = records.filter(r => {
-    const matchesSearch = r.name.toLowerCase().includes(search.toLowerCase()) || 
-                          (r.mobile && String(r.mobile).includes(search));
-    const matchesPerson = selectedPerson ? (r.name === selectedPerson.name && r.mobile === selectedPerson.mobile) : true;
-    return matchesSearch && matchesPerson;
-  });
-
-  // Specifically for ledger of selected person
-  const personRecords = records
-    .filter(r => selectedPerson && r.name === selectedPerson.name && r.mobile === selectedPerson.mobile)
+// Filter records matching general search or selected person ledger
+  let runningBal = 0;
+  const recordsWithBalance = [...personRecords]
     .sort((a, b) => {
       const dateA = new Date(a.date).getTime();
       const dateB = new Date(b.date).getTime();
       if (dateA !== dateB) return dateA - dateB;
       return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
-    });
-
-  // Calculate transaction history balances (credit - debit)
-  // Positive means you owe them, Negative means they owe you.
-  let runningBal = 0;
-  const recordsWithBalance = personRecords.map(r => {
-    if (r.type === 'credit') runningBal += r.amount;
-    else runningBal -= r.amount;
-    return { ...r, balance: runningBal };
-  }).reverse();
+    })
+    .map(r => {
+      if (r.type === 'credit') runningBal += r.amount;
+      else runningBal -= r.amount;
+      return { ...r, balance: runningBal };
+    }).reverse();
 
   const recordsByDate = recordsWithBalance.reduce((acc: Record<string, typeof recordsWithBalance>, r) => {
     const date = new Date(r.date).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
@@ -163,449 +267,289 @@ export default function HisabClient({ initialRecords }: HisabClientProps) {
     return acc;
   }, {});
 
-  const totalDebit = filteredRecords.filter(r => r.type === 'debit').reduce((sum, r) => sum + r.amount, 0);
-  const totalCredit = filteredRecords.filter(r => r.type === 'credit').reduce((sum, r) => sum + r.amount, 0);
-  const netBalance = totalCredit - totalDebit; // positive if you owe them, negative if they owe you
+  const searchedPeople = people.filter(p => 
+    p.name.toLowerCase().includes(search.toLowerCase()) || 
+    (p.mobile && String(p.mobile).includes(search))
+  );
 
-  // Group by name & mobile
-  const peopleGroups = records
-    .reduce((acc: Record<string, PersonSummary>, r) => {
-      const key = `${r.name}_${r.mobile || ''}`;
-      if (!acc[key]) {
-        acc[key] = { 
-          name: r.name, 
-          mobile: r.mobile, 
-          debit: 0, 
-          credit: 0, 
-          latest: r.date,
-          ignored: r.ignored 
-        };
-      }
-      acc[key][r.type] += r.amount;
-      if (r.ignored !== undefined) {
-        acc[key].ignored = r.ignored;
-      }
-      return acc;
-    }, {});
-
-  // Calculate Net totals
-  // You Will Get: Sum of (debit - credit) where debit > credit (they owe you)
-  const youWillGet = Object.values(peopleGroups).reduce((sum, p) => {
+  const youWillGet = people.reduce((sum, p) => {
     if (p.ignored) return sum;
     const diff = p.debit - p.credit;
     return diff > 0 ? sum + diff : sum;
   }, 0);
 
-  // You Will Give: Sum of (credit - debit) where credit > debit (you owe them)
-  const youWillGive = Object.values(peopleGroups).reduce((sum, p) => {
+  const youWillGive = people.reduce((sum, p) => {
     if (p.ignored) return sum;
     const diff = p.credit - p.debit;
     return diff > 0 ? sum + diff : sum;
   }, 0);
 
-  const overallNet = youWillGet - youWillGive;
+  const overallNet = netBalance;
 
-  // Filter people based on search query
-  const searchedPeople = Object.values(peopleGroups).filter(p => 
-    p.name.toLowerCase().includes(search.toLowerCase()) || 
-    (p.mobile && String(p.mobile).includes(search))
-  );
-
-  // Group into Active Outstanding (non-zero balance), Settled (zero balance), and Ignored
   const activePeople = searchedPeople.filter(p => p.debit !== p.credit && !p.ignored);
   const settledPeople = searchedPeople.filter(p => p.debit === p.credit && !p.ignored);
   const ignoredPeople = searchedPeople.filter(p => p.ignored);
 
   const isPersonIgnored = selectedPerson 
-    ? !!peopleGroups[`${selectedPerson.name}_${selectedPerson.mobile || ''}`]?.ignored 
+    ? !!people.find(p => p.name === selectedPerson.name && p.mobile === selectedPerson.mobile)?.ignored 
     : false;
 
   return (
-    <PageWrapper>
-      <div className="p-4 sm:p-6 lg:p-8 space-y-8 max-w-5xl mx-auto pb-32">
-        
-        {/* Header Section */}
-        <div className="space-y-6">
-           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
-             <div className="space-y-1">
-                <h1 className="text-4xl font-black text-slate-900 tracking-tight">
-                  Hisab <span className="text-indigo-600 italic">Ledger</span>
-                </h1>
-                <p className="text-slate-500 font-medium">Track your personal lent and borrowed money.</p>
-             </div>
-              <Button 
-                onClick={() => {
-                   setFormData({ 
-                     name: selectedPerson?.name || '', 
-                     mobile: selectedPerson?.mobile || '',
-                     type: 'debit',
-                     amount: '',
-                     description: '',
-                     date: new Date().toISOString().split('T')[0],
-                     logAsExpense: true
-                   });
-                   setEditId(null);
-                   setShowAddDialog(true);
-                }} 
-                className="rounded-2xl h-12 px-6 shadow-xl shadow-indigo-100 bg-indigo-600 hover:bg-indigo-700 font-bold w-full sm:w-auto transition-transform active:scale-95"
-              >
-                 <Plus className="mr-2 h-5 w-5" /> New Entry
-              </Button>
-           </div>
-
-           {/* Summary Cards */}
-           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
-              <SummaryCard 
-                label="You Will Get (Lent)" 
-                value={youWillGet} 
-                color="green" 
-                icon={ArrowUpRight} 
-                description="Money others owe you" 
-              />
-              <SummaryCard 
-                label="You Will Give (Borrowed)" 
-                value={youWillGive} 
-                color="red" 
-                icon={ArrowDownLeft} 
-                description="Money you owe others" 
-              />
-              <SummaryCard 
-                label="Overall Net Status" 
-                value={Math.abs(overallNet)} 
-                color={overallNet > 0 ? 'green' : overallNet < 0 ? 'red' : 'blue'} 
-                icon={HandCoins} 
-                description={
-                  overallNet > 0 
-                    ? "In net, others owe you" 
-                    : overallNet < 0 
-                      ? "In net, you owe others" 
-                      : "All settled up!"
-                }
-              />
-           </div>
+    <AppShell>
+      <PageHeader title="Hisab" subtitle="Your personal ledger" />
+      <div className="space-y-6">
+        <StatCard variant="hero" label="Where you stand" amount={overallNet} caption={overallNet > 0 ? 'Others owe you' : overallNet < 0 ? 'You owe others' : 'All settled up'} />
+        <div className="grid grid-cols-2 gap-3">
+          <StatCard variant="in" label="You will get" amount={youWillGet} />
+          <StatCard variant="out" label="You will give" amount={youWillGive} />
         </div>
+        
+        <QuickAddBar mode="hisab" onSaved={refreshData} />
 
-        {/* Search & Content Area */}
-        <div className="space-y-6 flex-1 h-full overflow-hidden flex flex-col min-h-0">
-               {/* Search Bar */}
-               <div className="relative group shrink-0">
-                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 group-focus-within:text-indigo-600 transition-colors" />
-                  <Input
-                    placeholder="Search by name or mobile number..."
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    className="pl-12 h-14 rounded-2xl border-2 border-slate-100 bg-white shadow-sm focus-visible:ring-4 focus-visible:ring-indigo-50 focus-visible:border-indigo-600 transition-all font-medium"
-                  />
-               </div>
+        <div className="space-y-6">
+           {/* Search Bar */}
+           <div className="relative group shrink-0">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 transition-colors" style={{ color: 'var(--muted-foreground)' }} />
+              <input
+                placeholder="Search person..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                style={{ background: 'var(--secondary)', border: '1px solid var(--border)', color: 'var(--foreground)' }}
+                className="w-full h-11 pl-12 pr-4 rounded-xl text-sm outline-none"
+              />
+           </div>
 
-               {/* Active Accounts Grid */}
-               <div className="space-y-4">
-                  <div className="flex items-center justify-between px-2">
-                    <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
-                      Active Balances ({activePeople.length})
-                    </h3>
-                    {activePeople.length > 0 && (
-                      <span className="text-[10px] text-slate-400 font-bold">
-                        Click cards to see transaction details
-                      </span>
-                    )}
-                  </div>
-                  
-                  {activePeople.length === 0 ? (
-                     <div className="text-center py-16 bg-white rounded-[2rem] border border-dashed border-slate-200">
-                        <Users className="h-12 w-12 text-slate-350 mx-auto mb-3" />
-                        <p className="text-slate-500 font-bold mb-1">No active outstanding balances</p>
-                        <p className="text-slate-450 text-xs font-medium">Add a transaction to get started, or check settled accounts below.</p>
+           {/* Active Accounts Grid */}
+           <div className="space-y-4">
+              <SectionTitle>Active Balances ({activePeople.length})</SectionTitle>
+              {activePeople.length === 0 ? (
+                 <EmptyState icon={Users} title="No active outstanding balances" hint="Add a transaction to get started, or check settled accounts below." />
+              ) : (
+                 <div className="card-surface p-0 flex flex-col gap-0 divide-y" style={{ borderColor: 'var(--border)' }}>
+                   {activePeople.map((p, idx) => {
+                     const bal = p.debit - p.credit; // positive = they owe us, negative = we owe them
+                     const isReceivable = bal > 0;
+                     const absBal = Math.abs(bal);
+                     
+                     return (
+                       <div
+                         key={idx}
+                         onClick={() => {
+                            setSelectedPerson({ name: p.name, mobile: p.mobile });
+                            setShowLedgerModal(true);
+                         }}
+                         className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-black/5 transition-colors"
+                       >
+                         <div className="tile w-10 h-10 shrink-0" style={{ background: isReceivable ? 'var(--success-soft)' : 'var(--danger-soft)', color: isReceivable ? 'var(--success)' : 'var(--danger)' }}>
+                              {p.name.charAt(0).toUpperCase()}
+                         </div>
+                         <div className="flex-1 min-w-0">
+                            <p className="font-bold text-sm truncate" style={{ color: 'var(--foreground)' }}>{p.name}</p>
+                            <p className="text-xs truncate" style={{ color: 'var(--muted-foreground)' }}>{p.mobile || 'No mobile'}</p>
+                         </div>
+                         <div className="flex items-center gap-2">
+                            <button onClick={(e) => { e.stopPropagation(); setQuickEntryPerson({ person: p, type: 'credit' }); }} className="px-3 h-8 rounded-full text-xs font-bold active:scale-95 transition-all" style={{ background: 'var(--success-soft)', color: 'var(--success)' }}>+ Got</button>
+                            <button onClick={(e) => { e.stopPropagation(); setQuickEntryPerson({ person: p, type: 'debit' }); }} className="px-3 h-8 rounded-full text-xs font-bold active:scale-95 transition-all" style={{ background: 'var(--danger-soft)', color: 'var(--danger)' }}>+ Gave</button>
+                            <div className="text-right ml-2 min-w-[3rem]">
+                               <p className="font-bold text-base leading-none mb-1" style={{ color: isReceivable ? 'var(--success)' : 'var(--danger)' }}>₹{absBal.toLocaleString()}</p>
+                            </div>
+                         </div>
+                       </div>
+                     );
+                   })}
+                 </div>
+              )}
+           </div>
+
+           {/* Collapsible Settled Accounts Section */}
+           {settledPeople.length > 0 && (
+             <div className="pt-2">
+               <button
+                 onClick={() => setShowSettled(!showSettled)}
+                 className="flex items-center justify-between w-full px-4 py-3 card-surface transition-all"
+               >
+                 <span className="text-sm font-bold flex items-center gap-2" style={{ color: 'var(--foreground)' }}>
+                   <CheckCircle2 className="h-4 w-4" style={{ color: 'var(--success)' }} />
+                   Settled Accounts ({settledPeople.length})
+                 </span>
+                 {showSettled ? <ChevronUp className="h-4 w-4" style={{ color: 'var(--muted-foreground)' }} /> : <ChevronDown className="h-4 w-4" style={{ color: 'var(--muted-foreground)' }} />}
+               </button>
+               
+               <AnimatePresence initial={false}>
+                 {showSettled && (
+                   <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
+                     <div className="card-surface p-0 flex flex-col gap-0 divide-y mt-2" style={{ borderColor: 'var(--border)' }}>
+                       {settledPeople.map((p, idx) => (
+                         <div
+                           key={idx}
+                           onClick={() => {
+                             setSelectedPerson({ name: p.name, mobile: p.mobile });
+                             setShowLedgerModal(true);
+                           }}
+                           className="flex items-center gap-3 px-4 py-3 cursor-pointer opacity-70 hover:opacity-100 transition-colors"
+                         >
+                           <div className="tile w-10 h-10 shrink-0" style={{ background: 'var(--secondary)', color: 'var(--muted-foreground)' }}>
+                             {p.name.charAt(0).toUpperCase()}
+                           </div>
+                           <div className="flex-1 min-w-0">
+                             <p className="font-bold text-sm truncate" style={{ color: 'var(--foreground)' }}>{p.name}</p>
+                             <p className="text-xs truncate" style={{ color: 'var(--muted-foreground)' }}>{p.mobile || 'No mobile'}</p>
+                           </div>
+                           <div className="text-right">
+                             <p className="font-bold text-sm" style={{ color: 'var(--muted-foreground)' }}>₹0</p>
+                             <span className="text-[9px] font-black uppercase tracking-widest" style={{ color: 'var(--muted-foreground)' }}>Settled</span>
+                           </div>
+                         </div>
+                       ))}
                      </div>
-                  ) : (
-                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                       {activePeople.map((p, idx) => {
-                         const bal = p.debit - p.credit; // positive = they owe us, negative = we owe them
-                         const isReceivable = bal > 0;
+                   </motion.div>
+                 )}
+               </AnimatePresence>
+             </div>
+           )}
+
+           {/* Collapsible Ignored Accounts Section */}
+           {ignoredPeople.length > 0 && (
+             <div className="pt-2">
+               <button
+                 onClick={() => setShowIgnored(!showIgnored)}
+                 className="flex items-center justify-between w-full px-4 py-3 card-surface transition-all"
+               >
+                 <span className="text-sm font-bold flex items-center gap-2" style={{ color: 'var(--foreground)' }}>
+                   <AlertCircle className="h-4 w-4" style={{ color: 'var(--warning)' }} />
+                   Ignored Accounts ({ignoredPeople.length})
+                 </span>
+                 {showIgnored ? <ChevronUp className="h-4 w-4" style={{ color: 'var(--muted-foreground)' }} /> : <ChevronDown className="h-4 w-4" style={{ color: 'var(--muted-foreground)' }} />}
+               </button>
+               
+               <AnimatePresence initial={false}>
+                 {showIgnored && (
+                   <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
+                     <div className="card-surface p-0 flex flex-col gap-0 divide-y mt-2" style={{ borderColor: 'var(--border)' }}>
+                       {ignoredPeople.map((p, idx) => {
+                         const bal = p.debit - p.credit;
                          const absBal = Math.abs(bal);
-                         
                          return (
-                           <motion.div
+                           <div
                              key={idx}
-                             whileHover={{ y: -4 }}
-                             transition={{ duration: 0.2 }}
+                             onClick={() => {
+                               setSelectedPerson({ name: p.name, mobile: p.mobile });
+                               setShowLedgerModal(true);
+                             }}
+                             className="flex items-center gap-3 px-4 py-3 cursor-pointer opacity-70 hover:opacity-100 transition-colors"
                            >
-                             <Card
-                               onClick={() => {
-                                  setSelectedPerson({ name: p.name, mobile: p.mobile });
-                                  setShowLedgerModal(true);
-                               }}
-                               className={`border-none shadow-sm hover:shadow-xl rounded-[2rem] overflow-hidden transition-all cursor-pointer bg-white group border-2 border-transparent hover:border-indigo-100 ${
-                                 isReceivable ? 'hover:bg-emerald-50/10' : 'hover:bg-rose-50/10'
-                               }`}
-                             >
-                               <CardContent className="p-5 flex items-center justify-between">
-                                  <div className="flex items-center gap-4 min-w-0">
-                                     <div className={`w-12 h-12 font-bold rounded-2xl flex items-center justify-center shadow-lg transition-transform group-hover:scale-110 shrink-0 ${
-                                       isReceivable 
-                                         ? 'bg-emerald-600 text-white shadow-emerald-100' 
-                                         : 'bg-rose-600 text-white shadow-rose-100'
-                                     }`}>
-                                          {p.name.charAt(0).toUpperCase()}
-                                     </div>
-                                     <div className="min-w-0">
-                                        <p className="font-black text-slate-900 text-base leading-tight mb-0.5 truncate">{p.name}</p>
-                                        <p className="text-[11px] text-slate-400 font-bold flex items-center gap-1.5 uppercase tracking-tight">
-                                           {p.mobile ? <Phone className="h-3 w-3 text-slate-350" /> : null}
-                                           {p.mobile || 'No mobile linked'}
-                                        </p>
-                                     </div>
-                                  </div>
-                                  <div className="text-right shrink-0">
-                                     <p className={`font-black text-lg sm:text-xl leading-none mb-1.5 ${isReceivable ? 'text-emerald-600' : 'text-rose-600'}`}>
-                                        ₹{absBal.toLocaleString()}
-                                     </p>
-                                     <span className={`inline-flex px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider ${
-                                       isReceivable 
-                                         ? 'bg-emerald-50 text-emerald-700' 
-                                         : 'bg-rose-50 text-rose-700'
-                                     }`}>
-                                        {isReceivable ? 'You Get' : 'You Give'}
-                                     </span>
-                                  </div>
-                               </CardContent>
-                            </Card>
-                          </motion.div>
+                             <div className="tile w-10 h-10 shrink-0" style={{ background: 'var(--warning-soft)', color: 'var(--warning)' }}>
+                               {p.name.charAt(0).toUpperCase()}
+                             </div>
+                             <div className="flex-1 min-w-0">
+                               <p className="font-bold text-sm truncate" style={{ color: 'var(--foreground)' }}>{p.name}</p>
+                               <p className="text-xs truncate" style={{ color: 'var(--muted-foreground)' }}>{p.mobile || 'No mobile'}</p>
+                             </div>
+                             <div className="text-right">
+                               <p className="font-bold text-sm" style={{ color: 'var(--muted-foreground)' }}>₹{absBal.toLocaleString()}</p>
+                               <span className="text-[9px] font-black uppercase tracking-widest" style={{ color: 'var(--warning)' }}>Ignored</span>
+                             </div>
+                           </div>
                          );
                        })}
                      </div>
-                  )}
-               </div>
-
-               {/* Collapsible Settled Accounts Section */}
-               {settledPeople.length > 0 && (
-                 <div className="mt-8 border-t border-slate-100 pt-6">
-                   <button
-                     onClick={() => setShowSettled(!showSettled)}
-                     className="flex items-center justify-between w-full px-5 py-4 bg-slate-50 hover:bg-slate-100/80 rounded-2xl transition-all border border-slate-100"
-                   >
-                     <span className="text-xs font-black uppercase tracking-wider text-slate-500 flex items-center gap-2">
-                       <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-                       Settled Accounts ({settledPeople.length})
-                     </span>
-                     <div className="flex items-center gap-1.5 text-xs font-bold text-slate-400">
-                       <span>{showSettled ? 'Collapse' : 'Expand'}</span>
-                       {showSettled ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                     </div>
-                   </button>
-                   
-                   <AnimatePresence initial={false}>
-                     {showSettled && (
-                       <motion.div
-                         initial={{ opacity: 0, height: 0 }}
-                         animate={{ opacity: 1, height: 'auto' }}
-                         exit={{ opacity: 0, height: 0 }}
-                         transition={{ duration: 0.3, ease: 'easeInOut' }}
-                         className="overflow-hidden"
-                       >
-                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-4 pb-4 px-1">
-                           {settledPeople.map((p, idx) => (
-                             <Card
-                               key={idx}
-                               onClick={() => {
-                                 setSelectedPerson({ name: p.name, mobile: p.mobile });
-                                 setShowLedgerModal(true);
-                               }}
-                               className="border-none shadow-sm hover:shadow-md rounded-[2rem] overflow-hidden transition-all cursor-pointer bg-white/70 hover:bg-white group border border-slate-200 hover:border-indigo-100 opacity-80 hover:opacity-100"
-                             >
-                               <CardContent className="p-4 flex items-center justify-between">
-                                 <div className="flex items-center gap-3 min-w-0">
-                                   <div className="w-10 h-10 font-bold rounded-xl bg-slate-100 text-slate-500 flex items-center justify-center shrink-0">
-                                     {p.name.charAt(0).toUpperCase()}
-                                   </div>
-                                   <div className="min-w-0">
-                                     <p className="font-bold text-slate-700 text-sm leading-tight mb-0.5 truncate">{p.name}</p>
-                                     <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-tight">
-                                       {p.mobile || 'No mobile'}
-                                     </p>
-                                   </div>
-                                 </div>
-                                 <div className="text-right shrink-0">
-                                   <p className="font-bold text-slate-400 text-sm leading-none mb-1">
-                                     ₹0
-                                   </p>
-                                   <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[8px] font-black bg-slate-100 text-slate-500 uppercase tracking-widest">
-                                     Settled
-                                   </span>
-                                 </div>
-                               </CardContent>
-                             </Card>
-                           ))}
-                         </div>
-                       </motion.div>
-                     )}
-                   </AnimatePresence>
-                 </div>
-               )}
-
-               {/* Collapsible Ignored Accounts Section */}
-               {ignoredPeople.length > 0 && (
-                 <div className="mt-8 border-t border-slate-100 pt-6">
-                   <button
-                     onClick={() => setShowIgnored(!showIgnored)}
-                     className="flex items-center justify-between w-full px-5 py-4 bg-slate-50 hover:bg-slate-100/80 rounded-2xl transition-all border border-slate-100"
-                   >
-                     <span className="text-xs font-black uppercase tracking-wider text-slate-500 flex items-center gap-2">
-                       <AlertCircle className="h-4 w-4 text-amber-500" />
-                       Ignored Accounts ({ignoredPeople.length})
-                     </span>
-                     <div className="flex items-center gap-1.5 text-xs font-bold text-slate-400">
-                       <span>{showIgnored ? 'Collapse' : 'Expand'}</span>
-                       {showIgnored ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                     </div>
-                   </button>
-                   
-                   <AnimatePresence initial={false}>
-                     {showIgnored && (
-                       <motion.div
-                         initial={{ opacity: 0, height: 0 }}
-                         animate={{ opacity: 1, height: 'auto' }}
-                         exit={{ opacity: 0, height: 0 }}
-                         transition={{ duration: 0.3, ease: 'easeInOut' }}
-                         className="overflow-hidden"
-                       >
-                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-4 pb-4 px-1">
-                           {ignoredPeople.map((p, idx) => {
-                             const bal = p.debit - p.credit;
-                             const absBal = Math.abs(bal);
-                             return (
-                               <Card
-                                 key={idx}
-                                 onClick={() => {
-                                   setSelectedPerson({ name: p.name, mobile: p.mobile });
-                                   setShowLedgerModal(true);
-                                 }}
-                                 className="border-none shadow-sm hover:shadow-md rounded-[2rem] overflow-hidden transition-all cursor-pointer bg-white/70 hover:bg-white group border border-slate-200 hover:border-indigo-100 opacity-80 hover:opacity-100"
-                               >
-                                 <CardContent className="p-4 flex items-center justify-between">
-                                   <div className="flex items-center gap-3 min-w-0">
-                                     <div className="w-10 h-10 font-bold rounded-xl bg-slate-100 text-slate-500 flex items-center justify-center shrink-0">
-                                       {p.name.charAt(0).toUpperCase()}
-                                     </div>
-                                     <div className="min-w-0">
-                                       <p className="font-bold text-slate-700 text-sm leading-tight mb-0.5 truncate">{p.name}</p>
-                                       <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-tight">
-                                         {p.mobile || 'No mobile'}
-                                       </p>
-                                     </div>
-                                   </div>
-                                   <div className="text-right shrink-0">
-                                     <p className="font-bold text-slate-500 text-sm leading-none mb-1">
-                                       ₹{absBal.toLocaleString()}
-                                     </p>
-                                     <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[8px] font-black bg-amber-50 text-amber-700 uppercase tracking-widest">
-                                       Ignored
-                                     </span>
-                                   </div>
-                                 </CardContent>
-                               </Card>
-                             );
-                           })}
-                         </div>
-                       </motion.div>
-                     )}
-                   </AnimatePresence>
-                 </div>
-               )}
+                   </motion.div>
+                 )}
+               </AnimatePresence>
+             </div>
+           )}
         </div>
 
-        {/* Ledger Details Dialog (Individual Person's Ledger) */}
-        <Dialog open={showLedgerModal} onOpenChange={setShowLedgerModal}>
-            <DialogContent className="max-w-2xl h-[100dvh] sm:h-[85vh] w-full flex flex-col p-0 overflow-hidden bg-slate-50 border-none shadow-2xl rounded-none sm:rounded-[2.5rem]">
-                           {/* Banner Header - Dynamic Color Coding & Responsive Stacking */}
-               <div className={`p-5 sm:p-8 text-white flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shrink-0 relative overflow-hidden bg-gradient-to-r transition-all duration-300 ${
-                 isPersonIgnored
-                   ? 'from-amber-500 to-amber-600'
-                   : netBalance > 0 
-                     ? 'from-rose-600 to-indigo-700' 
-                     : netBalance < 0 
-                       ? 'from-emerald-600 to-indigo-700' 
-                       : 'from-slate-600 to-slate-700'
-               }`}>
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -mr-10 -mt-10" />
-                  
-                  {/* Left Side: Back button + Person details */}
-                  <div className="flex items-center gap-3 relative z-10 w-full sm:w-auto">
-                     <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-white/10 flex items-center justify-center backdrop-blur-sm shadow-xl hover:bg-white/20 transition-all cursor-pointer" onClick={() => setShowLedgerModal(false)}>
-                        <ArrowLeft className="h-5 w-5 sm:h-6 sm:w-6" />
-                     </div>
-                     <div className="min-w-0">
-                        <DialogTitle className="text-xl sm:text-2xl font-black leading-none mb-1 text-white truncate">{selectedPerson?.name}</DialogTitle>
-                        <p className="text-white/80 text-[10px] font-bold uppercase tracking-widest flex items-center gap-1 mb-1.5">
-                           {selectedPerson?.mobile ? (
-                             <>
-                               <Phone className="h-2.5 w-2.5" /> {selectedPerson.mobile}
-                             </>
-                           ) : (
-                             'No mobile linked'
-                           )}
-                        </p>
-                        <button
-                           onClick={async () => {
-                             if (!selectedPerson) return;
-                             try {
-                               await secureFetch('/api/hisab/ignore', {
-                                 method: 'POST',
-                                 body: JSON.stringify({
-                                   name: selectedPerson.name,
-                                   mobile: selectedPerson.mobile || '',
-                                   ignored: !isPersonIgnored
-                                 })
-                               });
-                               toast.success(isPersonIgnored ? 'Person unignored' : 'Person ignored');
-                               setRecords(prev => prev.map(r => {
-                                 if (r.name === selectedPerson.name && (r.mobile || '') === (selectedPerson.mobile || '')) {
-                                   return { ...r, ignored: !isPersonIgnored };
-                                 }
-                                 return r;
-                               }));
-                             } catch (err) {
-                               toast.error('Failed to update ignored status');
-                             }
-                           }}
-                           className="inline-flex items-center gap-1 px-3 py-1 text-[9px] font-black uppercase tracking-wider bg-white/25 hover:bg-white/35 text-white rounded-full transition-all active:scale-95 border border-white/10 shadow-sm"
-                        >
-                           {isPersonIgnored ? 'Unignore Person' : 'Ignore Person'}
-                        </button>
-                     </div>
-                  </div>
- 
-                  {/* Right Side: Ledger summary status - stacks on mobile */}
-                  <div className="text-left sm:text-right relative z-10 w-full sm:w-auto pt-2.5 sm:pt-0 border-t border-white/10 sm:border-none">
-                     <p className="text-[9px] font-black uppercase tracking-widest text-white/70 leading-none mb-1.5">Net Status</p>
-                     <div className="flex items-baseline gap-1.5 sm:justify-end">
-                        <p className="text-2xl sm:text-3xl font-black">₹{Math.abs(netBalance).toLocaleString()}</p>
-                        <span className="text-[9px] font-black uppercase tracking-wider bg-white/10 px-2 py-0.5 rounded-full">
-                           {isPersonIgnored ? 'Ignored' : (netBalance > 0 
-                             ? 'You Give' 
-                             : netBalance < 0 
-                               ? 'You Get' 
-                               : 'Settled')}
-                        </span>
-                     </div>
-                  </div>
-               </div>
+        {quickEntryPerson && (
+          <div className="fixed inset-0 z-50 flex items-end justify-center" style={{ background: 'oklch(0.19 0.03 268 / 0.5)' }}>
+            <div className="card-surface w-full max-w-xl p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] flex flex-col gap-4 rounded-t-3xl m-0 border-b-0 border-x-0">
+              <p className="text-lg font-bold" style={{ color: 'var(--foreground)' }}>
+                {quickEntryPerson.type === 'credit' ? `${quickEntryPerson.person.name} gave you` : `You gave ${quickEntryPerson.person.name}`}
+              </p>
+              <input
+                type="number"
+                inputMode="decimal"
+                value={quickAmount}
+                onChange={(e) => setQuickAmount(e.target.value)}
+                autoFocus
+                placeholder="0"
+                className="text-4xl font-extrabold text-center bg-transparent outline-none w-full amount"
+                style={{ color: 'var(--foreground)' }}
+              />
+              <div className="flex gap-3">
+                <button onClick={() => { setQuickEntryPerson(null); setQuickAmount(''); }} className="flex-1 h-12 rounded-xl font-semibold" style={{ background: 'var(--secondary)', color: 'var(--muted-foreground)' }}>Cancel</button>
+                <button onClick={() => submitQuickEntry()} disabled={!quickAmount || isNaN(Number(quickAmount))} className="flex-[2] h-12 rounded-xl font-bold active:scale-95" style={{ backgroundImage: 'var(--gradient-hero)', color: 'white' }}>Save</button>
+              </div>
+              <a href="#" onClick={(e) => { e.preventDefault(); setQuickEntryPerson(null); setShowAddDialog(true); setFormData({...formData, name: quickEntryPerson.person.name, mobile: quickEntryPerson.person.mobile, type: quickEntryPerson.type }); }} className="text-center text-sm" style={{ color: 'var(--muted-foreground)' }}>More details →</a>
+            </div>
+          </div>
+        )}
 
-                {/* Transaction Timeline */}
-                <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 sm:space-y-6 bg-slate-50/50">
-                  {Object.entries(recordsByDate).length === 0 ? (
-                    <div className="text-center py-20 bg-white rounded-[2rem] border border-dashed border-slate-200">
-                       <AlertCircle className="h-10 w-10 text-slate-300 mx-auto mb-3" />
-                       <p className="text-slate-500 font-bold mb-1">No transaction history</p>
-                       <p className="text-slate-400 text-xs font-semibold">Use buttons below to log your first transaction.</p>
+      {/* Ledger Details Dialog (Individual Person's Ledger) */}
+      <Dialog open={showLedgerModal} onOpenChange={setShowLedgerModal}>
+        <DialogContent className="max-w-2xl h-[100dvh] sm:h-[85vh] w-full flex flex-col p-0 overflow-hidden card-surface border-none shadow-2xl rounded-none sm:rounded-[2.5rem]" style={{ background: 'var(--background)' }}>
+          <div className="p-5 sm:p-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shrink-0 relative overflow-hidden transition-all duration-300" style={{ background: isPersonIgnored ? 'var(--warning)' : netBalance > 0 ? 'var(--danger)' : netBalance < 0 ? 'var(--success)' : 'var(--muted-foreground)', color: 'white' }}>
+            <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -mr-10 -mt-10" />
+            
+            <div className="flex items-center gap-3 relative z-10 w-full sm:w-auto">
+               <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-white/10 flex items-center justify-center backdrop-blur-sm shadow-xl hover:bg-white/20 transition-all cursor-pointer" onClick={() => setShowLedgerModal(false)}>
+                  <ArrowLeft className="h-5 w-5 sm:h-6 sm:w-6" />
+               </div>
+               <div className="min-w-0">
+                  <DialogTitle className="text-xl sm:text-2xl font-black leading-none mb-1 text-white truncate">{selectedPerson?.name}</DialogTitle>
+                  <p className="text-white/80 text-[10px] font-bold uppercase tracking-widest flex items-center gap-1 mb-1.5">
+                     {selectedPerson?.mobile ? <><Phone className="h-2.5 w-2.5" /> {selectedPerson.mobile}</> : 'No mobile linked'}
+                  </p>
+                  <button
+                     onClick={async () => {
+                       if (!selectedPerson) return;
+                       try {
+                         await secureFetch('/api/hisab/ignore', {
+                           method: 'POST',
+                           body: JSON.stringify({
+                             name: selectedPerson.name,
+                             mobile: selectedPerson.mobile || '',
+                             ignored: !isPersonIgnored
+                           })
+                         });
+                         toast.success(isPersonIgnored ? 'Person unignored' : 'Person ignored');
+                         refreshData();
+                       } catch (err) {
+                         toast.error('Failed to update ignored status');
+                       }
+                     }}
+                     className="inline-flex items-center gap-1 px-3 py-1 text-[9px] font-black uppercase tracking-wider bg-white/25 hover:bg-white/35 text-white rounded-full transition-all active:scale-95 border border-white/10 shadow-sm"
+                  >
+                     {isPersonIgnored ? 'Unignore Person' : 'Ignore Person'}
+                  </button>
+               </div>
+            </div>
+
+            <div className="text-left sm:text-right relative z-10 w-full sm:w-auto pt-2.5 sm:pt-0 border-t border-white/10 sm:border-none">
+               <p className="text-[9px] font-black uppercase tracking-widest text-white/70 leading-none mb-1.5">Net Status</p>
+               <div className="flex items-baseline gap-1.5 sm:justify-end">
+                  <p className="text-2xl sm:text-3xl font-black">₹{Math.abs(netBalance).toLocaleString()}</p>
+                  <span className="text-[9px] font-black uppercase tracking-wider bg-white/10 px-2 py-0.5 rounded-full">
+                     {isPersonIgnored ? 'Ignored' : (netBalance > 0 ? 'You Give' : netBalance < 0 ? 'You Get' : 'Settled')}
+                  </span>
+               </div>
+            </div>
+          </div>
+
+                <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 sm:space-y-6 no-scrollbar">
+                  {isLoadingLedger ? (
+                    <div className="h-full flex items-center justify-center min-h-[200px]">
+                      <div className="w-8 h-8 border-4 border-current border-t-transparent rounded-full animate-spin opacity-50" />
                     </div>
+                  ) : Object.entries(recordsByDate).length === 0 ? (
+                    <EmptyState icon={AlertCircle} title="No transaction history" hint="Use buttons below to log your first transaction." />
                   ) : (
                     Object.entries(recordsByDate).map(([date, dateRecords]) => (
                       <div key={date} className="space-y-3">
                           <div className="flex items-center gap-4">
-                            <div className="h-px flex-1 bg-slate-200/80" />
-                            <span className="text-[9px] font-black text-slate-450 uppercase tracking-widest bg-slate-100 px-3 py-1 rounded-full border border-slate-200/50 shadow-sm">{date}</span>
-                            <div className="h-px flex-1 bg-slate-200/80" />
+                            <div className="h-px flex-1" style={{ background: 'var(--border)' }} />
+                            <span className="text-[9px] font-black uppercase tracking-widest px-3 py-1 rounded-full border shadow-sm" style={{ color: 'var(--muted-foreground)', background: 'var(--secondary)', borderColor: 'var(--border)' }}>{date}</span>
+                            <div className="h-px flex-1" style={{ background: 'var(--border)' }} />
                           </div>
                           <div className="space-y-2.5">
                             {dateRecords.map((r) => {
@@ -615,21 +559,17 @@ export default function HisabClient({ initialRecords }: HisabClientProps) {
                               const isBalPayable = bal > 0;
                               
                               return (
-                                <Card key={r.hisab_id} className="border-none shadow-sm rounded-2xl bg-white p-3.5 group hover:shadow-md transition-all border border-slate-100">
+                                <div key={r.hisab_id} className="card-surface p-3.5 group border" style={{ borderColor: 'var(--border)' }}>
                                   <div className="flex items-center justify-between gap-4">
                                       <div className="flex items-center gap-3 min-w-0">
-                                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
-                                          isLent 
-                                            ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' 
-                                            : 'bg-rose-50 text-rose-600 border border-rose-100'
-                                        }`}>
+                                        <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border" style={{ background: isLent ? 'var(--success-soft)' : 'var(--danger-soft)', color: isLent ? 'var(--success)' : 'var(--danger)', borderColor: 'transparent' }}>
                                             {isLent ? <ArrowUpRight className="h-5 w-5" /> : <ArrowDownLeft className="h-5 w-5" />}
                                         </div>
                                          <div className="min-w-0">
-                                             <p className="font-bold text-slate-800 text-sm leading-tight mb-0.5">
+                                             <p className="font-bold text-sm leading-tight mb-0.5" style={{ color: 'var(--foreground)' }}>
                                                {r.description || (isLent ? 'Lent Money' : 'Borrowed Money')}
                                              </p>
-                                            <p className="text-[9px] text-slate-400 font-semibold flex items-center gap-1 uppercase tracking-tight">
+                                            <p className="text-[9px] font-semibold flex items-center gap-1 uppercase tracking-tight" style={{ color: 'var(--muted-foreground)' }}>
                                               <Calendar className="h-2.5 w-2.5" />
                                               {new Date(r.date).toLocaleDateString([], { month: 'short', day: 'numeric' })} at {new Date(r.created_at || r.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                             </p>
@@ -638,15 +578,14 @@ export default function HisabClient({ initialRecords }: HisabClientProps) {
                                       
                                       <div className="flex items-center gap-3 shrink-0">
                                          <div className="text-right">
-                                            <p className={`font-black text-base ${isLent ? 'text-emerald-600' : 'text-rose-600'}`}>
+                                            <p className="font-black text-base" style={{ color: isLent ? 'var(--success)' : 'var(--danger)' }}>
                                               ₹{r.amount.toLocaleString()}
                                             </p>
-                                            <span className={`inline-block text-[8px] font-black uppercase tracking-wider ${isLent ? 'text-emerald-600' : 'text-rose-600'}`}>
+                                            <span className="inline-block text-[8px] font-black uppercase tracking-wider" style={{ color: isLent ? 'var(--success)' : 'var(--danger)' }}>
                                               {isLent ? 'Lent' : 'Borrowed'}
                                             </span>
                                         </div>
                                         
-                                        {/* Action buttons on hover */}
                                         <div className="flex gap-1 md:opacity-0 md:group-hover:opacity-100 transition-opacity flex-shrink-0">
                                             <button
                                                 onClick={() => {
@@ -663,14 +602,15 @@ export default function HisabClient({ initialRecords }: HisabClientProps) {
                                                     setShowLedgerModal(false);
                                                     setShowAddDialog(true);
                                                 }}
-                                                className="p-2.5 sm:p-2 rounded-xl bg-slate-50 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 border border-slate-100 transition-all focus:outline-none focus:ring-0 focus-visible:ring-0 flex items-center justify-center"
-                                                title="Edit transaction"
+                                                className="p-2.5 sm:p-2 rounded-xl transition-all focus:outline-none flex items-center justify-center hover:bg-black/5"
+                                                style={{ color: 'var(--muted-foreground)' }}
                                             >
                                                 <MoreVertical className="h-4 w-4 sm:h-3.5 sm:w-3.5" />
                                             </button>
                                             <button
                                                 onClick={() => setDeleteConfirm(r.hisab_id)}
-                                                className="p-2.5 sm:p-2 rounded-xl bg-slate-50 text-slate-400 hover:text-red-600 hover:bg-red-50 border border-slate-100 transition-all focus:outline-none focus:ring-0 focus-visible:ring-0 flex items-center justify-center"
+                                                className="p-2.5 sm:p-2 rounded-xl transition-all focus:outline-none flex items-center justify-center hover:bg-black/5"
+                                                style={{ color: 'var(--danger)' }}
                                                 title="Delete transaction"
                                             >
                                                 <Trash2 className="h-4 w-4 sm:h-3.5 sm:w-3.5" />
@@ -680,24 +620,18 @@ export default function HisabClient({ initialRecords }: HisabClientProps) {
                                   </div>
                                   
                                   {/* Running Balance and sync status */}
-                                  <div className="mt-2.5 pt-2 border-t border-slate-100/70 flex justify-between items-center text-[10px]">
-                                      <p className="font-bold text-slate-400">
+                                  <div className="mt-2.5 pt-2 flex justify-between items-center text-[10px]" style={{ borderTop: '1px solid var(--border)' }}>
+                                      <p className="font-bold" style={{ color: 'var(--muted-foreground)' }}>
                                           Net Balance: {' '}
-                                          {isBalReceivable && (
-                                            <span className="text-emerald-600 font-extrabold">Gets ₹{Math.abs(bal).toLocaleString()}</span>
-                                          )}
-                                          {isBalPayable && (
-                                            <span className="text-rose-600 font-extrabold">Gives ₹{Math.abs(bal).toLocaleString()}</span>
-                                          )}
-                                          {bal === 0 && (
-                                            <span className="text-slate-450 font-black">Settled</span>
-                                          )}
+                                          {isBalReceivable && <span className="font-extrabold" style={{ color: 'var(--success)' }}>Gets ₹{Math.abs(bal).toLocaleString()}</span>}
+                                          {isBalPayable && <span className="font-extrabold" style={{ color: 'var(--danger)' }}>Gives ₹{Math.abs(bal).toLocaleString()}</span>}
+                                          {bal === 0 && <span className="font-black">Settled</span>}
                                       </p>
                                       {r.log_as_expense && (
-                                        <span className="text-[9px] font-black text-indigo-500/80 bg-indigo-50/50 px-1.5 py-0.5 rounded border border-indigo-100/30">Synced with expenses</span>
+                                        <span className="text-[9px] font-black px-1.5 py-0.5 rounded border" style={{ color: 'var(--violet)', background: 'var(--violet-soft)', borderColor: 'transparent' }}>Synced with expenses</span>
                                       )}
                                   </div>
-                                </Card>
+                                </div>
                               );
                             })}
                           </div>
@@ -707,7 +641,7 @@ export default function HisabClient({ initialRecords }: HisabClientProps) {
                </div>
 
                {/* Quick Add buttons inside Ledger Modal */}
-               <div className="p-4 sm:p-6 bg-white border-t shrink-0 flex flex-col sm:flex-row gap-3 sm:gap-4 shadow-[0_-10px_40px_rgba(0,0,0,0.02)] relative z-20">
+               <div className="p-4 sm:p-6 card-surface border-t shrink-0 flex flex-col sm:flex-row gap-3 sm:gap-4 z-20 m-0 rounded-none border-x-0 border-b-0" style={{ borderColor: 'var(--border)' }}>
                   <Button
                      onClick={() => {
                         setFormData({ 
@@ -723,7 +657,8 @@ export default function HisabClient({ initialRecords }: HisabClientProps) {
                         setShowLedgerModal(false);
                         setShowAddDialog(true);
                      }}
-                     className="flex-1 h-12 sm:h-14 rounded-xl sm:rounded-2xl bg-emerald-600 hover:bg-emerald-700 font-black text-xs sm:text-sm uppercase shadow-xl shadow-emerald-100 transition-all active:scale-95 text-white flex items-center justify-center gap-1.5"
+                     className="flex-1 h-12 sm:h-14 rounded-xl sm:rounded-2xl font-black text-xs sm:text-sm uppercase shadow-xl transition-all active:scale-95 text-white flex items-center justify-center gap-1.5"
+                     style={{ background: 'var(--success)' }}
                   >
                      <ArrowUpRight className="h-4 w-4 sm:h-5 sm:w-5" /> I Lent (Gave)
                   </Button>
@@ -742,7 +677,8 @@ export default function HisabClient({ initialRecords }: HisabClientProps) {
                         setShowLedgerModal(false);
                         setShowAddDialog(true);
                      }}
-                     className="flex-1 h-12 sm:h-14 rounded-xl sm:rounded-2xl bg-rose-600 hover:bg-rose-700 font-black text-xs sm:text-sm uppercase shadow-xl shadow-rose-100 transition-all active:scale-95 text-white flex items-center justify-center gap-1.5"
+                     className="flex-1 h-12 sm:h-14 rounded-xl sm:rounded-2xl font-black text-xs sm:text-sm uppercase shadow-xl transition-all active:scale-95 text-white flex items-center justify-center gap-1.5"
+                     style={{ background: 'var(--danger)' }}
                   >
                      <ArrowDownLeft className="h-4 w-4 sm:h-5 sm:w-5" /> I Borrowed (Took)
                   </Button>
@@ -752,13 +688,13 @@ export default function HisabClient({ initialRecords }: HisabClientProps) {
 
         {/* Add/Edit Transaction Dialog */}
         <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
-           <DialogContent className="max-w-md w-[92vw] sm:w-full rounded-[2rem] sm:rounded-[2.5rem] p-0 overflow-hidden bg-white border-none shadow-2xl">
-              <div className="bg-indigo-600 p-6 sm:p-8 text-white relative">
+           <DialogContent className="max-w-md w-[92vw] sm:w-full rounded-[2rem] sm:rounded-[2.5rem] p-0 overflow-hidden card-surface border-none shadow-2xl">
+              <div className="p-6 sm:p-8 relative" style={{ backgroundImage: 'var(--gradient-hero)', color: 'white' }}>
                  <div className="absolute top-4 right-4 opacity-10">
                     <HandCoins className="h-16 w-16 sm:h-20 sm:w-20" />
                  </div>
-                  <DialogTitle className="text-2xl sm:text-3xl font-black mb-1 text-white">{editId ? 'Edit Entry' : 'New Entry'}</DialogTitle>
-                  <p className="text-indigo-100 text-xs sm:text-sm font-medium">{editId ? 'Modify this transaction record.' : 'Capture a new money exchange.'}</p>
+                  <DialogTitle className="text-2xl sm:text-3xl font-black mb-1">{editId ? 'Edit Entry' : 'New Entry'}</DialogTitle>
+                  <p className="text-xs sm:text-sm font-medium opacity-90">{editId ? 'Modify this transaction record.' : 'Capture a new money exchange.'}</p>
               </div>
               
               <form onSubmit={handleAddRecord} className="p-6 space-y-6">
@@ -767,60 +703,64 @@ export default function HisabClient({ initialRecords }: HisabClientProps) {
                      {/* Person Info */}
                      <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-1.5">
-                           <Label className="text-[10px] font-black tracking-widest uppercase text-slate-400 ml-1">Person Name</Label>
+                           <Label className="text-[10px] font-black tracking-widest uppercase ml-1" style={{ color: 'var(--muted-foreground)' }}>Person Name</Label>
                            <Input 
                             placeholder="e.g. Rahul Sharma"
                             value={formData.name}
                             onChange={(e) => setFormData({...formData, name: e.target.value})}
-                            className="h-12 rounded-xl bg-slate-50 border-2 border-transparent focus-visible:border-indigo-600 focus-visible:ring-4 focus-visible:ring-indigo-50 transition-all font-bold px-4"
+                            className="h-12 rounded-xl transition-all font-bold px-4"
+                            style={{ background: 'var(--secondary)', border: '1px solid var(--border)', color: 'var(--foreground)' }}
                             required
                            />
                         </div>
                         <div className="space-y-1.5">
-                           <Label className="text-[10px] font-black tracking-widest uppercase text-slate-400 ml-1">Mobile No.</Label>
+                           <Label className="text-[10px] font-black tracking-widest uppercase ml-1" style={{ color: 'var(--muted-foreground)' }}>Mobile No.</Label>
                            <Input 
                             placeholder="Optional"
                             value={formData.mobile}
                             onChange={(e) => setFormData({...formData, mobile: e.target.value})}
-                            className="h-12 rounded-xl bg-slate-50 border-2 border-transparent focus-visible:border-indigo-600 focus-visible:ring-4 focus-visible:ring-indigo-50 transition-all font-medium px-4"
+                            className="h-12 rounded-xl transition-all font-medium px-4"
+                            style={{ background: 'var(--secondary)', border: '1px solid var(--border)', color: 'var(--foreground)' }}
                            />
                         </div>
                      </div>
 
                      {/* Transaction Type Buttons */}
                      <div className="space-y-2">
-                        <Label className="text-[10px] font-black tracking-widest uppercase text-slate-400 ml-1">Type of Transaction</Label>
+                        <Label className="text-[10px] font-black tracking-widest uppercase ml-1" style={{ color: 'var(--muted-foreground)' }}>Type of Transaction</Label>
                         <div className="flex gap-2 sm:gap-3">
                            <button
                              type="button"
                              onClick={() => setFormData({...formData, type: 'debit'})}
-                             className={`flex-1 py-3 px-2 sm:px-4 rounded-xl font-bold text-[11px] sm:text-xs uppercase transition-all flex flex-col items-center justify-center gap-1 sm:gap-1.5 border-2 ${
-                               formData.type === 'debit' 
-                                 ? 'bg-emerald-50 border-emerald-500 text-emerald-700 shadow-md shadow-emerald-50' 
-                                 : 'bg-slate-50 border-transparent text-slate-500 hover:bg-slate-100/50'
-                             }`}
+                             className={`flex-1 py-3 px-2 sm:px-4 rounded-xl font-bold text-[11px] sm:text-xs uppercase transition-all flex flex-col items-center justify-center gap-1 sm:gap-1.5 border-2`}
+                             style={{
+                               background: formData.type === 'debit' ? 'var(--success-soft)' : 'var(--secondary)',
+                               borderColor: formData.type === 'debit' ? 'var(--success)' : 'transparent',
+                               color: formData.type === 'debit' ? 'var(--success)' : 'var(--muted-foreground)'
+                             }}
                            >
-                              <ArrowUpRight className="h-4.5 w-4.5 sm:h-5 sm:w-5 text-emerald-600" />
+                              <ArrowUpRight className="h-4.5 w-4.5 sm:h-5 sm:w-5" />
                               <span>Lent (Gave)</span>
                            </button>
                            <button
                              type="button"
                              onClick={() => setFormData({...formData, type: 'credit'})}
-                             className={`flex-1 py-3 px-2 sm:px-4 rounded-xl font-bold text-[11px] sm:text-xs uppercase transition-all flex flex-col items-center justify-center gap-1 sm:gap-1.5 border-2 ${
-                               formData.type === 'credit' 
-                                 ? 'bg-rose-50 border-rose-500 text-rose-700 shadow-md shadow-rose-50' 
-                                 : 'bg-slate-50 border-transparent text-slate-500 hover:bg-slate-100/50'
-                             }`}
+                             className={`flex-1 py-3 px-2 sm:px-4 rounded-xl font-bold text-[11px] sm:text-xs uppercase transition-all flex flex-col items-center justify-center gap-1 sm:gap-1.5 border-2`}
+                             style={{
+                               background: formData.type === 'credit' ? 'var(--danger-soft)' : 'var(--secondary)',
+                               borderColor: formData.type === 'credit' ? 'var(--danger)' : 'transparent',
+                               color: formData.type === 'credit' ? 'var(--danger)' : 'var(--muted-foreground)'
+                             }}
                            >
-                              <ArrowDownLeft className="h-4.5 w-4.5 sm:h-5 sm:w-5 text-rose-600" />
+                              <ArrowDownLeft className="h-4.5 w-4.5 sm:h-5 sm:w-5" />
                               <span>Borrowed (Took)</span>
                            </button>
                         </div>
                         <p className="text-[10px] text-center mt-1.5 font-semibold">
                           {formData.type === 'debit' ? (
-                            <span className="text-emerald-600 flex items-center justify-center gap-1"><Info className="h-3 w-3" /> They will have to return this money to you.</span>
+                            <span className="flex items-center justify-center gap-1" style={{ color: 'var(--success)' }}><Info className="h-3 w-3" /> They will have to return this money to you.</span>
                           ) : (
-                            <span className="text-rose-600 flex items-center justify-center gap-1"><Info className="h-3 w-3" /> You will have to return this money to them.</span>
+                            <span className="flex items-center justify-center gap-1" style={{ color: 'var(--danger)' }}><Info className="h-3 w-3" /> You will have to return this money to them.</span>
                           )}
                         </p>
                      </div>
@@ -828,25 +768,27 @@ export default function HisabClient({ initialRecords }: HisabClientProps) {
                      {/* Amount & Date */}
                      <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-1.5">
-                           <Label className="text-[10px] font-black tracking-widest uppercase text-slate-400 ml-1">Amount (₹)</Label>
+                           <Label className="text-[10px] font-black tracking-widest uppercase ml-1" style={{ color: 'var(--muted-foreground)' }}>Amount (₹)</Label>
                            <Input 
                              type="number"
                              placeholder="0.00"
                              value={formData.amount}
                              onChange={(e) => setFormData({...formData, amount: e.target.value})}
-                             className="h-12 rounded-xl bg-slate-50 border-2 border-transparent focus-visible:border-indigo-600 focus-visible:ring-4 focus-visible:ring-indigo-50 transition-all font-black text-lg px-4"
+                             className="h-12 rounded-xl transition-all font-black text-lg px-4 amount"
+                             style={{ background: 'var(--secondary)', border: '1px solid var(--border)', color: 'var(--foreground)' }}
                              required
                              min="0.01"
                              step="any"
                            />
                         </div>
                         <div className="space-y-1.5">
-                           <Label className="text-[10px] font-black tracking-widest uppercase text-slate-400 ml-1">Date</Label>
+                           <Label className="text-[10px] font-black tracking-widest uppercase ml-1" style={{ color: 'var(--muted-foreground)' }}>Date</Label>
                            <Input 
                              type="date"
                              value={formData.date}
                              onChange={(e) => setFormData({...formData, date: e.target.value})}
-                             className="h-12 rounded-xl bg-slate-50 border-2 border-transparent focus-visible:border-indigo-600 focus-visible:ring-4 focus-visible:ring-indigo-50 transition-all font-medium px-4"
+                             className="h-12 rounded-xl transition-all font-medium px-4"
+                             style={{ background: 'var(--secondary)', border: '1px solid var(--border)', color: 'var(--foreground)' }}
                              required
                            />
                         </div>
@@ -854,33 +796,34 @@ export default function HisabClient({ initialRecords }: HisabClientProps) {
 
                      {/* Description */}
                      <div className="space-y-1.5">
-                        <Label className="text-[10px] font-black tracking-widest uppercase text-slate-400 ml-1">Description (Optional)</Label>
+                        <Label className="text-[10px] font-black tracking-widest uppercase ml-1" style={{ color: 'var(--muted-foreground)' }}>Description (Optional)</Label>
                         <Input 
                          placeholder="Purpose of transaction..."
                          value={formData.description}
                          onChange={(e) => setFormData({...formData, description: e.target.value})}
-                         className="h-12 rounded-xl bg-slate-50 border-2 border-transparent focus-visible:border-indigo-600 focus-visible:ring-4 focus-visible:ring-indigo-50 transition-all font-medium px-4"
+                         className="h-12 rounded-xl transition-all font-medium px-4"
+                         style={{ background: 'var(--secondary)', border: '1px solid var(--border)', color: 'var(--foreground)' }}
                         />
                      </div>
 
                      {/* Log as Daily Expense Checkbox */}
                      <div className="space-y-2 pt-1">
-                        <label className="flex items-center gap-3 cursor-pointer p-3 bg-slate-50 hover:bg-slate-100/70 border border-slate-100 rounded-xl transition-all select-none">
+                        <label className="flex items-center gap-3 cursor-pointer p-3 rounded-xl transition-all select-none border" style={{ background: 'var(--secondary)', borderColor: 'var(--border)' }}>
                            <input 
                              type="checkbox"
                              checked={formData.logAsExpense}
                              onChange={(e) => setFormData({...formData, logAsExpense: e.target.checked})}
-                             className="h-4 w-4 rounded border-slate-350 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                             className="h-4 w-4 rounded cursor-pointer"
                            />
                            <div className="flex flex-col">
-                              <span className="text-xs font-bold text-slate-700">Sync with Daily Expenses</span>
-                              <span className="text-[10px] text-slate-400 font-semibold leading-tight mt-0.5">Automatically log this cash exchange as a daily expense or income.</span>
+                              <span className="text-xs font-bold" style={{ color: 'var(--foreground)' }}>Sync with Daily Expenses</span>
+                              <span className="text-[10px] font-semibold leading-tight mt-0.5" style={{ color: 'var(--muted-foreground)' }}>Automatically log this cash exchange as a daily expense or income.</span>
                            </div>
                         </label>
                      </div>
                  </div>
                  
-                 <Button disabled={isSubmitting} className="w-full h-14 rounded-2xl bg-indigo-600 hover:bg-indigo-700 font-black text-lg shadow-xl shadow-indigo-100 text-white transition-transform active:scale-98">
+                 <Button disabled={isSubmitting} className="w-full h-14 rounded-2xl font-black text-lg text-white transition-transform active:scale-95" style={{ backgroundImage: 'var(--gradient-hero)' }}>
                     {isSubmitting ? (editId ? 'Updating...' : 'Recording...') : (editId ? 'Update Transaction' : 'Record Transaction')}
                  </Button>
               </form>
@@ -898,38 +841,6 @@ export default function HisabClient({ initialRecords }: HisabClientProps) {
           variant="destructive"
         />
       </div>
-    </PageWrapper>
+    </AppShell>
   );
 }
-
-interface SummaryCardProps {
-  label: string;
-  value: number;
-  color: 'red' | 'green' | 'blue';
-  icon: any;
-  description?: string;
-}
-
-function SummaryCard({ label, value, color, icon: Icon, description }: SummaryCardProps) {
-    const colors = {
-       red: "text-rose-600 bg-rose-50 border-rose-100",
-       green: "text-emerald-600 bg-emerald-50 border-emerald-100",
-       blue: "text-indigo-600 bg-indigo-50 border-indigo-100"
-    };
-    
-    return (
-       <Card className="border-none shadow-sm hover:shadow-lg rounded-[1.8rem] sm:rounded-[2.2rem] bg-white p-4 sm:p-5 relative overflow-hidden group h-full border border-slate-100 transition-all duration-300">
-          <div className="flex items-center gap-3 sm:gap-4 relative z-10">
-             <div className={`w-11 h-11 sm:w-14 sm:h-14 rounded-xl sm:rounded-[1.3rem] ${colors[color].split(' ')[0]} ${colors[color].split(' ')[1]} border ${colors[color].split(' ')[2]} flex items-center justify-center flex-shrink-0 transition-transform group-hover:scale-110 shadow-sm`}>
-                <Icon className="h-5 w-5 sm:h-6 sm:w-6" />
-             </div>
-             <div className="min-w-0">
-                <p className="text-[9px] sm:text-[10px] font-black uppercase tracking-[0.12em] sm:tracking-[0.15em] text-slate-400 leading-none mb-1 sm:mb-1.5">{label}</p>
-                <h3 className={`text-lg sm:text-2xl font-black ${colors[color]?.split(' ')[0]} truncate tracking-tight mb-0.5`}>₹{Math.abs(value).toLocaleString()}</h3>
-                {description && <p className="text-[9px] sm:text-[10px] font-semibold text-slate-400 truncate">{description}</p>}
-             </div>
-          </div>
-          <div className={`absolute -right-4 -bottom-4 w-24 h-24 rounded-full ${colors[color]?.split(' ')[1]} opacity-20 blur-2xl group-hover:opacity-40 transition-opacity`} />
-       </Card>
-    );
- }

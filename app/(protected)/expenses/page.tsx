@@ -1,16 +1,26 @@
 export const dynamic = "force-dynamic";
 
-import React from "react";
-import PageWrapper from "@/components/PageWrapper";
-import ExpenseTopTabs from "@/components/expense/ExpenseTopTabs";
-import ExpenseEntryBox from "@/components/expense/ExpenseEntryBox";
+import AppShell from "@/components/AppShell";
+import SegmentedTabs from "@/components/SegmentedTabs";
+import StatCard from "@/components/StatCard";
+import QuickAddBar from "@/components/QuickAddBar";
 import BackupReminder from "@/components/settings/BackupReminder";
+import TodayExpensesSection from "@/components/expense/TodayExpensesSection";
 import {
   getSettings,
   getCollaborationData,
   getDashboardStats,
   getMonthlySummary,
 } from "@/lib/data-fetching";
+
+const EXPENSE_TABS = [
+  { label: "Today", href: "/expenses" },
+  { label: "History", href: "/expenses/history" },
+  { label: "Auto", href: "/expenses/recurring" },
+  { label: "Report", href: "/expenses/summary" },
+  { label: "Tax", href: "/expenses/tax" },
+  { label: "Settings", href: "/expenses/settings" },
+];
 
 export default async function ExpensesPage() {
   const [settings, collabData, stats, summary] = await Promise.all([
@@ -19,24 +29,58 @@ export default async function ExpensesPage() {
     getDashboardStats(),
     getMonthlySummary(),
   ]);
+
   const collaborators = collabData?.collaborators || [];
   const currentUserId = collabData?.currentUserId;
 
+  // Today's spend from summary
+  const todayTotal = summary?.todayTotal ?? 0;
+  const monthlyExpense = summary?.monthlyTotal ?? 0;
+  const monthlyIncome = summary?.monthlyIncome ?? 0;
+
   return (
-    <PageWrapper>
-      <ExpenseTopTabs />
-      <div className="max-w-7xl mx-auto p-4 space-y-5 pb-32">
-        <div className="space-y-1">
-          <h2 className="text-2xl font-black text-foreground">Add Expenses</h2>
+    <>
+      <SegmentedTabs tabs={EXPENSE_TABS} />
+
+      <AppShell className="pt-3">
+        <BackupReminder settings={settings} />
+
+        {/* Hero card — today's spend */}
+        <StatCard
+          variant="hero"
+          label="Spent today"
+          amount={todayTotal}
+          caption="Tap a chip below or type to add"
+        />
+
+        {/* Money in / out row */}
+        <div className="grid grid-cols-2 gap-3">
+          <StatCard
+            variant="in"
+            label="Money in"
+            amount={monthlyIncome}
+            caption="This month"
+          />
+          <StatCard
+            variant="out"
+            label="Money out"
+            amount={monthlyExpense}
+            caption="This month"
+          />
         </div>
 
-        <BackupReminder settings={settings} />
-        <ExpenseEntryBox
-          largeAmountLimit={settings.largeAmountLimit}
-          collaborators={collaborators}
-          currentUserId={currentUserId}
+        {/* Always-visible instant add bar */}
+        <QuickAddBar
+          mode="expense"
+          largeLimit={settings.largeAmountLimit}
         />
-      </div>
-    </PageWrapper>
+
+        {/* Today's expense list (client component for live refresh) */}
+        <TodayExpensesSection
+          collaborators={collaborators}
+          currentUserId={currentUserId || ""}
+        />
+      </AppShell>
+    </>
   );
 }

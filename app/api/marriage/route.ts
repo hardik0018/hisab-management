@@ -6,6 +6,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { NextRequest } from 'next/server';
 import { MarriageRecord } from '@/types';
 import { revalidatePath } from 'next/cache';
+import { getMarriageRecords } from '@/lib/data-fetching';
 
 export async function GET(request: NextRequest) {
   try {
@@ -14,18 +15,17 @@ export async function GET(request: NextRequest) {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const db = await getDb();
-    const spaceId = user.space_id || user.user_id;
+    const { searchParams } = new URL(request.url);
+    const page = parseInt(searchParams.get('page') || '1', 10);
+    const limit = parseInt(searchParams.get('limit') || '50', 10);
 
-    const query = { space_id: spaceId };
+    const data = await getMarriageRecords({ page, limit });
     
-    const records = await db
-      .collection('marriage_hisab')
-      .find(query, { projection: { _id: 0 } })
-      .sort({ date: -1 })
-      .toArray() as unknown as MarriageRecord[];
+    if (!data) {
+      return Response.json({ error: 'Failed to fetch records' }, { status: 500 });
+    }
 
-    return Response.json({ records });
+    return Response.json(data);
   } catch (error) {
     console.error('API Error:', error);
     return Response.json({ error: 'Internal server error' }, { status: 500 });

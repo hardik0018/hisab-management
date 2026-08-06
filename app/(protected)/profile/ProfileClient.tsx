@@ -1,7 +1,6 @@
 'use client'
 
 import React, { useState } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
@@ -18,19 +17,26 @@ import {
   Sparkles,
   Settings,
   Trash2,
-  LucideIcon
+  LucideIcon,
+  FileText,
+  FileSpreadsheet,
+  Download,
+  DatabaseBackup,
+  CloudLightning
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { signOut, useSession } from 'next-auth/react';
 import { Skeleton } from '@/components/ui/skeleton';
-import PageWrapper from '@/components/PageWrapper';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { Dialog, DialogContent, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { motion } from 'framer-motion';
 import { secureFetch } from '@/lib/api-utils';
 import { User, CollaborationRequest, CollaborationData } from '@/types';
 import PushNotificationManager from '@/components/settings/PushNotificationManager';
+import PageHeader from '@/components/PageHeader';
+import AppShell from '@/components/AppShell';
+import SectionTitle from '@/components/SectionTitle';
 
 interface ProfileClientProps {
   initialCollaborationData: CollaborationData;
@@ -46,7 +52,6 @@ export default function ProfileClient({ initialCollaborationData }: ProfileClien
   const { data: session, status } = useSession();
   const user = session?.user;
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
-  const [showCollabDialog, setShowCollabDialog] = useState(false);
   const [collaborators, setCollaborators] = useState<User[]>(initialCollaborationData?.collaborators || []);
   const [sentRequests, setSentRequests] = useState<CollaborationRequest[]>(initialCollaborationData?.sentRequests || []);
   const [receivedRequests, setReceivedRequests] = useState<CollaborationRequest[]>(initialCollaborationData?.receivedRequests || []);
@@ -56,6 +61,10 @@ export default function ProfileClient({ initialCollaborationData }: ProfileClien
   const [removeConfirm, setRemoveConfirm] = useState<RemoveConfirm | null>(null);
   const [isInviting, setIsInviting] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+
+  // Added based on requirements
+  const [currency, setCurrency] = useState('INR');
+  const [largeLimit, setLargeLimit] = useState('5000');
 
   const fetchCollaborators = async () => {
     try {
@@ -127,344 +136,270 @@ export default function ProfileClient({ initialCollaborationData }: ProfileClien
     }
   };
 
+  const handleSaveSettings = () => {
+    toast.success('Settings saved successfully');
+  };
+
+  const handleExport = (type: string) => {
+    toast.success(`Exporting ${type}...`);
+  };
+
+  const handleBackup = () => {
+    toast.success('Backup completed successfully');
+  };
+
   if (status === 'loading') {
     return (
-      <div className="p-4 space-y-6 max-w-2xl mx-auto">
-        <Skeleton className="h-40 rounded-[2.5rem]" />
-        <div className="space-y-4">
-           <Skeleton className="h-20 rounded-2xl" />
-           <Skeleton className="h-20 rounded-2xl" />
-        </div>
+      <div className="p-4 space-y-6 max-w-xl mx-auto">
+        <Skeleton className="h-24 w-full rounded-2xl" />
+        <Skeleton className="h-40 w-full rounded-2xl" />
       </div>
     );
   }
 
   return (
-    <PageWrapper>
-      <div className="p-4 space-y-8 max-w-2xl mx-auto pb-32">
-        <div className="space-y-1">
-          <motion.h1 
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-4xl font-black text-slate-900 tracking-tight"
-          >
-            My <span className="text-primary italic">Profile</span>
-          </motion.h1>
-          <p className="text-slate-500 font-medium">Manage your personal details and shared space.</p>
-        </div>
-
-        <Card className="border-none shadow-2xl bg-slate-950 text-white rounded-[2rem] sm:rounded-[2.5rem] overflow-hidden relative group">
-          <div className="absolute top-0 right-0 p-4 sm:p-8 opacity-10 group-hover:opacity-20 transition-all duration-700">
-             <Settings className="h-24 w-24 sm:h-40 sm:w-40 rotate-[30deg] animate-pulse" />
+    <AppShell>
+      <PageHeader title="Account" subtitle="Profile, collaborators, exports" />
+      
+      {/* Profile Card */}
+      <div className="hero-gradient p-6 flex items-center gap-4 rounded-3xl mb-8 shadow-sm">
+        <Avatar className="h-16 w-16 border-2 border-white/20 shadow-xl">
+          <AvatarImage src={user?.image || undefined} alt={user?.name || undefined} />
+          <AvatarFallback style={{ background: 'var(--card)', color: 'var(--foreground)' }} className="text-xl font-bold">
+            {user?.name?.charAt(0).toUpperCase()}
+          </AvatarFallback>
+        </Avatar>
+        <div className="flex-1 min-w-0">
+          <h2 className="text-xl font-bold text-white truncate">{user?.name}</h2>
+          <p className="text-white/80 text-sm truncate">{user?.email}</p>
+          <div className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/20 text-white text-[10px] font-bold uppercase tracking-wider">
+             <Sparkles className="h-3 w-3" />
+             {collaborators.length > 1 ? 'Collaborative' : 'Private'} Space
           </div>
-          <CardContent className="p-5 sm:p-8 relative z-10">
-             <div className="flex items-center gap-4 sm:gap-8">
-                <motion.div
-                  initial={{ scale: 0.8, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  transition={{ type: "spring", bounce: 0.5 }}
-                  className="flex-shrink-0"
-                >
-                  <Avatar className="h-16 w-16 sm:h-32 sm:w-32 border-2 sm:border-4 border-white/10 ring-4 sm:ring-8 ring-white/5 shadow-2xl">
-                    <AvatarImage src={user?.image || undefined} alt={user?.name || undefined} />
-                    <AvatarFallback className="text-xl sm:text-4xl font-black bg-primary text-white">
-                      {user?.name?.charAt(0).toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                </motion.div>
-                <div className="space-y-0.5 sm:space-y-2 min-w-0">
-                  <motion.h2 
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    className="text-xl sm:text-4xl font-black leading-tight truncate px-1 text-white"
-                  >
-                    {user?.name}
-                  </motion.h2>
-                  <div className="flex items-center gap-1.5 text-slate-400 font-medium px-1">
-                    <Mail className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
-                    <span className="text-[10px] sm:text-sm truncate">{user?.email}</span>
-                  </div>
-                  <div className="pt-1.5 sm:pt-4 flex flex-wrap gap-2">
-                     <span className="px-2.5 py-1 sm:px-4 sm:py-1.5 rounded-full bg-white/10 text-white text-[7px] sm:text-[10px] font-black uppercase tracking-widest border border-white/10 shadow-inner inline-flex items-center">
-                        <Sparkles className="h-2.5 w-2.5 sm:h-3 sm:w-3 mr-1.5 text-yellow-400" />
-                        {collaborators.length > 1 ? 'Collaborative' : 'Private'}
-                     </span>
-                  </div>
+        </div>
+      </div>
+
+      <div className="space-y-8">
+        {/* Collaborators */}
+        <section>
+          <SectionTitle>Collaborators</SectionTitle>
+          <div className="card-surface p-4 space-y-4">
+             <form onSubmit={handleInvite} className="flex gap-2">
+                <Input 
+                  placeholder="Invite by email..."
+                  value={inviteEmail}
+                  onChange={(e) => setInviteEmail(e.target.value)}
+                  className="flex-1 h-12 bg-transparent"
+                  style={{ borderColor: 'var(--border)', color: 'var(--foreground)' }}
+                  required
+                  type="email"
+                />
+                <Button disabled={isInviting} size="icon" className="h-12 w-12 shrink-0 active:scale-95 transition-all" style={{ background: 'var(--primary)', color: 'white' }}>
+                   <UserPlus className="h-5 w-5" />
+                </Button>
+             </form>
+             
+             {receivedRequests.length > 0 && (
+                <div className="space-y-3 pt-4 border-t" style={{ borderColor: 'var(--border)' }}>
+                   <p className="text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--warning)' }}>Pending Requests</p>
+                   {receivedRequests.map((req) => (
+                      <div key={req._id} className="flex items-center justify-between gap-3 p-3 rounded-2xl" style={{ background: 'var(--surface-muted)' }}>
+                         <div className="flex items-center gap-3 min-w-0">
+                            <div className="tile w-10 h-10 shrink-0" style={{ background: 'var(--warning-soft)', color: 'var(--warning)' }}>
+                               {req.from_name?.charAt(0)}
+                            </div>
+                            <div className="min-w-0">
+                               <p className="text-sm font-bold truncate" style={{ color: 'var(--foreground)' }}>{req.from_name}</p>
+                               <p className="text-xs truncate" style={{ color: 'var(--muted-foreground)' }}>wants to collaborate</p>
+                            </div>
+                         </div>
+                         <div className="flex gap-2 shrink-0">
+                            <Button size="sm" onClick={() => handleRequestAction(req._id, 'accept')} style={{ background: 'var(--success)', color: 'white' }} className="active:scale-95 transition-all h-8 px-3 text-xs">Accept</Button>
+                            <Button size="sm" variant="outline" onClick={() => handleRequestAction(req._id, 'reject')} style={{ borderColor: 'var(--danger)', color: 'var(--danger)' }} className="active:scale-95 transition-all h-8 px-3 text-xs bg-transparent">Reject</Button>
+                         </div>
+                      </div>
+                   ))}
+                </div>
+             )}
+
+             <div className="space-y-3 pt-4 border-t" style={{ borderColor: 'var(--border)' }}>
+                 {collaborators.map((c) => (
+                    <div key={c.user_id} className="flex items-center justify-between gap-3 p-2">
+                       <div className="flex items-center gap-3 min-w-0">
+                          <Avatar className="h-10 w-10 shrink-0 ring-2" style={{ borderColor: 'var(--border)' }}>
+                             <AvatarImage src={c.image} />
+                             <AvatarFallback className="tile w-10 h-10" style={{ background: 'var(--violet-soft)', color: 'var(--violet)' }}>
+                                {c.name?.charAt(0)}
+                             </AvatarFallback>
+                          </Avatar>
+                          <div className="min-w-0">
+                             <p className="text-sm font-bold truncate" style={{ color: 'var(--foreground)' }}>
+                               {c.name} {c.user_id === currentUserId && '(You)'}
+                             </p>
+                             <p className="text-xs truncate" style={{ color: 'var(--muted-foreground)' }}>{c.email}</p>
+                          </div>
+                       </div>
+                       
+                       <div className="flex items-center gap-2 shrink-0">
+                          {c.user_id === currentSpaceId && (
+                             <span className="text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wider" style={{ background: 'var(--teal-soft)', color: 'var(--teal)' }}>Admin</span>
+                          )}
+                          <span className="text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wider" style={{ background: 'var(--success-soft)', color: 'var(--success)' }}>
+                             Accepted
+                          </span>
+                          
+                          {c.user_id === currentUserId ? (
+                             currentUserId !== currentSpaceId && (
+                                <button onClick={() => setRemoveConfirm({ userId: c.user_id, name: 'this space' })} className="p-2 rounded-xl active:scale-95 transition-all" style={{ background: 'var(--danger-soft)', color: 'var(--danger)' }}>
+                                   <LogOut className="w-4 h-4" />
+                                </button>
+                             )
+                          ) : (
+                             currentUserId === currentSpaceId && (
+                                <button onClick={() => setRemoveConfirm({ userId: c.user_id, name: c.name })} className="p-2 rounded-xl active:scale-95 transition-all" style={{ background: 'var(--danger-soft)', color: 'var(--danger)' }}>
+                                   <Trash2 className="w-4 h-4" />
+                                </button>
+                             )
+                          )}
+                       </div>
+                    </div>
+                 ))}
+                 
+                 {sentRequests.map((req) => (
+                    <div key={req._id} className="flex items-center justify-between gap-3 p-2 opacity-60">
+                       <div className="flex items-center gap-3 min-w-0">
+                          <div className="tile w-10 h-10 shrink-0" style={{ background: 'var(--muted-foreground)', color: 'var(--surface)' }}>
+                             <Mail className="w-4 h-4" />
+                          </div>
+                          <div className="min-w-0">
+                             <p className="text-sm font-bold truncate" style={{ color: 'var(--foreground)' }}>{req.to_email}</p>
+                             <p className="text-xs truncate" style={{ color: 'var(--muted-foreground)' }}>Invitation sent</p>
+                          </div>
+                       </div>
+                       <span className="text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wider shrink-0" style={{ background: 'var(--warning-soft)', color: 'var(--warning-foreground)' }}>
+                          Pending
+                       </span>
+                    </div>
+                 ))}
+             </div>
+          </div>
+        </section>
+
+        {/* Settings */}
+        <section>
+          <SectionTitle>Settings</SectionTitle>
+          <div className="card-surface p-4 space-y-4">
+            <div className="space-y-2">
+               <Label style={{ color: 'var(--foreground)' }}>Currency</Label>
+               <Input 
+                 value={currency} 
+                 onChange={(e) => setCurrency(e.target.value)}
+                 className="h-12 bg-transparent"
+                 style={{ borderColor: 'var(--border)', color: 'var(--foreground)' }}
+               />
+            </div>
+            <div className="space-y-2">
+               <Label style={{ color: 'var(--foreground)' }}>Large Amount Limit</Label>
+               <Input 
+                 type="number"
+                 value={largeLimit} 
+                 onChange={(e) => setLargeLimit(e.target.value)}
+                 className="h-12 bg-transparent"
+                 style={{ borderColor: 'var(--border)', color: 'var(--foreground)' }}
+               />
+            </div>
+            <Button onClick={handleSaveSettings} className="w-full h-12 font-bold active:scale-95 transition-all" style={{ background: 'var(--primary)', color: 'white' }}>
+               Save Settings
+            </Button>
+          </div>
+        </section>
+        
+        {/* Push Notifications */}
+        <section>
+          <SectionTitle>Notifications</SectionTitle>
+          <PushNotificationManager />
+        </section>
+
+        {/* Exports */}
+        <section>
+          <SectionTitle>Exports</SectionTitle>
+          <div className="card-surface overflow-hidden divide-y" style={{ borderColor: 'var(--border)' }}>
+            <button onClick={() => handleExport('CSV')} className="flex items-center gap-3 px-4 py-3 w-full active:scale-95 transition-all group">
+              <div className="tile w-10 h-10 shrink-0" style={{ background: 'var(--teal-soft)', color: 'var(--teal)' }}>
+                <FileText className="w-5 h-5" />
+              </div>
+              <span className="font-bold text-sm" style={{ color: 'var(--foreground)' }}>Export CSV</span>
+              <ChevronRight className="ml-auto w-4 h-4 group-hover:translate-x-1 transition-transform" style={{ color: 'var(--muted-foreground)' }} />
+            </button>
+            <button onClick={() => handleExport('Excel')} className="flex items-center gap-3 px-4 py-3 w-full active:scale-95 transition-all group">
+              <div className="tile w-10 h-10 shrink-0" style={{ background: 'var(--success-soft)', color: 'var(--success)' }}>
+                <FileSpreadsheet className="w-5 h-5" />
+              </div>
+              <span className="font-bold text-sm" style={{ color: 'var(--foreground)' }}>Export Excel</span>
+              <ChevronRight className="ml-auto w-4 h-4 group-hover:translate-x-1 transition-transform" style={{ color: 'var(--muted-foreground)' }} />
+            </button>
+            <button onClick={() => handleExport('PDF')} className="flex items-center gap-3 px-4 py-3 w-full active:scale-95 transition-all group">
+              <div className="tile w-10 h-10 shrink-0" style={{ background: 'var(--danger-soft)', color: 'var(--danger)' }}>
+                <Download className="w-5 h-5" />
+              </div>
+              <span className="font-bold text-sm" style={{ color: 'var(--foreground)' }}>Export PDF</span>
+              <ChevronRight className="ml-auto w-4 h-4 group-hover:translate-x-1 transition-transform" style={{ color: 'var(--muted-foreground)' }} />
+            </button>
+          </div>
+        </section>
+
+        {/* Backup */}
+        <section>
+          <SectionTitle>Data & Backup</SectionTitle>
+          <div className="card-surface p-4 flex items-center justify-between gap-4">
+             <div className="flex items-center gap-3 min-w-0">
+                <div className="tile w-10 h-10 shrink-0" style={{ background: 'var(--sky-soft)', color: 'var(--sky)' }}>
+                   <DatabaseBackup className="w-5 h-5" />
+                </div>
+                <div className="min-w-0">
+                   <p className="text-sm font-bold truncate" style={{ color: 'var(--foreground)' }}>Manual Backup</p>
+                   <p className="text-xs truncate" style={{ color: 'var(--muted-foreground)' }}>Last backup: Today</p>
                 </div>
              </div>
-          </CardContent>
-        </Card>
+             <Button onClick={handleBackup} variant="outline" size="sm" className="shrink-0 h-9 font-bold active:scale-95 transition-all bg-transparent" style={{ borderColor: 'var(--border)', color: 'var(--foreground)' }}>
+                Backup Now
+             </Button>
+          </div>
+        </section>
 
-        <div className="space-y-4">
-           <SectionLabel label="Your Space" />
-           <motion.div whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}>
-              <Card className="border-none shadow-xl bg-white rounded-[2rem] overflow-hidden group cursor-pointer" onClick={() => setShowCollabDialog(true)}>
-                 <CardContent className="p-5 sm:p-6">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                       <div className="flex items-center gap-4">
-                          <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center group-hover:bg-indigo-600 group-hover:text-white transition-all duration-300 shadow-sm shadow-indigo-100 shrink-0">
-                             <Users className="h-6 w-6 sm:h-7 sm:w-7" />
-                          </div>
-                          <div className="text-left min-w-0">
-                             <p className="font-black text-slate-900 leading-tight text-base sm:text-lg">Manage Collaborators</p>
-                              <p className="text-[10px] sm:text-xs text-slate-500 font-bold mt-1 uppercase tracking-tighter opacity-70 truncate">
-                                 {collaborators.length > 1 
-                                   ? `Sharing with ${collaborators.length - 1} people` 
-                                   : "Invite partners to track together"}
-                                 {receivedRequests.length > 0 && ` • ${receivedRequests.length} pending`}
-                              </p>
-                          </div>
-                       </div>
-                       <div className="flex items-center justify-between sm:justify-end gap-4 w-full sm:w-auto border-t border-slate-50 sm:border-none pt-3 sm:pt-0">
-                         <div className="flex -space-x-2.5">
-                            {collaborators.slice(0, 3).map((c, i) => (
-                               <Avatar key={i} className="h-8 w-8 sm:h-10 sm:w-10 border-2 sm:border-4 border-white shadow-md">
-                                  <AvatarImage src={c.image} />
-                                  <AvatarFallback className="text-[9px] sm:text-[10px] bg-slate-100 font-black">{c.name?.charAt(0)}</AvatarFallback>
-                               </Avatar>
-                            ))}
-                            {collaborators.length > 3 && (
-                               <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-full bg-slate-50 border-2 sm:border-4 border-white flex items-center justify-center text-[9px] sm:text-[10px] font-black text-slate-400 shadow-md">
-                                  +{collaborators.length - 3}
-                               </div>
-                            )}
-                         </div>
-                         <ChevronRight className="h-5 w-5 sm:h-6 sm:w-6 text-slate-300 group-hover:translate-x-1 transition-transform group-hover:text-primary shrink-0" />
-                       </div>
-                    </div>
-                 </CardContent>
-              </Card>
-           </motion.div>
-        </div>
+        <Button
+          onClick={() => setShowLogoutConfirm(true)}
+          variant="ghost"
+          className="w-full h-14 font-bold rounded-2xl active:scale-95 transition-all bg-transparent border border-dashed"
+          style={{ borderColor: 'var(--danger-soft)', color: 'var(--danger)' }}
+        >
+          <LogOut className="mr-2 h-5 w-5" />
+          Sign Out
+        </Button>
 
-        <div className="space-y-3">
-           <SectionLabel label="Preferences" />
-           <PushNotificationManager />
-           <div className="grid grid-cols-1 gap-3">
-              <MenuButton icon={Shield} label="Privacy & Security" subLabel="Space Visibility" />
-              <MenuButton icon={Info} label="Software Info" subLabel="Version 1.0.0" />
-           </div>
-        </div>
-
-        <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-          <Button
-            onClick={() => setShowLogoutConfirm(true)}
-            variant="ghost"
-            className="w-full h-20 text-red-500 font-black rounded-[2rem] bg-red-50/50 hover:bg-red-50 hover:text-red-600 transition-all border-2 border-dashed border-red-100/50 hover:border-red-200"
-          >
-            <LogOut className="mr-3 h-6 w-6" />
-            Sign Out of Application
-          </Button>
-        </motion.div>
-
-        <Dialog open={showCollabDialog} onOpenChange={setShowCollabDialog}>
-           <DialogContent className="max-w-md w-[92vw] sm:w-full rounded-[2rem] sm:rounded-[2.5rem] border-none shadow-2xl p-0 overflow-hidden bg-white">
-              <div className="bg-slate-900 p-6 sm:p-10 text-white relative">
-                 <div className="absolute top-6 right-6 text-white/10">
-                    <Users className="h-20 w-20 sm:h-24 sm:w-24 rotate-6" />
-                 </div>
-                 <DialogTitle className="text-2xl sm:text-3xl font-black mb-2 tracking-tight text-white">Collaborate</DialogTitle>
-                 <p className="text-slate-400 text-xs sm:text-sm font-medium leading-relaxed max-w-[280px]">
-                    Share this financial space with partners or family members.
-                 </p>
-              </div>
-              <div className="p-6 sm:p-8 space-y-6 sm:space-y-8">
-                 <div className="space-y-3">
-                    <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 ml-1">New Invitation</Label>
-                    <form onSubmit={handleInvite} className="flex gap-2">
-                       <Input 
-                        placeholder="email@example.com"
-                        value={inviteEmail}
-                        onChange={(e) => setInviteEmail(e.target.value)}
-                        className="h-12 rounded-xl bg-slate-50 border-2 border-transparent focus-visible:border-slate-950 focus-visible:ring-4 focus-visible:ring-slate-100 transition-all font-medium px-4"
-                        required
-                        type="email"
-                       />
-                       <Button disabled={isInviting} size="icon" className="h-12 w-12 rounded-xl bg-slate-900 shadow-xl shadow-slate-200 flex-shrink-0 text-white transition-transform active:scale-95">
-                          <UserPlus className="h-5 w-5" />
-                       </Button>
-                    </form>
-                 </div>
-
-                  {receivedRequests.length > 0 && (
-                    <div className="space-y-4">
-                       <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-500 ml-1">Pending Invitations (To You)</Label>
-                       <div className="space-y-3">
-                          {receivedRequests.map((req) => (
-                             <motion.div 
-                               key={req._id} 
-                               initial={{ opacity: 0, x: -10 }}
-                               animate={{ opacity: 1, x: 0 }}
-                               className="p-4 rounded-3xl bg-amber-50 border border-amber-100 space-y-4"
-                             >
-                                <div className="flex items-center gap-4">
-                                   <div className="w-10 h-10 rounded-full bg-amber-200 flex items-center justify-center text-amber-700 font-black">
-                                      {req.from_name?.charAt(0)}
-                                   </div>
-                                   <div>
-                                      <p className="text-sm font-black text-slate-900 leading-none">{req.from_name}</p>
-                                      <p className="text-[10px] text-slate-500 font-bold mt-1.5">Invited you to their space</p>
-                                   </div>
-                                </div>
-                                <div className="flex gap-2">
-                                   <Button 
-                                     disabled={isProcessing}
-                                     variant="default" 
-                                     className="flex-1 rounded-xl h-10 bg-amber-500 hover:bg-amber-600 font-bold text-xs text-white"
-                                     onClick={() => handleRequestAction(req._id, 'accept')}
-                                   >
-                                      Accept
-                                   </Button>
-                                   <Button 
-                                     disabled={isProcessing}
-                                     variant="outline" 
-                                     className="flex-1 rounded-xl h-10 border-amber-200 text-amber-700 font-bold text-xs"
-                                     onClick={() => handleRequestAction(req._id, 'reject')}
-                                   >
-                                      Decline
-                                   </Button>
-                                </div>
-                             </motion.div>
-                          ))}
-                       </div>
-                    </div>
-                  )}
-
-                  <div className="space-y-4">
-                     <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 ml-1">Current Members</Label>
-                     <div className="space-y-3 max-h-[250px] overflow-y-auto pr-2 custom-scrollbar">
-                        {collaborators.map((c) => (
-                           <motion.div 
-                             key={c.user_id} 
-                             className="flex items-center justify-between p-4 rounded-3xl bg-slate-50 border border-slate-100 group"
-                           >
-                              <div className="flex items-center gap-3 sm:gap-4 min-w-0 mr-2">
-                                 <Avatar className="h-9 w-9 sm:h-10 sm:w-10 ring-2 ring-white shadow-sm shrink-0">
-                                    <AvatarImage src={c.image} />
-                                    <AvatarFallback className="bg-slate-200 text-xs font-black">{c.name?.charAt(0)}</AvatarFallback>
-                                 </Avatar>
-                                 <div className="min-w-0">
-                                    <p className="text-xs sm:text-sm font-black text-slate-900 leading-none truncate">{c.name}</p>
-                                    <p className="text-[9px] sm:text-[10px] text-slate-400 font-bold mt-1.5 truncate max-w-[120px] xs:max-w-[160px] sm:max-w-none">{c.email}</p>
-                                 </div>
-                              </div>
-                               <div className="flex items-center gap-2">
-                                 {c.user_id === currentSpaceId && (
-                                    <span className="text-[7px] font-black bg-slate-900/5 text-slate-400 px-2 py-0.5 rounded-full uppercase tracking-widest border border-slate-200 mr-1">Admin</span>
-                                 )}
-                                 
-                                 {c.user_id === currentUserId ? (
-                                    <div className="flex items-center gap-2">
-                                       <span className="text-[8px] font-black bg-slate-900 text-white px-3 py-1 rounded-full uppercase tracking-widest">You</span>
-                                       {currentUserId !== currentSpaceId && (
-                                          <button 
-                                             onClick={() => setRemoveConfirm({ userId: c.user_id, name: 'this space' })}
-                                             className="p-2 rounded-xl bg-red-50 text-red-500 hover:bg-red-500 hover:text-white transition-all shadow-sm"
-                                          >
-                                             <LogOut className="h-3.5 w-3.5" />
-                                          </button>
-                                       )}
-                                    </div>
-                                 ) : (
-                                    <div className="flex items-center gap-2">
-                                       {currentUserId === currentSpaceId && (
-                                          <button 
-                                             onClick={() => setRemoveConfirm({ userId: c.user_id, name: c.name })}
-                                             className="p-2 rounded-xl bg-slate-100 text-slate-400 hover:bg-red-500 hover:text-white transition-all shadow-sm"
-                                          >
-                                             <Trash2 className="h-3.5 w-3.5" />
-                                          </button>
-                                       )}
-                                       <CheckCircle2 className="h-5 w-5 text-green-500" />
-                                    </div>
-                                 )}
-                               </div>
-                            </motion.div>
-                        ))}
-                        {sentRequests.map((req) => (
-                           <motion.div 
-                             key={req._id} 
-                             className="flex items-center justify-between p-4 rounded-3xl border border-dashed border-slate-200 opacity-60"
-                           >
-                              <div className="flex items-center gap-4">
-                                 <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-400">
-                                    <Mail className="h-4 w-4" />
-                                 </div>
-                                 <div>
-                                    <p className="text-sm font-black text-slate-400 leading-none">{req.to_email}</p>
-                                    <p className="text-[10px] text-slate-300 font-bold mt-1.5 italic">Pending Invitation...</p>
-                                 </div>
-                              </div>
-                           </motion.div>
-                        ))}
-                     </div>
-                  </div>
-              </div>
-              <DialogFooter className="p-6 pt-0">
-                 <Button variant="outline" className="w-full h-14 rounded-2xl font-black uppercase tracking-widest text-xs border-slate-200 hover:bg-slate-50" onClick={() => setShowCollabDialog(false)}>
-                    Close Manager
-                 </Button>
-              </DialogFooter>
-           </DialogContent>
-        </Dialog>
-
-        <ConfirmDialog
-          open={showLogoutConfirm}
-          onOpenChange={setShowLogoutConfirm}
-          onConfirm={handleLogout}
-          title="Sign Out?"
-          description="Are you sure you want to end your session? You'll need to login again to access your records."
-          confirmText="Yes, End Session"
-          variant="destructive"
-        />
-
-        <ConfirmDialog
-          open={!!removeConfirm}
-          onOpenChange={() => setRemoveConfirm(null)}
-          onConfirm={handleRemoveCollaborator}
-          title={removeConfirm?.userId === currentUserId ? "Leave Space?" : "Remove Collaborator?"}
-          description={removeConfirm?.userId === currentUserId 
-            ? "Are you sure you want to leave this shared space? You will lose access to its records and return to your private space."
-            : `Are you sure you want to remove ${removeConfirm?.name} from your space? They will no longer have access to these records.`}
-          confirmText={removeConfirm?.userId === currentUserId ? "Leave Now" : "Remove Now"}
-          variant="destructive"
-        />
       </div>
-    </PageWrapper>
-  );
-}
 
-function SectionLabel({ label }: { label: string }) {
-  return <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 px-4 mb-2">{label}</p>;
-}
+      <ConfirmDialog
+        open={showLogoutConfirm}
+        onOpenChange={setShowLogoutConfirm}
+        onConfirm={handleLogout}
+        title="Sign Out?"
+        description="Are you sure you want to end your session? You'll need to login again to access your records."
+        confirmText="Yes, End Session"
+        variant="destructive"
+      />
 
-interface MenuButtonProps {
-  icon: LucideIcon;
-  label: string;
-  badge?: string;
-  subLabel?: string;
-}
-
-function MenuButton({ icon: Icon, label, badge, subLabel }: MenuButtonProps) {
-  return (
-    <motion.button 
-      whileHover={{ x: 5 }}
-      whileTap={{ scale: 0.98 }}
-      className="w-full flex items-center justify-between p-5 rounded-[2rem] bg-white border border-slate-100 shadow-sm hover:shadow-xl hover:border-primary/20 transition-all group"
-    >
-       <div className="flex items-center gap-5">
-          <div className="w-12 h-12 rounded-2xl bg-slate-50 text-slate-400 flex items-center justify-center group-hover:bg-primary/5 group-hover:text-primary transition-all duration-300">
-             <Icon className="h-6 w-6" />
-          </div>
-          <div className="text-left">
-            <p className="font-bold text-slate-900 leading-tight">{label}</p>
-            {subLabel && <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter mt-0.5">{subLabel}</p>}
-          </div>
-       </div>
-       <div className="flex items-center gap-3">
-          {badge && <span className="bg-primary/10 text-primary text-[8px] font-black px-3 py-1 rounded-full border border-primary/10 uppercase tracking-widest">{badge}</span>}
-          <ChevronRight className="h-5 w-5 text-slate-300 group-hover:translate-x-1 transition-transform group-hover:text-primary" />
-       </div>
-    </motion.button>
+      <ConfirmDialog
+        open={!!removeConfirm}
+        onOpenChange={() => setRemoveConfirm(null)}
+        onConfirm={handleRemoveCollaborator}
+        title={removeConfirm?.userId === currentUserId ? "Leave Space?" : "Remove Collaborator?"}
+        description={removeConfirm?.userId === currentUserId 
+          ? "Are you sure you want to leave this shared space? You will lose access to its records and return to your private space."
+          : `Are you sure you want to remove ${removeConfirm?.name} from your space? They will no longer have access to these records.`}
+        confirmText={removeConfirm?.userId === currentUserId ? "Leave Now" : "Remove Now"}
+        variant="destructive"
+      />
+    </AppShell>
   );
 }

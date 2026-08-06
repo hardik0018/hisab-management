@@ -3,8 +3,8 @@
 import React from 'react';
 import { Expense, User } from '@/types';
 import ExpenseCard from './ExpenseCard';
-import { formatDisplayDate } from '@/lib/date-utils';
-import { ShoppingBag, ChevronRight } from 'lucide-react';
+import EmptyState from '@/components/EmptyState';
+import { ShoppingBag } from 'lucide-react';
 
 interface ExpenseListProps {
   expenses: Expense[];
@@ -14,78 +14,93 @@ interface ExpenseListProps {
   currentUserId: string;
 }
 
+function labelDate(dateStr: string): string {
+  const today = new Date().toISOString().split('T')[0];
+  const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+  if (dateStr === today) return 'Today';
+  if (dateStr === yesterday) return 'Yesterday';
+  return new Date(dateStr).toLocaleDateString('en-IN', {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
+}
+
+function fmtAmt(amt: number) {
+  return amt % 1 === 0 ? `₹${amt}` : `₹${amt.toFixed(2)}`;
+}
+
 export default function ExpenseList({
   expenses,
   onEditClick,
   onDeleteClick,
   collaborators,
-  currentUserId
+  currentUserId,
 }: ExpenseListProps) {
   if (expenses.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-16 px-4 text-center gap-3">
-        <div className="w-16 h-16 rounded-full bg-muted border border-border flex items-center justify-center text-muted-foreground animate-pulse">
-          <ShoppingBag className="w-8 h-8" />
-        </div>
-        <div className="space-y-1">
-          <h3 className="text-sm font-bold text-foreground">No expenses recorded</h3>
-          <p className="text-xs text-muted-foreground max-w-[200px]">
-            Try adding expenses in the Entry tab or adjusting your active filters.
-          </p>
-        </div>
-      </div>
+      <EmptyState
+        icon={ShoppingBag}
+        title="No expenses here"
+        hint="Try adjusting the date range or filters."
+        color="--violet"
+      />
     );
   }
 
-  // Group expenses by date: "YYYY-MM-DD"
-  const grouped: { [date: string]: Expense[] } = {};
+  // Group by date
+  const grouped: Record<string, Expense[]> = {};
   for (const exp of expenses) {
-    if (!grouped[exp.date]) {
-      grouped[exp.date] = [];
-    }
+    if (!grouped[exp.date]) grouped[exp.date] = [];
     grouped[exp.date].push(exp);
   }
-
-  // Sort dates: latest date first
   const sortedDates = Object.keys(grouped).sort((a, b) => b.localeCompare(a));
 
-  const formatAmount = (amt: number) => {
-    return amt % 1 === 0 ? `₹${amt}` : `₹${amt.toFixed(2)}`;
-  };
-
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-4">
       {sortedDates.map((dateStr) => {
-        const dayExpenses = grouped[dateStr];
-        const dayTotal = dayExpenses.reduce((sum, e) => sum + e.amount, 0);
+        const dayExps = grouped[dateStr];
+        const dayTotal = dayExps.reduce((s, e) => s + (e.type === 'income' ? 0 : e.amount), 0);
 
         return (
-          <div key={dateStr} className="space-y-3">
-            {/* Group Header: Date and Daily Total */}
-            <div className="flex justify-between items-center px-1 sticky top-[68px] bg-background py-2 z-10 border-b border-border">
-              <div className="flex items-center gap-1">
-                <ChevronRight className="w-4 h-4 text-primary shrink-0" />
-                <span className="text-xs font-black text-foreground tracking-wide">
-                  {formatDisplayDate(dateStr)}
-                </span>
-              </div>
-              <span className="text-[10px] font-bold text-primary bg-primary/10 border border-primary/20 px-2 py-0.5 rounded-lg">
-                Total: {formatAmount(dayTotal)}
+          <div key={dateStr} className="flex flex-col gap-2">
+            {/* Date group header */}
+            <div
+              className="flex items-center justify-between px-1 sticky py-1 z-10"
+              style={{ top: '68px', background: 'var(--background)' }}
+            >
+              <span
+                className="text-xs font-bold tracking-wide"
+                style={{ color: 'var(--foreground)' }}
+              >
+                {labelDate(dateStr)}
+              </span>
+              <span
+                className="text-[11px] font-bold px-2 py-0.5 rounded-full"
+                style={{
+                  background: 'var(--accent)',
+                  color: 'var(--accent-foreground)',
+                }}
+              >
+                {fmtAmt(dayTotal)}
               </span>
             </div>
 
-            {/* Expenses in this Group */}
-            <div className="flex flex-col gap-2.5">
-              {dayExpenses.map((exp) => (
-                <ExpenseCard
-                  key={String(exp._id)}
-                  expense={exp}
-                  onEditClick={onEditClick}
-                  onDeleteClick={onDeleteClick}
-                  collaborators={collaborators}
-                  currentUserId={currentUserId}
-                />
-              ))}
+            {/* Cards */}
+            <div className="card-surface overflow-hidden" style={{ padding: 0 }}>
+              <div className="divide-y" style={{ borderColor: 'var(--border)' }}>
+                {dayExps.map((exp) => (
+                  <ExpenseCard
+                    key={String(exp._id)}
+                    expense={exp}
+                    onEditClick={onEditClick}
+                    onDeleteClick={onDeleteClick}
+                    collaborators={collaborators}
+                    currentUserId={currentUserId}
+                  />
+                ))}
+              </div>
             </div>
           </div>
         );
