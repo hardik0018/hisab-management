@@ -20,6 +20,7 @@ import PageHeader from '@/components/PageHeader';
 import AppShell from '@/components/AppShell';
 import SectionTitle from '@/components/SectionTitle';
 import EmptyState from '@/components/EmptyState';
+import Link from 'next/link';
 
 type Tab = 'insurance' | 'warranty';
 
@@ -174,9 +175,9 @@ export default function VaultClient() {
                   </div>
 
                   {p.attachmentUrl && (
-                    <a className="mt-4 flex items-center justify-center gap-2 text-xs font-bold py-2.5 rounded-xl transition-all active:scale-95" style={{ background: 'var(--sky-soft)', color: 'var(--sky)' }} href={p.attachmentUrl} target="_blank" rel="noreferrer">
+                    <Link className="mt-4 flex items-center justify-center gap-2 text-xs font-bold py-2.5 rounded-xl transition-all active:scale-95" style={{ background: 'var(--sky-soft)', color: 'var(--sky)' }} href={p.attachmentUrl} target="_blank" rel="noreferrer">
                       <ExternalLink className="h-4 w-4" /> View Document
-                    </a>
+                    </Link>
                   )}
                 </div>
               ))}
@@ -238,14 +239,14 @@ export default function VaultClient() {
                   {(w.invoiceUrl || w.warrantyCardUrl) && (
                     <div className="mt-4 flex gap-3">
                       {w.invoiceUrl && (
-                        <a className="flex-1 flex items-center justify-center gap-2 text-xs font-bold py-2.5 rounded-xl transition-all active:scale-95" style={{ background: 'var(--teal-soft)', color: 'var(--teal)' }} href={w.invoiceUrl} target="_blank" rel="noreferrer">
+                        <Link className="flex-1 flex items-center justify-center gap-2 text-xs font-bold py-2.5 rounded-xl transition-all active:scale-95" style={{ background: 'var(--teal-soft)', color: 'var(--teal)' }} href={w.invoiceUrl} target="_blank" rel="noreferrer">
                           <ExternalLink className="h-4 w-4" /> Invoice
-                        </a>
+                        </Link>
                       )}
                       {w.warrantyCardUrl && (
-                        <a className="flex-1 flex items-center justify-center gap-2 text-xs font-bold py-2.5 rounded-xl transition-all active:scale-95" style={{ background: 'var(--teal-soft)', color: 'var(--teal)' }} href={w.warrantyCardUrl} target="_blank" rel="noreferrer">
+                        <Link className="flex-1 flex items-center justify-center gap-2 text-xs font-bold py-2.5 rounded-xl transition-all active:scale-95" style={{ background: 'var(--teal-soft)', color: 'var(--teal)' }} href={w.warrantyCardUrl} target="_blank" rel="noreferrer">
                           <ExternalLink className="h-4 w-4" /> Card
-                        </a>
+                        </Link>
                       )}
                     </div>
                   )}
