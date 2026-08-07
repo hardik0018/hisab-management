@@ -1,6 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: 'standalone',
+  output: process.env.VERCEL ? undefined : 'standalone',
   allowedDevOrigins: ['hope-apicultural-cleta.ngrok-free.dev'],
   reactCompiler: true,
   experimental: {
