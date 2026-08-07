@@ -1,6 +1,7 @@
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import BottomNav from '@/components/BottomNav';
+import PullToRefresh from '@/components/PullToRefresh';
 import { ReactNode } from 'react';
 
 interface ProtectedLayoutProps {
@@ -24,7 +25,9 @@ export default async function ProtectedLayout({ children }: ProtectedLayoutProps
       className="min-h-screen"
       style={{ background: 'var(--background)' }}
     >
-      {children}
+      <PullToRefresh>
+        {children}
+      </PullToRefresh>
       <BottomNav />
     </div>
   );

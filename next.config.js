@@ -2,6 +2,12 @@
 const nextConfig = {
   output: 'standalone',
   allowedDevOrigins: ['hope-apicultural-cleta.ngrok-free.dev'],
+  experimental: {
+    staleTimes: {
+      dynamic: 3600, // Cache for 1 hour to prevent refetching on tab switch
+      static: 3600,
+    },
+  },
   images: {
     // Re-enabled optimization: Next.js will now serve WebP/AVIF at correct sizes
     remotePatterns: [
