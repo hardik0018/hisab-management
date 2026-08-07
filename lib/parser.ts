@@ -39,7 +39,14 @@ export interface ParsedHisabDraft {
   source: string;
 }
 
-export type ParsedDraft = ParsedExpenseDraft | ParsedHisabDraft;
+export interface ParsedTransferDraft {
+  kind: "transfer";
+  recipientName: string;
+  amount: number;
+  source: string;
+}
+
+export type ParsedDraft = ParsedExpenseDraft | ParsedHisabDraft | ParsedTransferDraft;
 
 export interface InvalidLine {
   source: string;
@@ -163,6 +170,33 @@ function parseHisabLine(raw: string): ParsedHisabDraft | null {
   };
 }
 
+// ── Transfer line parser ──────────────────────────────────────────────────────
+
+function parseTransferLine(raw: string): ParsedTransferDraft | null {
+  const text = raw.trim();
+  
+  // Match "transfer 500 to Ramesh" or "transfer to Ramesh 500"
+  // Words: transfer, send, sent
+  const TRANSFER_RE_1 = /^(?:transfer|send|sent)\s+to\s+(?<recipient>[a-zA-Z\s]+?)\s+(?:(?:₹|rs\.?|inr\s*)?)(?<amount>\d+(?:[.,]\d+)?)$/i;
+  const TRANSFER_RE_2 = /^(?:transfer|send|sent)\s+(?:(?:₹|rs\.?|inr\s*)?)(?<amount>\d+(?:[.,]\d+)?)\s+to\s+(?<recipient>[a-zA-Z\s]+)$/i;
+  
+  const m = text.match(TRANSFER_RE_1) ?? text.match(TRANSFER_RE_2);
+  if (!m?.groups) return null;
+  
+  const amount = toNumber(m.groups["amount"] ?? "");
+  if (!Number.isFinite(amount) || amount <= 0) return null;
+  
+  const recipientName = m.groups["recipient"].trim();
+  if (recipientName.length < 2) return null;
+  
+  return {
+    kind: "transfer",
+    recipientName: recipientName.charAt(0).toUpperCase() + recipientName.slice(1),
+    amount,
+    source: raw
+  };
+}
+
 // ── Expense line parser ───────────────────────────────────────────────────────
 
 function parseExpenseLine(
@@ -239,6 +273,14 @@ export function parseEntries(
     if (hisab) {
       if (hisab.amount >= largeLimit) hasLarge = true;
       items.push(hisab);
+      continue;
+    }
+
+    // Try internal transfer
+    const transfer = parseTransferLine(chunk);
+    if (transfer) {
+      if (transfer.amount >= largeLimit) hasLarge = true;
+      items.push(transfer);
       continue;
     }
 

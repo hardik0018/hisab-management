@@ -108,7 +108,7 @@ export default function ExpenseCard({
               Income
             </span>
           )}
-          {(expense.type === 'transfer_out' || expense.type === 'transfer_in') && (
+          {(expense.type === 'transfer_out' || expense.type === 'transfer_in' || expense.category === 'Transfers & Settlements') && (
             <span className="inline-flex items-center gap-0.5 text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-full"
               style={{ background: 'var(--sky-soft)', color: 'var(--sky)' }}>
               <LinkIcon className="w-2 h-2" />Transfer

@@ -72,6 +72,7 @@ export default async function ExpensesPage() {
         <QuickAddBar
           mode="expense"
           largeLimit={settings.largeAmountLimit}
+          collaborators={collaborators}
         />
 
         {/* Today's expense list (client component for live refresh) */}

@@ -15,9 +15,10 @@ import {
   TrendingUp,
   Wallet,
   Zap,
+  ArrowRightLeft,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { parseEntries, ParsedDraft, ParsedExpenseDraft, ParsedHisabDraft } from '@/lib/parser';
+import { parseEntries, ParsedDraft, ParsedExpenseDraft, ParsedHisabDraft, ParsedTransferDraft } from '@/lib/parser';
 import { cn } from '@/lib/utils';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -33,6 +34,8 @@ interface QuickAddBarProps {
   mode?: 'expense' | 'hisab';
   /** Large amount threshold (from settings, default 10000) */
   largeLimit?: number;
+  /** Collaborators available for internal transfers */
+  collaborators?: { user_id: string; name: string }[];
   /** Called after a successful save so the parent can refresh its list */
   onSaved?: () => void;
   className?: string;
@@ -51,6 +54,9 @@ const today = () => new Date().toISOString().split('T')[0];
  * e.g. "Chai · ₹20 · Food"  or  "Ramesh · ₹500 · you gave"
  */
 function chipLabel(item: ParsedDraft): string {
+  if (item.kind === 'transfer') {
+    return `Transfer to ${item.recipientName} · ${fmtMoney(item.amount)}`;
+  }
   if (item.kind === 'expense') {
     return `${item.itemName} · ${fmtMoney(item.amount)}${item.category && item.category !== 'General & Other' ? ' · ' + item.category : ''}`;
   }
@@ -62,6 +68,7 @@ function chipLabel(item: ParsedDraft): string {
 export default function QuickAddBar({
   mode = 'expense',
   largeLimit = 10000,
+  collaborators,
   onSaved,
   className,
 }: QuickAddBarProps) {
@@ -102,8 +109,54 @@ export default function QuickAddBar({
       const savedIds: string[] = [];
       const savePromises: Promise<void>[] = [];
 
-      const expenseItems = items.filter((i): i is ParsedExpenseDraft => i.kind === 'expense');
+      const rawExpenseItems = items.filter((i): i is ParsedExpenseDraft => i.kind === 'expense');
       const hisabItems = items.filter((i): i is ParsedHisabDraft => i.kind === 'hisab');
+      const transferItems = items.filter((i): i is ParsedTransferDraft => i.kind === 'transfer');
+
+      // Catch expenses that are actually transfers but failed the strict regex
+      const expenseItems: ParsedExpenseDraft[] = [];
+      for (const ex of rawExpenseItems) {
+        const lowerName = ex.itemName.toLowerCase();
+        if (lowerName.startsWith('transfer to ')) {
+          transferItems.push({
+            kind: 'transfer',
+            recipientName: ex.itemName.substring('transfer to '.length).trim(),
+            amount: ex.amount,
+            source: ex.source
+          });
+        } else {
+          expenseItems.push(ex);
+        }
+      }
+
+      // ── Save internal transfers ─────────────────────────────────────────────
+      for (const t of transferItems) {
+        const matchingCollab = collaborators?.find(c => c.name.toLowerCase() === t.recipientName.toLowerCase());
+        if (!matchingCollab) {
+          toast.error(`Collaborator '${t.recipientName}' not found in group.`);
+          setSaving(false);
+          return;
+        }
+        
+        savePromises.push(
+          fetch('/api/expenses', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              expenses: [{
+                date: today(),
+                itemName: `Transfer to ${matchingCollab.name}`,
+                amount: t.amount,
+                note: '',
+                type: 'transfer',
+                transfer_to_user_id: matchingCollab.user_id,
+              }]
+            }),
+          }).then(async (res) => {
+            if (!res.ok) throw new Error(`Failed to save transfer to ${t.recipientName}`);
+          })
+        );
+      }
 
       // ── Save expenses ────────────────────────────────────────────────────
       if (expenseItems.length > 0) {
@@ -232,23 +285,22 @@ export default function QuickAddBar({
     [handleSubmit]
   );
 
-  // ── Repeat chip tap ───────────────────────────────────────────────────────
+  // ── Repeat / Collaborator chip tap ────────────────────────────────────────
 
   const handleRepeatTap = useCallback(
-    async (item: FrequentItem) => {
-      const draft: ParsedExpenseDraft = {
-        kind: 'expense',
-        itemName: item.itemName,
-        amount: item.amount,
-        note: '',
-        category: item.category,
-        type: 'expense',
-        isLarge: item.amount >= largeLimit,
-        source: `${item.itemName} ${item.amount}`,
-      };
-      await save([draft], draft.source);
+    (item: FrequentItem) => {
+      setValue(`${item.itemName} ${item.amount}`);
+      inputRef.current?.focus();
     },
-    [save, largeLimit]
+    []
+  );
+
+  const handleCollaboratorTap = useCallback(
+    (name: string) => {
+      setValue(`transfer to ${name} `);
+      inputRef.current?.focus();
+    },
+    []
   );
 
   // ── Render ────────────────────────────────────────────────────────────────
@@ -346,12 +398,12 @@ export default function QuickAddBar({
       )}
 
       {/* ── Repeat chips (expense mode only) ──────────────────────────── */}
-      {mode === 'expense' && frequent.length > 0 && !value.trim() && (
+      {mode === 'expense' && (!value.trim() && (frequent.length > 0 || (collaborators && collaborators.length > 0))) && (
         <div className="overflow-x-auto no-scrollbar -mx-1 px-1">
           <div className="flex gap-2 w-max pb-0.5">
             {frequent.map((item, i) => (
               <button
-                key={i}
+                key={`freq-${i}`}
                 onClick={() => handleRepeatTap(item)}
                 disabled={saving}
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap active:scale-95 transition-all"
@@ -363,6 +415,22 @@ export default function QuickAddBar({
               >
                 <ShoppingBag className="w-3 h-3" />
                 {item.itemName} · {fmtMoney(item.amount)}
+              </button>
+            ))}
+            {collaborators?.map((c, i) => (
+              <button
+                key={`collab-${i}`}
+                onClick={() => handleCollaboratorTap(c.name)}
+                disabled={saving}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap active:scale-95 transition-all"
+                style={{
+                  background: 'rgba(59, 130, 246, 0.15)', // Light blue tint
+                  color: 'rgb(37, 99, 235)',
+                  border: '1px solid var(--border)',
+                }}
+              >
+                <ArrowRightLeft className="w-3 h-3" />
+                Transfer to {c.name}
               </button>
             ))}
           </div>
