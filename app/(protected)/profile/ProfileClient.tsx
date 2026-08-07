@@ -35,11 +35,16 @@ import { secureFetch } from '@/lib/api-utils';
 import { User, CollaborationRequest, CollaborationData } from '@/types';
 import PushNotificationManager from '@/components/settings/PushNotificationManager';
 import PageHeader from '@/components/PageHeader';
+import { formatDisplayDate, formatDisplayTime } from '@/lib/date-utils';
+import ClearAllData from '@/components/settings/ClearAllData';
+import { Loader2 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import AppShell from '@/components/AppShell';
 import SectionTitle from '@/components/SectionTitle';
 
 interface ProfileClientProps {
   initialCollaborationData: CollaborationData;
+  initialSettings: any;
 }
 
 interface RemoveConfirm {
@@ -47,7 +52,7 @@ interface RemoveConfirm {
   name: string;
 }
 
-export default function ProfileClient({ initialCollaborationData }: ProfileClientProps) {
+export default function ProfileClient({ initialCollaborationData, initialSettings }: ProfileClientProps) {
   const router = useRouter();
   const { data: session, status } = useSession();
   const user = session?.user;
@@ -62,9 +67,16 @@ export default function ProfileClient({ initialCollaborationData }: ProfileClien
   const [isInviting, setIsInviting] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
 
-  // Added based on requirements
-  const [currency, setCurrency] = useState('INR');
-  const [largeLimit, setLargeLimit] = useState('5000');
+  // Settings State
+  const [settings, setSettings] = useState<any>(initialSettings);
+  const [largeLimit, setLargeLimit] = useState<string>(String(initialSettings?.largeAmountLimit || '5000'));
+  const [reminderEnabled, setReminderEnabled] = useState<boolean>(initialSettings?.backupReminder?.enabled || false);
+  const [isUpdating, setIsUpdating] = useState<boolean>(false);
+
+  // Export States
+  const [exportScope, setExportScope] = useState<'month' | 'range' | 'all'>('month');
+  const [startDate, setStartDate] = useState<string>('');
+  const [endDate, setEndDate] = useState<string>('');
 
   const fetchCollaborators = async () => {
     try {
@@ -136,15 +148,89 @@ export default function ProfileClient({ initialCollaborationData }: ProfileClien
     }
   };
 
-  const handleSaveSettings = () => {
-    toast.success('Settings saved successfully');
+  const fetchSettings = async () => {
+    try {
+      const res = await secureFetch<{ settings: any }>('/api/settings');
+      setSettings(res.settings);
+      setLargeLimit(String(res.settings.largeAmountLimit));
+      setReminderEnabled(res.settings.backupReminder.enabled);
+    } catch (err) {
+      console.error(err);
+    }
   };
 
-  const handleExport = (type: string) => {
-    toast.success(`Exporting ${type}...`);
+  const handleSaveSettings = async () => {
+    const limit = parseInt(largeLimit, 10);
+    if (isNaN(limit) || limit <= 0) {
+      toast.error('Large amount limit must be a positive number');
+      return;
+    }
+
+    setIsUpdating(true);
+    try {
+      const data = await secureFetch<{ settings: any }>('/api/settings', {
+        method: 'PATCH',
+        body: JSON.stringify({
+          largeAmountLimit: limit,
+          backupReminder: {
+            enabled: reminderEnabled,
+            frequency: 'monthly',
+            display: 'inside-app'
+          }
+        }),
+      });
+
+      setSettings(data.settings);
+      toast.success('Settings updated successfully!');
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to save settings');
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const handleExport = (format: string) => {
+    const params = new URLSearchParams();
+
+    if (exportScope === 'month') {
+      const now = new Date();
+      const yyyy = now.getFullYear();
+      const mm = String(now.getMonth() + 1).padStart(2, '0');
+      params.append('month', `${yyyy}-${mm}`);
+    } else if (exportScope === 'all') {
+      params.append('month', 'all');
+    } else if (exportScope === 'range') {
+      if (!startDate || !endDate) {
+        toast.error('Please select both Start Date and End Date');
+        return;
+      }
+      if (startDate > endDate) {
+        toast.error('Start Date cannot be after End Date');
+        return;
+      }
+      params.append('startDate', startDate);
+      params.append('endDate', endDate);
+    }
+
+    window.location.href = `/api/export/${format.toLowerCase()}?${params.toString()}`;
+    toast.success(`Generating ${format.toUpperCase()} export...`);
+
+    setTimeout(() => {
+      fetchSettings();
+    }, 1500);
+  };
+
+  const getBackupTime = () => {
+    if (!settings || !settings.lastBackupAt) return 'Never';
+    const parts = settings.lastBackupAt.split('T');
+    const datePart = formatDisplayDate(parts[0]);
+    const timePart = parts.length > 1 ? formatDisplayTime(settings.lastBackupAt) : '';
+    return `${datePart} ${timePart}`.trim();
   };
 
   const handleBackup = () => {
+    // A manual backup trigger could be implemented here
     toast.success('Backup completed successfully');
   };
 
@@ -287,19 +373,10 @@ export default function ProfileClient({ initialCollaborationData }: ProfileClien
 
         {/* Settings */}
         <section>
-          <SectionTitle>Settings</SectionTitle>
-          <div className="card-surface p-4 space-y-4">
+          <SectionTitle>Preferences</SectionTitle>
+          <div className="card-surface p-5 space-y-5">
             <div className="space-y-2">
-               <Label style={{ color: 'var(--foreground)' }}>Currency</Label>
-               <Input 
-                 value={currency} 
-                 onChange={(e) => setCurrency(e.target.value)}
-                 className="h-12 bg-transparent"
-                 style={{ borderColor: 'var(--border)', color: 'var(--foreground)' }}
-               />
-            </div>
-            <div className="space-y-2">
-               <Label style={{ color: 'var(--foreground)' }}>Large Amount Limit</Label>
+               <Label style={{ color: 'var(--foreground)' }}>Large Amount Warning Limit (₹)</Label>
                <Input 
                  type="number"
                  value={largeLimit} 
@@ -308,8 +385,29 @@ export default function ProfileClient({ initialCollaborationData }: ProfileClien
                  style={{ borderColor: 'var(--border)', color: 'var(--foreground)' }}
                />
             </div>
-            <Button onClick={handleSaveSettings} className="w-full h-12 font-bold active:scale-95 transition-all" style={{ background: 'var(--primary)', color: 'white' }}>
-               Save Settings
+            
+            <div className="flex items-center justify-between gap-4 py-1">
+              <div className="space-y-0.5">
+                <Label htmlFor="reminder-toggle" className="text-sm font-semibold cursor-pointer" style={{ color: 'var(--foreground)' }}>
+                  In-App Backup Reminders
+                </Label>
+                <p className="text-xs" style={{ color: 'var(--muted-foreground)' }}>
+                  Trigger alerts when backup age exceeds 30 days.
+                </p>
+              </div>
+              <input
+                id="reminder-toggle"
+                type="checkbox"
+                checked={reminderEnabled}
+                onChange={(e) => setReminderEnabled(e.target.checked)}
+                className="w-5 h-5 rounded-lg border-input bg-background focus:ring-ring cursor-pointer accent-primary"
+                style={{ accentColor: 'var(--primary)' }}
+              />
+            </div>
+
+            <Button disabled={isUpdating} onClick={handleSaveSettings} className="w-full h-12 font-bold active:scale-95 transition-all" style={{ background: 'var(--primary)', color: 'white' }}>
+               {isUpdating ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+               {isUpdating ? 'Updating...' : 'Save Preferences'}
             </Button>
           </div>
         </section>
@@ -324,6 +422,56 @@ export default function ProfileClient({ initialCollaborationData }: ProfileClien
         <section>
           <SectionTitle>Exports</SectionTitle>
           <div className="card-surface overflow-hidden divide-y" style={{ borderColor: 'var(--border)' }}>
+            
+            <div className="p-4 space-y-4">
+              <div className="space-y-2">
+                <span className="text-[10px] font-bold uppercase tracking-wider block" style={{ color: 'var(--muted-foreground)' }}>Select Scope</span>
+                <div className="grid grid-cols-3 gap-2">
+                  {['month', 'range', 'all'].map((scope) => (
+                    <button
+                      key={scope}
+                      type="button"
+                      onClick={() => setExportScope(scope as any)}
+                      className={cn(
+                        "py-2 px-1 rounded-xl border text-[11px] font-bold transition-all",
+                        exportScope === scope
+                          ? "bg-primary/10 border-primary/30 text-primary"
+                          : "bg-muted/50 border-border hover:border-muted-foreground/60"
+                      )}
+                      style={exportScope === scope ? { background: 'var(--primary-soft)', borderColor: 'var(--primary)', color: 'var(--primary)' } : { color: 'var(--muted-foreground)' }}
+                    >
+                      {scope === 'month' ? 'Current Month' : scope === 'range' ? 'Custom Range' : 'All Data'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {exportScope === 'range' && (
+                <div className="grid grid-cols-2 gap-3.5 p-3.5 rounded-2xl" style={{ background: 'var(--surface-muted)' }}>
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-bold uppercase" style={{ color: 'var(--muted-foreground)' }}>Start Date</label>
+                    <Input
+                      type="date"
+                      value={startDate}
+                      onChange={(e) => setStartDate(e.target.value)}
+                      className="bg-transparent text-xs rounded-xl h-9"
+                      style={{ borderColor: 'var(--border)', color: 'var(--foreground)' }}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-bold uppercase" style={{ color: 'var(--muted-foreground)' }}>End Date</label>
+                    <Input
+                      type="date"
+                      value={endDate}
+                      onChange={(e) => setEndDate(e.target.value)}
+                      className="bg-transparent text-xs rounded-xl h-9"
+                      style={{ borderColor: 'var(--border)', color: 'var(--foreground)' }}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
             <button onClick={() => handleExport('CSV')} className="flex items-center gap-3 px-4 py-3 w-full active:scale-95 transition-all group">
               <div className="tile w-10 h-10 shrink-0" style={{ background: 'var(--teal-soft)', color: 'var(--teal)' }}>
                 <FileText className="w-5 h-5" />
@@ -351,19 +499,24 @@ export default function ProfileClient({ initialCollaborationData }: ProfileClien
         {/* Backup */}
         <section>
           <SectionTitle>Data & Backup</SectionTitle>
-          <div className="card-surface p-4 flex items-center justify-between gap-4">
-             <div className="flex items-center gap-3 min-w-0">
-                <div className="tile w-10 h-10 shrink-0" style={{ background: 'var(--sky-soft)', color: 'var(--sky)' }}>
-                   <DatabaseBackup className="w-5 h-5" />
-                </div>
-                <div className="min-w-0">
-                   <p className="text-sm font-bold truncate" style={{ color: 'var(--foreground)' }}>Manual Backup</p>
-                   <p className="text-xs truncate" style={{ color: 'var(--muted-foreground)' }}>Last backup: Today</p>
-                </div>
+          <div className="card-surface p-4 flex flex-col gap-4">
+             <div className="flex items-center justify-between gap-4">
+                 <div className="flex items-center gap-3 min-w-0">
+                    <div className="tile w-10 h-10 shrink-0" style={{ background: 'var(--sky-soft)', color: 'var(--sky)' }}>
+                       <DatabaseBackup className="w-5 h-5" />
+                    </div>
+                    <div className="min-w-0">
+                       <p className="text-sm font-bold truncate" style={{ color: 'var(--foreground)' }}>Manual Backup</p>
+                       <p className="text-xs truncate" style={{ color: 'var(--muted-foreground)' }}>Last backup: {getBackupTime()}</p>
+                    </div>
+                 </div>
+                 <Button onClick={handleBackup} variant="outline" size="sm" className="shrink-0 h-9 font-bold active:scale-95 transition-all bg-transparent" style={{ borderColor: 'var(--border)', color: 'var(--foreground)' }}>
+                    Backup Now
+                 </Button>
              </div>
-             <Button onClick={handleBackup} variant="outline" size="sm" className="shrink-0 h-9 font-bold active:scale-95 transition-all bg-transparent" style={{ borderColor: 'var(--border)', color: 'var(--foreground)' }}>
-                Backup Now
-             </Button>
+             <div className="border-t pt-4" style={{ borderColor: 'var(--border)' }}>
+                <ClearAllData />
+             </div>
           </div>
         </section>
 

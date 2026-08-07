@@ -12,7 +12,6 @@ const EXPENSE_TABS = [
   { label: 'Auto', href: '/expenses/recurring' },
   { label: 'Report', href: '/expenses/summary' },
   { label: 'Tax', href: '/expenses/tax' },
-  { label: 'Settings', href: '/expenses/settings' },
 ];
 
 interface PageProps {

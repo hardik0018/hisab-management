@@ -339,6 +339,17 @@ export default function HisabClient({
       )?.ignored
     : false;
 
+  const selectedPersonStats = selectedPerson
+    ? people.find(
+        (p) =>
+          p.name === selectedPerson.name && p.mobile === selectedPerson.mobile,
+      )
+    : null;
+
+  const personNetBalance = selectedPersonStats
+    ? selectedPersonStats.debit - selectedPersonStats.credit
+    : 0;
+
   return (
     <AppShell>
       <PageHeader title="Hisab" subtitle="Your personal ledger" />
@@ -393,7 +404,7 @@ export default function HisabClient({
               />
             ) : (
               <div
-                className="card-surface p-0 flex flex-col gap-0 divide-y"
+                className="card-surface p-0 flex flex-col gap-0 divide-y overflow-hidden"
                 style={{ borderColor: "var(--border)" }}
               >
                 {activePeople.map((p, idx) => {
@@ -405,13 +416,12 @@ export default function HisabClient({
                     <div
                       key={idx}
                       onClick={() => {
-                        setSelectedPerson({ name: p.name, mobile: p.mobile });
-                        setShowLedgerModal(true);
+                        openLedger({ name: p.name, mobile: p.mobile });
                       }}
                       className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-black/5 transition-colors"
                     >
                       <div
-                        className="tile w-10 h-10 shrink-0"
+                        className="tile w-9 h-9 text-sm shrink-0"
                         style={{
                           background: isReceivable
                             ? "var(--success-soft)"
@@ -443,30 +453,32 @@ export default function HisabClient({
                             e.stopPropagation();
                             setQuickEntryPerson({ person: p, type: "credit" });
                           }}
-                          className="px-3 h-8 rounded-full text-xs font-bold active:scale-95 transition-all"
+                          className="w-8 h-8 sm:w-auto sm:px-3 sm:h-8 rounded-full text-xs font-bold active:scale-95 transition-all flex items-center justify-center gap-1 shrink-0"
                           style={{
                             background: "var(--success-soft)",
                             color: "var(--success)",
                           }}
                         >
-                          + Got
+                          <Plus className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
+                          <span className="hidden sm:inline">Got</span>
                         </button>
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
                             setQuickEntryPerson({ person: p, type: "debit" });
                           }}
-                          className="px-3 h-8 rounded-full text-xs font-bold active:scale-95 transition-all"
+                          className="w-8 h-8 sm:w-auto sm:px-3 sm:h-8 rounded-full text-xs font-bold active:scale-95 transition-all flex items-center justify-center gap-1 shrink-0"
                           style={{
                             background: "var(--danger-soft)",
                             color: "var(--danger)",
                           }}
                         >
-                          + Gave
+                          <Plus className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
+                          <span className="hidden sm:inline">Gave</span>
                         </button>
                         <div className="text-right ml-2 min-w-[3rem]">
                           <p
-                            className="font-bold text-base leading-none mb-1"
+                            className="font-bold text-sm leading-none mb-1"
                             style={{
                               color: isReceivable
                                 ? "var(--success)"
@@ -523,23 +535,19 @@ export default function HisabClient({
                     className="overflow-hidden"
                   >
                     <div
-                      className="card-surface p-0 flex flex-col gap-0 divide-y mt-2"
+                      className="card-surface p-0 flex flex-col gap-0 divide-y mt-2 overflow-hidden"
                       style={{ borderColor: "var(--border)" }}
                     >
                       {settledPeople.map((p, idx) => (
                         <div
                           key={idx}
                           onClick={() => {
-                            setSelectedPerson({
-                              name: p.name,
-                              mobile: p.mobile,
-                            });
-                            setShowLedgerModal(true);
+                            openLedger({ name: p.name, mobile: p.mobile });
                           }}
                           className="flex items-center gap-3 px-4 py-3 cursor-pointer opacity-70 hover:opacity-100 transition-colors"
                         >
                           <div
-                            className="tile w-10 h-10 shrink-0"
+                            className="tile w-9 h-9 text-sm shrink-0"
                             style={{
                               background: "var(--secondary)",
                               color: "var(--muted-foreground)",
@@ -623,7 +631,7 @@ export default function HisabClient({
                     className="overflow-hidden"
                   >
                     <div
-                      className="card-surface p-0 flex flex-col gap-0 divide-y mt-2"
+                      className="card-surface p-0 flex flex-col gap-0 divide-y mt-2 overflow-hidden"
                       style={{ borderColor: "var(--border)" }}
                     >
                       {ignoredPeople.map((p, idx) => {
@@ -633,16 +641,12 @@ export default function HisabClient({
                           <div
                             key={idx}
                             onClick={() => {
-                              setSelectedPerson({
-                                name: p.name,
-                                mobile: p.mobile,
-                              });
-                              setShowLedgerModal(true);
+                              openLedger({ name: p.name, mobile: p.mobile });
                             }}
                             className="flex items-center gap-3 px-4 py-3 cursor-pointer opacity-70 hover:opacity-100 transition-colors"
                           >
                             <div
-                              className="tile w-10 h-10 shrink-0"
+                              className="tile w-9 h-9 text-sm shrink-0"
                               style={{
                                 background: "var(--warning-soft)",
                                 color: "var(--warning)",
@@ -772,10 +776,10 @@ export default function HisabClient({
               style={{
                 background: isPersonIgnored
                   ? "var(--warning)"
-                  : netBalance > 0
-                    ? "var(--danger)"
-                    : netBalance < 0
-                      ? "var(--success)"
+                  : personNetBalance > 0
+                    ? "var(--success)"
+                    : personNetBalance < 0
+                      ? "var(--danger)"
                       : "var(--muted-foreground)",
                 color: "white",
               }}
@@ -838,15 +842,15 @@ export default function HisabClient({
                 </p>
                 <div className="flex items-baseline gap-1.5 sm:justify-end">
                   <p className="text-2xl sm:text-3xl font-black">
-                    ₹{Math.abs(netBalance).toLocaleString()}
+                    ₹{Math.abs(personNetBalance).toLocaleString()}
                   </p>
                   <span className="text-[9px] font-black uppercase tracking-wider bg-white/10 px-2 py-0.5 rounded-full">
                     {isPersonIgnored
                       ? "Ignored"
-                      : netBalance > 0
-                        ? "You Give"
-                        : netBalance < 0
-                          ? "You Get"
+                      : personNetBalance > 0
+                        ? "You Get"
+                        : personNetBalance < 0
+                          ? "You Give"
                           : "Settled"}
                   </span>
                 </div>

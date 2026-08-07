@@ -3,6 +3,7 @@ import { getCollaborationData } from '@/lib/data-fetching';
 import ProfileClient from './ProfileClient';
 import { redirect } from 'next/navigation';
 import { getAuthenticatedUser } from '@/lib/auth';
+import { getSystemSettings } from '@/models/Settings';
 
 /**
  * SSR Page for Profile and Collaboration management.
@@ -24,5 +25,8 @@ export default async function ProfilePage() {
       return <div>Loading...</div>; // Or a proper error state
   }
 
-  return <ProfileClient initialCollaborationData={collaborationData} />;
+  const spaceId = user.space_id || user.user_id;
+  const initialSettings = await getSystemSettings(spaceId);
+
+  return <ProfileClient initialCollaborationData={collaborationData} initialSettings={initialSettings} />;
 }

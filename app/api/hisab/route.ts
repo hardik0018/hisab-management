@@ -49,11 +49,24 @@ export async function POST(request: NextRequest) {
     const spaceId = user.space_id || user.user_id;
     const personMobile = mobile ? String(mobile) : '';
 
+    const m = mobile ? String(mobile).trim() : '';
+    let mobileQuery: any;
+    if (m) {
+      const num = Number(m);
+      if (!isNaN(num)) {
+        mobileQuery = { $in: [m, num] };
+      } else {
+        mobileQuery = m;
+      }
+    } else {
+      mobileQuery = { $in: ['', null] };
+    }
+
     // Check if this person is currently ignored
     const existingIgnored = await db.collection('hisab').findOne({
       space_id: spaceId,
       name,
-      mobile: personMobile,
+      mobile: mobileQuery,
       ignored: true
     });
 

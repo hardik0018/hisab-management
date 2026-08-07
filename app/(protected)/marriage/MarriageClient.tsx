@@ -209,29 +209,31 @@ export default function MarriageClient({ initialRecords, initialTotalGiven, init
                className={`flex-1 h-8 rounded-lg text-xs font-bold transition-all ${recordType === 'received' ? 'bg-[var(--success-soft)] text-[var(--success)]' : 'text-[var(--muted-foreground)]'}`}
              >Received</button>
           </div>
-          <div className="flex flex-col sm:flex-row gap-2">
+          <div className="flex flex-col sm:flex-row gap-3">
              <input 
                 placeholder="Name (e.g. Mehta Family)"
                 value={formData.name}
                 onChange={(e) => setFormData({...formData, name: e.target.value})}
                 style={{ background: 'var(--secondary)', border: '1px solid var(--border)', color: 'var(--foreground)' }} 
-                className="h-10 px-3 rounded-xl text-sm outline-none flex-1"
+                className="h-12 px-4 rounded-xl text-sm outline-none w-full sm:flex-1"
              />
-             <input 
-                placeholder="City"
-                value={formData.city}
-                onChange={(e) => setFormData({...formData, city: e.target.value})}
-                style={{ background: 'var(--secondary)', border: '1px solid var(--border)', color: 'var(--foreground)' }} 
-                className="h-10 px-3 rounded-xl text-sm outline-none w-full sm:w-28"
-             />
-             <input 
-                type="number"
-                placeholder="Amount"
-                value={formData.amount}
-                onChange={(e) => setFormData({...formData, amount: e.target.value})}
-                style={{ background: 'var(--secondary)', border: '1px solid var(--border)', color: 'var(--foreground)' }} 
-                className="h-10 px-3 rounded-xl text-sm outline-none w-full sm:w-28"
-             />
+             <div className="flex gap-3 w-full sm:w-auto">
+               <input 
+                  placeholder="City"
+                  value={formData.city}
+                  onChange={(e) => setFormData({...formData, city: e.target.value})}
+                  style={{ background: 'var(--secondary)', border: '1px solid var(--border)', color: 'var(--foreground)' }} 
+                  className="h-12 px-4 rounded-xl text-sm outline-none w-1/2 sm:w-32"
+               />
+               <input 
+                  type="number"
+                  placeholder="Amount"
+                  value={formData.amount}
+                  onChange={(e) => setFormData({...formData, amount: e.target.value})}
+                  style={{ background: 'var(--secondary)', border: '1px solid var(--border)', color: 'var(--foreground)' }} 
+                  className="h-12 px-4 rounded-xl text-sm outline-none w-1/2 sm:w-32"
+               />
+             </div>
           </div>
           {recordType === 'given' && (
             <label className="flex items-center gap-2 px-1">

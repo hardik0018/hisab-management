@@ -21,14 +21,25 @@ export async function POST(request: NextRequest) {
     const spaceId = user.space_id || user.user_id;
     const isIgnored = !!ignored;
 
-    const personMobile = mobile ? String(mobile) : '';
+    const m = mobile ? String(mobile).trim() : '';
+    let mobileQuery: any;
+    if (m) {
+      const num = Number(m);
+      if (!isNaN(num)) {
+        mobileQuery = { $in: [m, num] };
+      } else {
+        mobileQuery = m;
+      }
+    } else {
+      mobileQuery = { $in: ['', null] };
+    }
 
     // Update all matching hisab records to the new ignore state
     await db.collection('hisab').updateMany(
       {
         space_id: spaceId,
         name: name,
-        mobile: personMobile,
+        mobile: mobileQuery,
       },
       {
         $set: { ignored: isIgnored }
@@ -41,7 +52,7 @@ export async function POST(request: NextRequest) {
       const records = await db.collection('hisab').find({
         space_id: spaceId,
         name: name,
-        mobile: personMobile,
+        mobile: mobileQuery,
       }).toArray();
       
       const hisabIds = records.map(r => r.hisab_id);
@@ -57,7 +68,7 @@ export async function POST(request: NextRequest) {
       const records = await db.collection('hisab').find({
         space_id: spaceId,
         name: name,
-        mobile: personMobile,
+        mobile: mobileQuery,
         log_as_expense: true
       }).toArray();
 

@@ -22,9 +22,22 @@ export async function GET(request: NextRequest) {
     const db = await getDb();
     const spaceId = user.space_id || user.user_id;
 
+    const m = mobile ? String(mobile).trim() : '';
+    let mobileQuery: any;
+    if (m) {
+      const num = Number(m);
+      if (!isNaN(num)) {
+        mobileQuery = { $in: [m, num] };
+      } else {
+        mobileQuery = m;
+      }
+    } else {
+      mobileQuery = { $in: ['', null] };
+    }
+
     const records = await db
       .collection('hisab')
-      .find({ space_id: spaceId, name, mobile }, { projection: { _id: 0 } })
+      .find({ space_id: spaceId, name, mobile: mobileQuery }, { projection: { _id: 0 } })
       .sort({ date: -1, created_at: -1 })
       .toArray() as unknown as HisabRecord[];
 
