@@ -2,6 +2,11 @@
 const nextConfig = {
   output: 'standalone',
   allowedDevOrigins: ['hope-apicultural-cleta.ngrok-free.dev'],
+  reactCompiler: true,
+  experimental: {
+    turbopackRustReactCompiler: true,
+    useOffline: true,
+  },
   images: {
     // Re-enabled optimization: Next.js will now serve WebP/AVIF at correct sizes
     remotePatterns: [
