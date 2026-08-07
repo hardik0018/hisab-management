@@ -2,7 +2,7 @@ export const dynamic = 'force-dynamic';
 
 import { NextRequest } from 'next/server';
 import { getDb } from '@/lib/db';
-import { validateExpense } from '@/models/Expense';
+import { expenseSchema } from '@/models/Expense';
 import { getAuthenticatedUser } from '@/lib/auth';
 import { Expense } from '@/types';
 import { categorizeExpense } from '@/lib/category-engine';
@@ -63,7 +63,7 @@ export async function POST(request: NextRequest) {
         note: exp.note || '',
         category: categorizeExpense(exp.itemName, exp.note, Number(exp.amount), exp.type, exp.category),
         currency: 'INR',
-        type: exp.type as any, // handled below
+        type: exp.type, // handled below
       };
 
       if (exp.type === 'transfer') {
@@ -89,9 +89,9 @@ export async function POST(request: NextRequest) {
           associatedType: 'transfer',
         };
         
-        const outValidation = validateExpense(transferOut);
-        const inValidation = validateExpense(transferIn);
-        if (!outValidation.isValid || !inValidation.isValid) {
+        const outValidation = expenseSchema.safeParse(transferOut);
+        const inValidation = expenseSchema.safeParse(transferIn);
+        if (!outValidation.success || !inValidation.success) {
           return Response.json({ error: 'Validation Error', message: 'Invalid transfer data' }, { status: 400 });
         }
         
@@ -102,10 +102,10 @@ export async function POST(request: NextRequest) {
 
       expenseDoc.type = exp.type === 'income' ? 'income' : 'expense';
 
-      const validationResult = validateExpense(expenseDoc);
-      if (!validationResult.isValid) {
+      const validationResult = expenseSchema.safeParse(expenseDoc);
+      if (!validationResult.success) {
         return Response.json(
-          { error: 'Validation Error', message: validationResult.reason || 'Invalid expense data' },
+          { error: 'Validation Error', message: validationResult.error.issues[0]?.message || 'Invalid expense data' },
           { status: 400 }
         );
       }

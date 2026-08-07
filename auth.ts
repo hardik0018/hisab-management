@@ -40,7 +40,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       const db = client.db(process.env.DB_NAME || 'hisab_db');
       await db.collection('users').updateOne(
         { _id: new ObjectId(user.id) },
-        { $set: { user_id: userId } }
+        { $set: { user_id: userId, space_id: userId } }
       );
     },
   },

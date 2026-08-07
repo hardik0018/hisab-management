@@ -4,7 +4,7 @@ import { NextRequest } from 'next/server';
 import { getDb } from '@/lib/db';
 import { ObjectId } from 'mongodb';
 import { getAuthenticatedUser } from '@/lib/auth';
-import { validateExpense } from '@/models/Expense';
+import { expenseSchema } from '@/models/Expense';
 import { Expense } from '@/types';
 import { categorizeExpense } from '@/lib/category-engine';
 import { revalidatePath } from 'next/cache';
@@ -65,10 +65,10 @@ export async function PATCH(
       ),
     };
 
-    const validation = validateExpense(updatedDoc);
-    if (!validation.isValid) {
+    const validation = expenseSchema.safeParse(updatedDoc);
+    if (!validation.success) {
       return Response.json(
-        { error: 'Validation Error', message: validation.reason || 'Invalid expense data' },
+        { error: 'Validation Error', message: validation.error.issues[0]?.message || 'Invalid expense data' },
         { status: 400 }
       );
     }

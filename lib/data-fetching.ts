@@ -35,9 +35,6 @@ export interface HisabGroupedData {
   hasMore: boolean;
 }
 
-/**
- * Fetches and groups hisab records for the authenticated user's space.
- */
 export async function getHisabRecords(options: {
   page?: number;
   limit?: number;
@@ -53,57 +50,92 @@ export async function getHisabRecords(options: {
   const limit = options.limit || 50;
   const skip = (page - 1) * limit;
 
-  // We fetch all records to group them properly, as grouping paginated raw data is incorrect.
-  // In a very large app, this aggregation should happen directly in MongoDB using $group.
-  const records = await db
-    .collection('hisab')
-    .find({ space_id: spaceId }, { projection: { _id: 0 } })
-    .sort({ date: -1, created_at: -1 })
-    .toArray() as unknown as HisabRecord[];
-
-  const peopleGroups: Record<string, HisabGroupedPerson> = {};
-  for (const r of records) {
-    const key = `${r.name}_${r.mobile || ''}`;
-    if (!peopleGroups[key]) {
-      peopleGroups[key] = { name: r.name, mobile: r.mobile || '', debit: 0, credit: 0, latest: new Date(r.date), ignored: !!r.ignored };
-    }
-    if (r.type === 'debit') peopleGroups[key].debit += (r.amount || 0);
-    else if (r.type === 'credit') peopleGroups[key].credit += (r.amount || 0);
-    
-    if (r.ignored !== undefined) {
-      peopleGroups[key].ignored = r.ignored;
-    }
-  }
-
-  let peopleList = Object.values(peopleGroups);
-  
+  // Build match stage
+  const matchStage: any = { space_id: spaceId };
   if (options.search) {
-    const searchLower = options.search.toLowerCase();
-    peopleList = peopleList.filter(p => p.name.toLowerCase().includes(searchLower) || p.mobile.includes(searchLower));
+    const escapedSearch = escapeRegExp(options.search);
+    matchStage.$or = [
+      { name: { $regex: escapedSearch, $options: 'i' } },
+      { mobile: { $regex: escapedSearch, $options: 'i' } }
+    ];
   }
 
-  // Sort by latest date descending
-  peopleList.sort((a, b) => b.latest.getTime() - a.latest.getTime());
+  // Aggregation pipeline using $facet for pagination and totals
+  const pipeline = [
+    { $match: matchStage },
+    // Sort before grouping so $first captures the newest record's values
+    { $sort: { date: -1, created_at: -1 } },
+    {
+      $group: {
+        _id: { 
+          name: { $trim: { input: "$name" } }, 
+          mobile: { $trim: { input: { $toString: { $ifNull: ["$mobile", ""] } } } } 
+        },
+        name: { $first: { $trim: { input: "$name" } } },
+        mobile: { $first: { $trim: { input: { $toString: { $ifNull: ["$mobile", ""] } } } } },
+        debit: { $sum: { $cond: [{ $eq: ["$type", "debit"] }, "$amount", 0] } },
+        credit: { $sum: { $cond: [{ $eq: ["$type", "credit"] }, "$amount", 0] } },
+        latest: { $first: "$date" },
+        ignored: { $first: { $ifNull: ["$ignored", false] } }
+      }
+    },
+    {
+      $facet: {
+        metadata: [
+          {
+            $group: {
+              _id: null,
+              totalDebit: {
+                $sum: {
+                  $cond: [
+                    { $eq: ["$ignored", false] },
+                    { $max: [0, { $subtract: ["$debit", "$credit"] }] },
+                    0
+                  ]
+                }
+              },
+              totalCredit: {
+                $sum: {
+                  $cond: [
+                    { $eq: ["$ignored", false] },
+                    { $max: [0, { $subtract: ["$credit", "$debit"] }] },
+                    0
+                  ]
+                }
+              },
+              totalCount: { $sum: 1 }
+            }
+          }
+        ],
+        data: [
+          { $sort: { latest: -1 } },
+          { $skip: skip },
+          { $limit: limit }
+        ]
+      }
+    }
+  ];
 
-  // Calculate overall totals (excluding ignored)
-  let totalDebit = 0;
-  let totalCredit = 0;
-  for (const p of peopleList) {
-    if (p.ignored) continue;
-    const diffGet = p.debit - p.credit;
-    if (diffGet > 0) totalDebit += diffGet;
-    const diffGive = p.credit - p.debit;
-    if (diffGive > 0) totalCredit += diffGive;
-  }
+  const result = await db.collection('hisab').aggregate(pipeline).toArray();
+  const facetResult = result[0];
+  
+  const metadata = facetResult.metadata[0] || { totalDebit: 0, totalCredit: 0, totalCount: 0 };
+  const people = facetResult.data.map((d: any) => ({
+    name: d.name,
+    mobile: d.mobile,
+    debit: d.debit,
+    credit: d.credit,
+    latest: new Date(d.latest),
+    ignored: d.ignored
+  }));
 
-  const hasMore = peopleList.length > skip + limit;
-  const paginatedPeople = peopleList.slice(skip, skip + limit);
+  const hasMore = metadata.totalCount > skip + limit;
 
   return {
-    people: paginatedPeople,
-    totalDebit,
-    totalCredit,
-    netBalance: totalDebit - totalCredit,
+    people,
+    totalDebit: metadata.totalDebit,
+    totalCredit: metadata.totalCredit,
+    netBalance: metadata.totalDebit - metadata.totalCredit,
     hasMore
   };
 }
@@ -412,7 +444,7 @@ export async function getMonthlySummary(monthStr?: string, search?: string, cate
   const monthEnd = `${nextYear}-${paddedNextMon}-01`;
 
   // Single aggregation for monthly totals + daily breakdown + member balances
-  const [monthlyAgg, todayAgg, incomeAgg, userExpenseAgg, userIncomeAgg, userTransferInAgg, userTransferOutAgg, spaceUsers, categoryAgg, topExpensesAgg, previousBalancesAgg] = await Promise.all([
+  const [monthlyAgg, todayAgg, userStatsAgg, spaceUsers, categoryAgg, topExpensesAgg, previousBalancesAgg] = await Promise.all([
     db.collection('expenses').aggregate([
       {
         $match: {
@@ -434,24 +466,15 @@ export async function getMonthlySummary(monthStr?: string, search?: string, cate
       { $group: { _id: null, total: { $sum: '$amount' } } },
     ]).toArray(),
     db.collection('expenses').aggregate([
-      { $match: { space_id: spaceId, date: { $gte: monthStart, $lt: monthEnd }, type: 'income' } },
-      { $group: { _id: null, total: { $sum: '$amount' } } },
-    ]).toArray(),
-    db.collection('expenses').aggregate([
-      { $match: { space_id: spaceId, date: { $gte: monthStart, $lt: monthEnd }, type: { $nin: ['income', 'transfer_in', 'transfer_out'] } } },
-      { $group: { _id: '$user_id', total: { $sum: '$amount' } } },
-    ]).toArray(),
-    db.collection('expenses').aggregate([
-      { $match: { space_id: spaceId, date: { $gte: monthStart, $lt: monthEnd }, type: 'income' } },
-      { $group: { _id: '$user_id', total: { $sum: '$amount' } } },
-    ]).toArray(),
-    db.collection('expenses').aggregate([
-      { $match: { space_id: spaceId, date: { $gte: monthStart, $lt: monthEnd }, type: 'transfer_in' } },
-      { $group: { _id: '$user_id', total: { $sum: '$amount' } } },
-    ]).toArray(),
-    db.collection('expenses').aggregate([
-      { $match: { space_id: spaceId, date: { $gte: monthStart, $lt: monthEnd }, type: 'transfer_out' } },
-      { $group: { _id: '$user_id', total: { $sum: '$amount' } } },
+      { $match: { space_id: spaceId, date: { $gte: monthStart, $lt: monthEnd } } },
+      { $group: { 
+          _id: '$user_id', 
+          income: { $sum: { $cond: [{ $eq: ['$type', 'income'] }, '$amount', 0] } },
+          expense: { $sum: { $cond: [{ $not: { $in: ['$type', ['income', 'transfer_in', 'transfer_out', null]] } }, '$amount', 0] } },
+          transfer_in: { $sum: { $cond: [{ $eq: ['$type', 'transfer_in'] }, '$amount', 0] } },
+          transfer_out: { $sum: { $cond: [{ $eq: ['$type', 'transfer_out'] }, '$amount', 0] } }
+        } 
+      }
     ]).toArray(),
     db.collection('users').find({ space_id: spaceId }, { projection: { user_id: 1, name: 1, _id: 0 } }).toArray(),
     db.collection('expenses').aggregate([
@@ -489,7 +512,9 @@ export async function getMonthlySummary(monthStr?: string, search?: string, cate
   const dailyTotals = monthlyAgg.map((d) => ({ date: d._id as string, total: d.dailyTotal as number }));
   const monthlyTotal = dailyTotals.reduce((sum, d) => sum + d.total, 0);
   const todayTotal = todayAgg[0]?.total || 0;
-  const monthlyIncome = incomeAgg[0]?.total || 0;
+  
+  // monthlyIncome is the sum of all users' income from userStatsAgg
+  const monthlyIncome = userStatsAgg.reduce((sum, agg: any) => sum + (agg.income || 0), 0);
 
   // Build Member Balances
   const memberBalancesMap = new Map<string, { user_id: string; name: string; income: number; expense: number; transfer_in: number; transfer_out: number; month_balance: number; previous_balance: number; total_balance: number; }>();
@@ -516,28 +541,14 @@ export async function getMonthlySummary(monthStr?: string, search?: string, cate
     return memberBalancesMap.get(userId)!;
   };
 
-  // Populate incomes
-  userIncomeAgg.forEach((agg: any) => {
+  // Populate from userStatsAgg
+  userStatsAgg.forEach((agg: any) => {
+    if (!agg._id) return;
     const mb = getOrInitMember(agg._id);
-    mb.income = agg.total;
-  });
-
-  // Populate expenses
-  userExpenseAgg.forEach((agg: any) => {
-    const mb = getOrInitMember(agg._id);
-    mb.expense = agg.total;
-  });
-
-  // Populate transfer_in
-  userTransferInAgg.forEach((agg: any) => {
-    const mb = getOrInitMember(agg._id);
-    mb.transfer_in = agg.total;
-  });
-
-  // Populate transfer_out
-  userTransferOutAgg.forEach((agg: any) => {
-    const mb = getOrInitMember(agg._id);
-    mb.transfer_out = agg.total;
+    mb.income = agg.income || 0;
+    mb.expense = agg.expense || 0;
+    mb.transfer_in = agg.transfer_in || 0;
+    mb.transfer_out = agg.transfer_out || 0;
   });
 
   // Populate previous balances
