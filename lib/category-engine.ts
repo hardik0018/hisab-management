@@ -58,7 +58,7 @@ export function categorizeExpense(
   }
 
   // 2. Salary & Income (આવક અને પગાર)
-  if (/salary|bonus|stipend|income|wage|synergy|prime|trion/i.test(text) || type === 'income') {
+  if (/salary|bonus|stipend|income|wage|synergy|prime|trion|overtime|over\s*time/i.test(text) || type === 'income') {
     return 'Salary & Income';
   }
 
@@ -73,12 +73,12 @@ export function categorizeExpense(
   }
 
   // 5. Vegetables & Fruits (શાકભાજી અને ફળ)
-  if (/tameta|tamato|tomato|bateka|bataka|potato|rigna|ringna|rigana|brinjal|marcha|march|mirchi|karela|bhindo|kakdi|kakani|gavar|dudhi|kobi|cabbage|vatana|keri|kera|banana|mango|kachi\s*keri|sherdi|khalela/i.test(text)) {
+  if (/tameta|tamato|tomato|bateka|bataka|potato|rigna|ringna|rigana|rigan|brinjal|marcha|march|mirchi|karela|bhindo|kakdi|kakani|gavar|dudhi|kobi|cabbage|vatana|keri|kera|banana|mango|kachi\s*keri|sherdi|khalela|fulavar|fulavr|bakalu/i.test(text)) {
     return 'Vegetables & Fruits';
   }
 
   // 6. Groceries & Kitchen (કરિયાણું અને રસોડું)
-  if (/dudh|milk|dhana|jisoda|jeeshoda|pawa|pava|samo|sabu|sabudani|sing|methi|sugar|khand|solt|salt|mithu|rava|kathor|mag|hing|mamra|astar|bakas|shree\s*fal|shreefal|powder|khapda\s*dhovano|liquid|vasan|rooh|durvana|sori|chhash|navratra|orsolum|oil|agarbatti|ghau|ઘઉં|kirana|grocery|masala|sev|chavanu|papad/i.test(text)) {
+  if (/dudh|milk|dhana|jisoda|jeeshoda|pawa|pava|samo|sabu|sabudani|sing|methi|sugar|khand|solt|salt|mithu|rava|kathor|mag|hing|mamra|mamara|astar|bakas|shree\s*fal|shreefal|nariyel|powder|khapda\s*dhovano|liquid|vasan|rooh|durvana|sori|chhash|chhaash|navratra|orsolum|oil|agarbatti|ghau|ઘઉં|kirana|kariyanu|grocery|masala|sev|chavanu|papad/i.test(text)) {
     return 'Groceries & Kitchen';
   }
 
@@ -88,7 +88,7 @@ export function categorizeExpense(
   }
 
   // 8. Personal Care, Health & Medical (આરોગ્ય અને પર્સનલ કેર)
-  if (/hair|cut|salon|doctor|hospital|medicine|medical|pharma|pill|clinic|test|blood|watch|whatch|colgate|sampoo|sampoo|sempu|soap|ped|shampoo|doctor|dental|eye/i.test(text)) {
+  if (/hair|cut|salon|doctor|hospital|medicine|medical|pharma|pill|clinic|test|blood|watch|whatch|colgate|sampoo|sempu|soap|ped|shampoo|dental|eye|jilaid|guard|shave|razor|blade/i.test(text)) {
     return 'Personal Care & Medical';
   }
 
@@ -108,7 +108,7 @@ export function categorizeExpense(
   }
 
   // 12. Transfers & Balance Settlements (ટ્રાન્સફર અને હિસાબ)
-  if (/transfer|net\s*balance|balance|credit|debit|hisab|jama|udhar|settle|aayavar|pravinbhai|dhayrana|daurana|dado|demo|loan|borrow|lend/i.test(text)) {
+  if (/transfer|net\s*balance|balance|credit|debit|hisab|jama|udhar|settle|aayavar|pravinbhai|dhayrana|daurana|dado|demo|loan|borrow|lend|mahesh\s*kaka|nin/i.test(text)) {
     return 'Transfers & Settlements';
   }
 
