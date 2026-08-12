@@ -2,7 +2,7 @@ export const dynamic = "force-dynamic";
 
 import AppShell from "@/components/AppShell";
 import SegmentedTabs from "@/components/SegmentedTabs";
-import StatCard from "@/components/StatCard";
+import LiveStatCards from "@/components/expense/LiveStatCards";
 import QuickAddBar from "@/components/QuickAddBar";
 import BackupReminder from "@/components/settings/BackupReminder";
 import TodayExpensesSection from "@/components/expense/TodayExpensesSection";
@@ -44,29 +44,11 @@ export default async function ExpensesPage() {
       <AppShell className="pt-3">
         <BackupReminder settings={settings} />
 
-        {/* Hero card — today's spend */}
-        <StatCard
-          variant="hero"
-          label="Spent today"
-          amount={todayTotal}
-          caption="Tap a chip below or type to add"
+        <LiveStatCards 
+          initialToday={todayTotal} 
+          initialMonthlyIn={monthlyIncome} 
+          initialMonthlyOut={monthlyExpense} 
         />
-
-        {/* Money in / out row */}
-        <div className="grid grid-cols-2 gap-3">
-          <StatCard
-            variant="in"
-            label="Money in"
-            amount={monthlyIncome}
-            caption="This month"
-          />
-          <StatCard
-            variant="out"
-            label="Money out"
-            amount={monthlyExpense}
-            caption="This month"
-          />
-        </div>
 
         {/* Always-visible instant add bar */}
         <QuickAddBar
