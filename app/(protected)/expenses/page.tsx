@@ -1,7 +1,7 @@
 export const dynamic = "force-dynamic";
 
 import AppShell from "@/components/AppShell";
-import SegmentedTabs from "@/components/SegmentedTabs";
+import ExpenseNavTabs from "@/components/expense/ExpenseNavTabs";
 import LiveStatCards from "@/components/expense/LiveStatCards";
 import QuickAddBar from "@/components/QuickAddBar";
 import BackupReminder from "@/components/settings/BackupReminder";
@@ -11,14 +11,6 @@ import {
   getCollaborationData,
   getMonthlySummary,
 } from "@/lib/data-fetching";
-
-const EXPENSE_TABS = [
-  { label: "Today", href: "/expenses" },
-  { label: "History", href: "/expenses/history" },
-  { label: "Auto", href: "/expenses/recurring" },
-  { label: "Report", href: "/expenses/summary" },
-  { label: "Tax", href: "/expenses/tax" },
-];
 
 export default async function ExpensesPage() {
   const [settings, collabData, summary] = await Promise.all([
@@ -37,7 +29,7 @@ export default async function ExpensesPage() {
 
   return (
     <>
-      <SegmentedTabs tabs={EXPENSE_TABS} />
+      <ExpenseNavTabs />
 
       <AppShell className="pt-3">
         <BackupReminder settings={settings} />

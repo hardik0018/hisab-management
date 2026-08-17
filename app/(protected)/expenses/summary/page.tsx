@@ -4,15 +4,7 @@ import { getMonthlySummary, getTodayKolkata } from '@/lib/data-fetching';
 import SummaryClient from './SummaryClient';
 import { redirect } from 'next/navigation';
 import { getAuthenticatedUser } from '@/lib/auth';
-import SegmentedTabs from '@/components/SegmentedTabs';
-
-const EXPENSE_TABS = [
-  { label: 'Today', href: '/expenses' },
-  { label: 'History', href: '/expenses/history' },
-  { label: 'Auto', href: '/expenses/recurring' },
-  { label: 'Report', href: '/expenses/summary' },
-  { label: 'Tax', href: '/expenses/tax' },
-];
+import ExpenseNavTabs from '@/components/expense/ExpenseNavTabs';
 
 interface PageProps {
   searchParams: Promise<{
@@ -44,7 +36,7 @@ export default async function SummaryPage({ searchParams }: PageProps) {
 
   return (
     <>
-      <SegmentedTabs tabs={EXPENSE_TABS} />
+      <ExpenseNavTabs />
       <SummaryClient
         initialMonth={summary.month}
         initialMonthlyTotal={summary.monthlyTotal}

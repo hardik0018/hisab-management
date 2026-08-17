@@ -69,4 +69,5 @@ export interface DashboardStats {
 }
 
 export * from './expense';
+export * from './trip';
 
