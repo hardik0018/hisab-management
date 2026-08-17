@@ -26,14 +26,16 @@ export async function getSystemSettings(spaceId: string): Promise<Settings> {
     };
     const result = await db.collection('settings').insertOne(newSettings as any);
     return {
-      _id: result.insertedId,
+      _id: result.insertedId.toString(),
       space_id: spaceId,
       ...DEFAULT_SETTINGS,
+      createdAt: newSettings.createdAt.toISOString(),
+      updatedAt: newSettings.updatedAt.toISOString(),
     };
   }
 
   return {
-    _id: settings._id,
+    _id: settings._id ? settings._id.toString() : undefined,
     space_id: settings.space_id || spaceId,
     currency: settings.currency || 'INR',
     largeAmountLimit: settings.largeAmountLimit !== undefined ? settings.largeAmountLimit : 10000,
@@ -43,8 +45,8 @@ export async function getSystemSettings(spaceId: string): Promise<Settings> {
       frequency: 'monthly',
       display: 'inside-app',
     },
-    createdAt: settings.createdAt,
-    updatedAt: settings.updatedAt,
+    createdAt: settings.createdAt instanceof Date ? settings.createdAt.toISOString() : (settings.createdAt ? String(settings.createdAt) : undefined),
+    updatedAt: settings.updatedAt instanceof Date ? settings.updatedAt.toISOString() : (settings.updatedAt ? String(settings.updatedAt) : undefined),
   };
 }
 
@@ -63,15 +65,18 @@ export async function updateSystemSettings(spaceId: string, updates: Partial<Set
     };
   }
   
-  setObj.updatedAt = new Date();
+  const updatedAt = new Date();
+  setObj.updatedAt = updatedAt;
 
   await db.collection('settings').updateOne(
-    { _id: new ObjectId(current._id as any) },
+    { space_id: spaceId },
     { $set: setObj }
   );
 
   return {
     ...current,
     ...updates,
+    _id: current._id?.toString(),
+    updatedAt: updatedAt.toISOString(),
   };
 }

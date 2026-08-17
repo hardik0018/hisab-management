@@ -53,6 +53,8 @@ export async function GET(request: NextRequest) {
     headers.set('Content-Length', result.blob.size.toString());
     headers.set('Content-Disposition', 'inline');
     headers.set('Cache-Control', 'private, max-age=3600');
+    headers.set('X-Frame-Options', 'SAMEORIGIN');
+    headers.set('Content-Security-Policy', "frame-ancestors 'self'");
 
     return new Response(result.stream, {
       status: 200,

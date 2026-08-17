@@ -91,8 +91,8 @@ export default function QuickAddBar({
 
   const parsed = useMemo(() => {
     if (!value.trim()) return null;
-    return parseEntries(value, largeLimit);
-  }, [value, largeLimit]);
+    return parseEntries(value, largeLimit, mode);
+  }, [value, largeLimit, mode]);
 
   const hasItems = (parsed?.items.length ?? 0) > 0;
   const hasInvalid = (parsed?.invalid.length ?? 0) > 0;
@@ -255,10 +255,10 @@ export default function QuickAddBar({
   const handleSubmit = useCallback(async () => {
     if (!value.trim() || saving) return;
 
-    const result = parseEntries(value, largeLimit);
+    const result = parseEntries(value, largeLimit, mode);
 
     if (result.items.length === 0) {
-      toast.error('Nothing recognised. Try: chai 20');
+      toast.error('Nothing recognised. Try: chai 20 or Ramesh debit 500');
       return;
     }
 
@@ -271,7 +271,7 @@ export default function QuickAddBar({
     }
 
     await save(result.items, value);
-  }, [value, largeLimit, saving, save]);
+  }, [value, largeLimit, mode, saving, save]);
 
   // ── Handle Enter key ──────────────────────────────────────────────────────
 

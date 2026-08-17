@@ -20,6 +20,7 @@ import PageHeader from '@/components/PageHeader';
 import AppShell from '@/components/AppShell';
 import SectionTitle from '@/components/SectionTitle';
 import EmptyState from '@/components/EmptyState';
+import { DocumentViewerModal } from '@/components/DocumentViewerModal';
 import Link from 'next/link';
 
 type Tab = 'insurance' | 'warranty';
@@ -32,6 +33,7 @@ export default function VaultClient() {
   const [reminders, setReminders] = useState<VaultReminder[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const [docViewer, setDocViewer] = useState<{ open: boolean; title: string; url: string }>({ open: false, title: '', url: '' });
   const [insDialog, setInsDialog] = useState<{ open: boolean; edit?: InsurancePolicy }>({ open: false });
   const [warDialog, setWarDialog] = useState<{ open: boolean; edit?: Warranty }>({ open: false });
   const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; title: string; isDeleting?: boolean; onConfirm: () => Promise<void> }>({ open: false, title: '', onConfirm: async () => {} });
@@ -175,9 +177,14 @@ export default function VaultClient() {
                   </div>
 
                   {p.attachmentUrl && (
-                    <Link className="mt-4 flex items-center justify-center gap-2 text-xs font-bold py-2.5 rounded-xl transition-all active:scale-95" style={{ background: 'var(--sky-soft)', color: 'var(--sky)' }} href={p.attachmentUrl} target="_blank" rel="noreferrer">
+                    <button
+                      type="button"
+                      onClick={() => setDocViewer({ open: true, title: `${p.policyName} - Document`, url: p.attachmentUrl! })}
+                      className="mt-4 w-full flex items-center justify-center gap-2 text-xs font-bold py-2.5 rounded-xl transition-all active:scale-95 cursor-pointer"
+                      style={{ background: 'var(--sky-soft)', color: 'var(--sky)' }}
+                    >
                       <ExternalLink className="h-4 w-4" /> View Document
-                    </Link>
+                    </button>
                   )}
                 </div>
               ))}
@@ -239,14 +246,24 @@ export default function VaultClient() {
                   {(w.invoiceUrl || w.warrantyCardUrl) && (
                     <div className="mt-4 flex gap-3">
                       {w.invoiceUrl && (
-                        <Link className="flex-1 flex items-center justify-center gap-2 text-xs font-bold py-2.5 rounded-xl transition-all active:scale-95" style={{ background: 'var(--teal-soft)', color: 'var(--teal)' }} href={w.invoiceUrl} target="_blank" rel="noreferrer">
+                        <button
+                          type="button"
+                          onClick={() => setDocViewer({ open: true, title: `${w.itemName} - Invoice`, url: w.invoiceUrl! })}
+                          className="flex-1 flex items-center justify-center gap-2 text-xs font-bold py-2.5 rounded-xl transition-all active:scale-95 cursor-pointer"
+                          style={{ background: 'var(--teal-soft)', color: 'var(--teal)' }}
+                        >
                           <ExternalLink className="h-4 w-4" /> Invoice
-                        </Link>
+                        </button>
                       )}
                       {w.warrantyCardUrl && (
-                        <Link className="flex-1 flex items-center justify-center gap-2 text-xs font-bold py-2.5 rounded-xl transition-all active:scale-95" style={{ background: 'var(--teal-soft)', color: 'var(--teal)' }} href={w.warrantyCardUrl} target="_blank" rel="noreferrer">
+                        <button
+                          type="button"
+                          onClick={() => setDocViewer({ open: true, title: `${w.itemName} - Warranty Card`, url: w.warrantyCardUrl! })}
+                          className="flex-1 flex items-center justify-center gap-2 text-xs font-bold py-2.5 rounded-xl transition-all active:scale-95 cursor-pointer"
+                          style={{ background: 'var(--teal-soft)', color: 'var(--teal)' }}
+                        >
                           <ExternalLink className="h-4 w-4" /> Card
-                        </Link>
+                        </button>
                       )}
                     </div>
                   )}
@@ -259,6 +276,12 @@ export default function VaultClient() {
 
       <InsuranceDialog state={insDialog} onClose={() => setInsDialog({ open: false })} onSaved={loadAll} />
       <WarrantyDialog  state={warDialog} onClose={() => setWarDialog({ open: false })} onSaved={loadAll} />
+      <DocumentViewerModal
+        isOpen={docViewer.open}
+        onClose={() => setDocViewer({ open: false, title: '', url: '' })}
+        title={docViewer.title}
+        url={docViewer.url}
+      />
 
       <AlertDialog open={deleteDialog.open} onOpenChange={(open) => !open && setDeleteDialog(prev => ({ ...prev, open: false }))}>
         <AlertDialogContent className="w-[calc(100%-2rem)] sm:w-full rounded-2xl" style={{ background: 'var(--card)', borderColor: 'var(--border)' }}>

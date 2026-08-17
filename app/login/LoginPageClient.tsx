@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { Sparkles, ShieldCheck, Zap, Globe, LucideIcon } from 'lucide-react';
 import { signIn, useSession } from 'next-auth/react';
 import { motion } from 'framer-motion';
@@ -122,7 +123,7 @@ export default function LoginPageClient() {
             </button>
             
             <p className="text-xs text-center text-slate-400 font-medium pt-4">
-              By continuing, you agree to our <span className="underline cursor-pointer hover:text-primary">Terms of Service</span> and <span className="underline cursor-pointer hover:text-primary">Privacy Policy</span>.
+              By continuing, you agree to our <Link href="/terms" className="underline cursor-pointer hover:text-primary">Terms of Service</Link> and <Link href="/privacy" className="underline cursor-pointer hover:text-primary">Privacy Policy</Link>.
             </p>
           </div>
 

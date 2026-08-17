@@ -62,9 +62,11 @@ export async function POST(request: NextRequest) {
       mobileQuery = { $in: ['', null] };
     }
 
+    const spaceIds = [user.space_id, user.user_id].filter(Boolean);
+
     // Check if this person is currently ignored
     const existingIgnored = await db.collection('hisab').findOne({
-      space_id: spaceId,
+      space_id: { $in: spaceIds },
       name,
       mobile: mobileQuery,
       ignored: true

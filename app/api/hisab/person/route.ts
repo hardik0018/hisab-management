@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
     }
 
     const db = await getDb();
-    const spaceId = user.space_id || user.user_id;
+    const spaceIds = [user.space_id, user.user_id].filter(Boolean);
 
     const m = mobile ? String(mobile).trim() : '';
     let mobileQuery: any;
@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
 
     const records = await db
       .collection('hisab')
-      .find({ space_id: spaceId, name, mobile: mobileQuery }, { projection: { _id: 0 } })
+      .find({ space_id: { $in: spaceIds }, name, mobile: mobileQuery }, { projection: { _id: 0 } })
       .sort({ date: -1, created_at: -1 })
       .toArray() as unknown as HisabRecord[];
 

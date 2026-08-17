@@ -254,8 +254,11 @@ export default function ProfileClient({
   };
 
   const handleBackup = () => {
-    // A manual backup trigger could be implemented here
-    toast.success("Backup completed successfully");
+    toast.success("Generating full data backup...");
+    window.location.href = "/api/backup";
+    setTimeout(() => {
+      fetchSettings();
+    }, 1500);
   };
 
   if (status === "loading") {

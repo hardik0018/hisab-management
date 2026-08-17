@@ -188,6 +188,25 @@ export default function HisabClient({
   };
 
   const refreshData = async () => {
+    try {
+      const data = await secureFetch<{
+        people: PersonSummary[];
+        totalDebit: number;
+        totalCredit: number;
+        netBalance: number;
+        hasMore: boolean;
+      }>(`/api/hisab?page=1&limit=50&search=${encodeURIComponent(search)}`);
+      if (data) {
+        setPeople(data.people);
+        setTotalDebit(data.totalDebit);
+        setTotalCredit(data.totalCredit);
+        setNetBalance(data.netBalance);
+        setHasMore(data.hasMore);
+        setPage(1);
+      }
+    } catch (err) {
+      // fallback to router.refresh
+    }
     router.refresh();
     // If ledger modal is open, re-fetch person ledger
     if (showLedgerModal && selectedPerson) {
@@ -768,11 +787,11 @@ export default function HisabClient({
         {/* Ledger Details Dialog (Individual Person's Ledger) */}
         <Dialog open={showLedgerModal} onOpenChange={setShowLedgerModal}>
           <DialogContent
-            className="max-w-2xl h-[100dvh] sm:h-[85vh] w-full flex flex-col p-0 overflow-hidden card-surface border-none shadow-2xl rounded-none sm:rounded-[2.5rem]"
+            className="w-[92vw] sm:w-full max-w-lg max-h-[82vh] h-[80vh] flex flex-col p-0 overflow-hidden card-surface border-none shadow-2xl rounded-[2rem] sm:rounded-[2.5rem]"
             style={{ background: "var(--background)" }}
           >
             <div
-              className="p-5 sm:p-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shrink-0 relative overflow-hidden transition-all duration-300"
+              className="p-4 sm:p-5 pr-10 flex flex-row justify-between items-center gap-3 shrink-0 relative overflow-hidden transition-all duration-300"
               style={{
                 background: isPersonIgnored
                   ? "var(--warning)"
@@ -784,24 +803,24 @@ export default function HisabClient({
                 color: "white",
               }}
             >
-              <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -mr-10 -mt-10" />
+              <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -mr-10 -mt-10 pointer-events-none" />
 
-              <div className="flex items-center gap-3 relative z-10 w-full sm:w-auto">
-                <div
-                  className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-white/10 flex items-center justify-center backdrop-blur-sm shadow-xl hover:bg-white/20 transition-all cursor-pointer"
+              <div className="flex items-center gap-3 relative z-10 min-w-0">
+                <button
+                  type="button"
+                  className="w-10 h-10 rounded-xl bg-white/15 flex items-center justify-center backdrop-blur-sm shadow-md hover:bg-white/25 active:scale-95 transition-all cursor-pointer shrink-0"
                   onClick={() => setShowLedgerModal(false)}
                 >
-                  <ArrowLeft className="h-5 w-5 sm:h-6 sm:w-6" />
-                </div>
+                  <ArrowLeft className="h-5 w-5" />
+                </button>
                 <div className="min-w-0">
-                  <DialogTitle className="text-xl sm:text-2xl font-black leading-none mb-1 text-white truncate">
+                  <DialogTitle className="text-lg sm:text-xl font-black leading-tight text-white truncate mb-0.5">
                     {selectedPerson?.name}
                   </DialogTitle>
-                  <p className="text-white/80 text-[10px] font-bold uppercase tracking-widest flex items-center gap-1 mb-1.5">
+                  <p className="text-white/80 text-[10px] font-bold uppercase tracking-wider flex items-center gap-1">
                     {selectedPerson?.mobile ? (
                       <>
-                        <Phone className="h-2.5 w-2.5" />{" "}
-                        {selectedPerson.mobile}
+                        <Phone className="h-2.5 w-2.5" /> {selectedPerson.mobile}
                       </>
                     ) : (
                       "No mobile linked"
@@ -829,35 +848,33 @@ export default function HisabClient({
                         toast.error("Failed to update ignored status");
                       }
                     }}
-                    className="inline-flex items-center gap-1 px-3 py-1 text-[9px] font-black uppercase tracking-wider bg-white/25 hover:bg-white/35 text-white rounded-full transition-all active:scale-95 border border-white/10 shadow-sm"
+                    className="inline-flex items-center gap-1 mt-1.5 px-2.5 py-0.5 text-[9px] font-black uppercase tracking-wider bg-white/20 hover:bg-white/30 text-white rounded-full transition-all active:scale-95 border border-white/10 shadow-sm"
                   >
                     {isPersonIgnored ? "Unignore Person" : "Ignore Person"}
                   </button>
                 </div>
               </div>
 
-              <div className="text-left sm:text-right relative z-10 w-full sm:w-auto pt-2.5 sm:pt-0 border-t border-white/10 sm:border-none">
-                <p className="text-[9px] font-black uppercase tracking-widest text-white/70 leading-none mb-1.5">
+              <div className="text-right relative z-10 shrink-0">
+                <p className="text-[9px] font-black uppercase tracking-widest text-white/75 leading-none mb-1">
                   Net Status
                 </p>
-                <div className="flex items-baseline gap-1.5 sm:justify-end">
-                  <p className="text-2xl sm:text-3xl font-black">
-                    ₹{Math.abs(personNetBalance).toLocaleString()}
-                  </p>
-                  <span className="text-[9px] font-black uppercase tracking-wider bg-white/10 px-2 py-0.5 rounded-full">
-                    {isPersonIgnored
-                      ? "Ignored"
-                      : personNetBalance > 0
-                        ? "You Get"
-                        : personNetBalance < 0
-                          ? "You Give"
-                          : "Settled"}
-                  </span>
-                </div>
+                <p className="text-2xl sm:text-3xl font-black leading-none">
+                  ₹{Math.abs(personNetBalance).toLocaleString()}
+                </p>
+                <span className="inline-block mt-1 text-[9px] font-black uppercase tracking-wider bg-white/15 px-2 py-0.5 rounded-full">
+                  {isPersonIgnored
+                    ? "Ignored"
+                    : personNetBalance > 0
+                      ? "You Get"
+                      : personNetBalance < 0
+                        ? "You Give"
+                        : "Settled"}
+                </span>
               </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 sm:space-y-6 no-scrollbar">
+            <div className="flex-1 overflow-y-auto px-3.5 sm:px-6 py-4 space-y-4 sm:space-y-5 no-scrollbar">
               {isLoadingLedger ? (
                 <div className="h-full flex items-center justify-center min-h-[200px]">
                   <div className="w-8 h-8 border-4 border-current border-t-transparent rounded-full animate-spin opacity-50" />
@@ -870,14 +887,14 @@ export default function HisabClient({
                 />
               ) : (
                 Object.entries(recordsByDate).map(([date, dateRecords]) => (
-                  <div key={date} className="space-y-3">
-                    <div className="flex items-center gap-4">
+                  <div key={date} className="space-y-2.5">
+                    <div className="flex items-center gap-3 my-2">
                       <div
                         className="h-px flex-1"
                         style={{ background: "var(--border)" }}
                       />
                       <span
-                        className="text-[9px] font-black uppercase tracking-widest px-3 py-1 rounded-full border shadow-sm"
+                        className="text-[9px] font-bold uppercase tracking-wider px-3 py-0.5 rounded-full border shadow-sm"
                         style={{
                           color: "var(--muted-foreground)",
                           background: "var(--secondary)",
@@ -901,13 +918,13 @@ export default function HisabClient({
                         return (
                           <div
                             key={r.hisab_id}
-                            className="card-surface p-3.5 group border"
+                            className="card-surface p-3.5 sm:p-4 group border rounded-2xl shadow-sm transition-all"
                             style={{ borderColor: "var(--border)" }}
                           >
-                            <div className="flex items-center justify-between gap-4">
+                            <div className="flex items-center justify-between gap-3">
                               <div className="flex items-center gap-3 min-w-0">
                                 <div
-                                  className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border"
+                                  className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
                                   style={{
                                     background: isLent
                                       ? "var(--success-soft)"
@@ -915,7 +932,6 @@ export default function HisabClient({
                                     color: isLent
                                       ? "var(--success)"
                                       : "var(--danger)",
-                                    borderColor: "transparent",
                                   }}
                                 >
                                   {isLent ? (
@@ -926,7 +942,7 @@ export default function HisabClient({
                                 </div>
                                 <div className="min-w-0">
                                   <p
-                                    className="font-bold text-sm leading-tight mb-0.5"
+                                    className="font-bold text-sm leading-tight truncate mb-0.5"
                                     style={{ color: "var(--foreground)" }}
                                   >
                                     {r.description ||
@@ -935,10 +951,10 @@ export default function HisabClient({
                                         : "Borrowed Money")}
                                   </p>
                                   <p
-                                    className="text-[9px] font-semibold flex items-center gap-1 uppercase tracking-tight"
+                                    className="text-[10px] font-medium flex items-center gap-1"
                                     style={{ color: "var(--muted-foreground)" }}
                                   >
-                                    <Calendar className="h-2.5 w-2.5" />
+                                    <Calendar className="h-3 w-3" />
                                     {new Date(r.date).toLocaleDateString([], {
                                       month: "short",
                                       day: "numeric",
@@ -954,10 +970,10 @@ export default function HisabClient({
                                 </div>
                               </div>
 
-                              <div className="flex items-center gap-3 shrink-0">
+                              <div className="flex items-center gap-2.5 shrink-0">
                                 <div className="text-right">
                                   <p
-                                    className="font-black text-base"
+                                    className="font-black text-base leading-tight"
                                     style={{
                                       color: isLent
                                         ? "var(--success)"
@@ -967,7 +983,7 @@ export default function HisabClient({
                                     ₹{r.amount.toLocaleString()}
                                   </p>
                                   <span
-                                    className="inline-block text-[8px] font-black uppercase tracking-wider"
+                                    className="inline-block text-[9px] font-bold uppercase tracking-wider"
                                     style={{
                                       color: isLent
                                         ? "var(--success)"
@@ -978,7 +994,7 @@ export default function HisabClient({
                                   </span>
                                 </div>
 
-                                <div className="flex gap-1 md:opacity-0 md:group-hover:opacity-100 transition-opacity flex-shrink-0">
+                                <div className="flex items-center gap-0.5 shrink-0">
                                   <button
                                     onClick={() => {
                                       setFormData({
@@ -999,18 +1015,19 @@ export default function HisabClient({
                                       setShowLedgerModal(false);
                                       setShowAddDialog(true);
                                     }}
-                                    className="p-2.5 sm:p-2 rounded-xl transition-all focus:outline-none flex items-center justify-center hover:bg-black/5"
+                                    className="p-1.5 rounded-lg transition-all hover:bg-black/5"
                                     style={{ color: "var(--muted-foreground)" }}
+                                    title="Edit"
                                   >
-                                    <MoreVertical className="h-4 w-4 sm:h-3.5 sm:w-3.5" />
+                                    <MoreVertical className="h-4 w-4" />
                                   </button>
                                   <button
                                     onClick={() => setDeleteConfirm(r.hisab_id)}
-                                    className="p-2.5 sm:p-2 rounded-xl transition-all focus:outline-none flex items-center justify-center hover:bg-black/5"
+                                    className="p-1.5 rounded-lg transition-all hover:bg-black/5"
                                     style={{ color: "var(--danger)" }}
-                                    title="Delete transaction"
+                                    title="Delete"
                                   >
-                                    <Trash2 className="h-4 w-4 sm:h-3.5 sm:w-3.5" />
+                                    <Trash2 className="h-4 w-4" />
                                   </button>
                                 </div>
                               </div>
@@ -1018,17 +1035,17 @@ export default function HisabClient({
 
                             {/* Running Balance and sync status */}
                             <div
-                              className="mt-2.5 pt-2 flex justify-between items-center text-[10px]"
+                              className="mt-2.5 pt-2 flex justify-between items-center text-[11px]"
                               style={{ borderTop: "1px solid var(--border)" }}
                             >
                               <p
-                                className="font-bold"
+                                className="font-semibold"
                                 style={{ color: "var(--muted-foreground)" }}
                               >
-                                Net Balance:{" "}
+                                Net:{" "}
                                 {isBalReceivable && (
                                   <span
-                                    className="font-extrabold"
+                                    className="font-bold"
                                     style={{ color: "var(--success)" }}
                                   >
                                     Gets ₹{Math.abs(bal).toLocaleString()}
@@ -1036,23 +1053,22 @@ export default function HisabClient({
                                 )}
                                 {isBalPayable && (
                                   <span
-                                    className="font-extrabold"
+                                    className="font-bold"
                                     style={{ color: "var(--danger)" }}
                                   >
                                     Gives ₹{Math.abs(bal).toLocaleString()}
                                   </span>
                                 )}
                                 {bal === 0 && (
-                                  <span className="font-black">Settled</span>
+                                  <span className="font-bold">Settled</span>
                                 )}
                               </p>
                               {r.log_as_expense && (
                                 <span
-                                  className="text-[9px] font-black px-1.5 py-0.5 rounded border"
+                                  className="text-[9px] font-bold px-2 py-0.5 rounded-full"
                                   style={{
                                     color: "var(--violet)",
                                     background: "var(--violet-soft)",
-                                    borderColor: "transparent",
                                   }}
                                 >
                                   Synced with expenses
@@ -1070,7 +1086,7 @@ export default function HisabClient({
 
             {/* Quick Add buttons inside Ledger Modal */}
             <div
-              className="p-4 sm:p-6 card-surface border-t shrink-0 flex flex-col sm:flex-row gap-3 sm:gap-4 z-20 m-0 rounded-none border-x-0 border-b-0"
+              className="p-3.5 sm:p-4 card-surface border-t shrink-0 grid grid-cols-2 gap-2.5 sm:gap-4 z-20 m-0 rounded-none border-x-0 border-b-0 shadow-lg"
               style={{ borderColor: "var(--border)" }}
             >
               <Button
@@ -1088,10 +1104,11 @@ export default function HisabClient({
                   setShowLedgerModal(false);
                   setShowAddDialog(true);
                 }}
-                className="flex-1 h-12 sm:h-14 rounded-xl sm:rounded-2xl font-black text-xs sm:text-sm uppercase shadow-xl transition-all active:scale-95 text-white flex items-center justify-center gap-1.5"
+                className="h-12 sm:h-13 rounded-xl sm:rounded-2xl font-black text-xs sm:text-sm uppercase shadow-md transition-all active:scale-95 text-white flex items-center justify-center gap-1.5"
                 style={{ background: "var(--success)" }}
               >
-                <ArrowUpRight className="h-4 w-4 sm:h-5 sm:w-5" /> I Lent (Gave)
+                <ArrowUpRight className="h-4 w-4 sm:h-5 sm:w-5 shrink-0" />
+                <span>I Lent (Gave)</span>
               </Button>
               <Button
                 onClick={() => {
@@ -1108,11 +1125,11 @@ export default function HisabClient({
                   setShowLedgerModal(false);
                   setShowAddDialog(true);
                 }}
-                className="flex-1 h-12 sm:h-14 rounded-xl sm:rounded-2xl font-black text-xs sm:text-sm uppercase shadow-xl transition-all active:scale-95 text-white flex items-center justify-center gap-1.5"
+                className="h-12 sm:h-13 rounded-xl sm:rounded-2xl font-black text-xs sm:text-sm uppercase shadow-md transition-all active:scale-95 text-white flex items-center justify-center gap-1.5"
                 style={{ background: "var(--danger)" }}
               >
-                <ArrowDownLeft className="h-4 w-4 sm:h-5 sm:w-5" /> I Borrowed
-                (Took)
+                <ArrowDownLeft className="h-4 w-4 sm:h-5 sm:w-5 shrink-0" />
+                <span>I Borrowed (Took)</span>
               </Button>
             </div>
           </DialogContent>

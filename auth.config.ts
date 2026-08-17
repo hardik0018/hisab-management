@@ -19,6 +19,8 @@ export const authConfig = {
         path === '/login' || 
         path === '/privacy' || 
         path === '/terms' ||
+        path === '/manifest.json' ||
+        path === '/sw.js' ||
         path.startsWith('/api/');
       
       if (isPublicRoute) {

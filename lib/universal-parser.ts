@@ -94,54 +94,103 @@ const FREQ_MAP: Record<string, ParsedInsurance['premiumFrequency']> = {
 // ─── Per-module parsers ───────────────────────────────────────────────────────
 
 /**
- * hisab <Name> gave|lent <Amount> [note...]
- * hisab <Name> took|borrowed|liya <Amount> [note...]
+ * hisab <Name> gave|lent|debit|dr <Amount> [note...]
+ * hisab debit|credit <Amount> <Name> [note...]
+ * hisab <Name> took|borrowed|liya|credit|cr <Amount> [note...]
+ * hisab <Name> <Amount> [note...]
  */
 function parseHisabLine(parts: string[], date: string): ParsedHisab | UniversalInvalidLine {
-  // parts[0] is already stripped of the 'hisab' prefix
   const raw = parts.join(' ').trim();
+  if (!raw) {
+    return { line: 'hisab', reason: 'Missing hisab details — e.g. hisab Ramesh debit 500' };
+  }
 
-  // Find gave/lent/took/borrowed/liya keyword
-  const gaveRe = /\b(gave|lent|diya)\b/i;
-  const tookRe = /\b(took|borrowed|liya|received|mila)\b/i;
+  const gaveRe = /\b(gave|given|diya|didha|lent|paid\s+to|paid|debit|debited|dr|udhar|udhhar|lend)\b/i;
+  const tookRe = /\b(took|borrowed|liya|lidha|received|mila|returned|repaid|credit|credited|cr|jama|borrow)\b/i;
 
   const gaveM = raw.match(gaveRe);
   const tookM = raw.match(tookRe);
 
-  let direction: 'debit' | 'credit' | null = null;
+  let direction: 'debit' | 'credit' = 'debit';
+  let matchedVerb = '';
   let kwIndex = -1;
 
-  if (gaveM?.index !== undefined) { direction = 'debit';  kwIndex = gaveM.index; }
-  if (tookM?.index !== undefined) { direction = 'credit'; kwIndex = tookM.index; }
-
-  if (!direction) {
-    return { line: `hisab ${raw}`, reason: 'Use "gave" or "took" — e.g. hisab Ramesh gave 500 lunch' };
+  if (gaveM?.index !== undefined && (tookM?.index === undefined || gaveM.index <= tookM.index)) {
+    direction = 'debit';
+    matchedVerb = gaveM[0];
+    kwIndex = gaveM.index;
+  } else if (tookM?.index !== undefined) {
+    direction = 'credit';
+    matchedVerb = tookM[0];
+    kwIndex = tookM.index;
   }
 
-  const before = raw.slice(0, kwIndex).trim();
-  const after  = raw.slice(kwIndex).replace(/^\S+\s*/, '').trim(); // strip keyword itself
-
-  const name = before;
-  if (!name) {
-    return { line: `hisab ${raw}`, reason: 'Missing person name — e.g. hisab Ramesh gave 500' };
+  // 1. Verb is at start: e.g. "debit 500 Ramesh" or "debit Ramesh 500"
+  if (kwIndex === 0) {
+    const afterVerb = raw.slice(matchedVerb.length).trim();
+    // Check if amount first: e.g. "500 Ramesh"
+    const amtFirstM = afterVerb.match(/^(?:₹|rs\.?|inr\s*)?(\d+(?:[.,]\d+)?)\s+([^0-9₹]+?)(?:\s+(.*))?$/i);
+    if (amtFirstM) {
+      const amount = parseFloat(amtFirstM[1].replace(/,/g, ''));
+      const name = amtFirstM[2].trim();
+      const note = (amtFirstM[3] || '').trim();
+      if (name && Number.isFinite(amount) && amount > 0) {
+        return { kind: 'hisab', name, type: direction, amount, description: note, date, logAsExpense: true };
+      }
+    }
+    // Check if name first: e.g. "Ramesh 500"
+    const nameFirstM = afterVerb.match(/^([^0-9₹]+?)\s+(?:₹|rs\.?|inr\s*)?(\d+(?:[.,]\d+)?)(?:\s+(.*))?$/i);
+    if (nameFirstM) {
+      const name = nameFirstM[1].trim();
+      const amount = parseFloat(nameFirstM[2].replace(/,/g, ''));
+      const note = (nameFirstM[3] || '').trim();
+      if (name && Number.isFinite(amount) && amount > 0) {
+        return { kind: 'hisab', name, type: direction, amount, description: note, date, logAsExpense: true };
+      }
+    }
   }
 
-  // First token in 'after' is amount
-  const [amtStr, ...noteParts] = after.split(/\s+/);
-  const amount = parseFloat(amtStr);
-  if (isNaN(amount) || amount <= 0) {
-    return { line: `hisab ${raw}`, reason: `Invalid amount "${amtStr}" — e.g. hisab Ramesh gave 500` };
+  // 2. Verb is in middle: e.g. "Ramesh debit 500" or "Ramesh gave 500 lunch"
+  if (kwIndex > 0) {
+    const before = raw.slice(0, kwIndex).trim();
+    const after = raw.slice(kwIndex + matchedVerb.length).trim();
+    const [amtStr, ...noteParts] = after.split(/\s+/);
+    const amount = parseFloat(amtStr.replace(/[^0-9.]/g, ''));
+    if (before && Number.isFinite(amount) && amount > 0) {
+      return {
+        kind: 'hisab',
+        name: before,
+        type: direction,
+        amount,
+        description: noteParts.join(' '),
+        date,
+        logAsExpense: true,
+      };
+    }
   }
 
-  return {
-    kind: 'hisab',
-    name,
-    type: direction,
-    amount,
-    description: noteParts.join(' '),
-    date,
-    logAsExpense: true,
-  };
+  // 3. No verb found or verb at end: fallback for "hisab Ramesh 500" or "hisab 500 Ramesh"
+  const defaultItemFirst = raw.match(/^([^0-9₹]+?)\s+(?:₹|rs\.?|inr\s*)?(\d+(?:[.,]\d+)?)(?:\s+(.*))?$/i);
+  if (defaultItemFirst) {
+    const name = defaultItemFirst[1].trim();
+    const amount = parseFloat(defaultItemFirst[2].replace(/,/g, ''));
+    const note = (defaultItemFirst[3] || '').trim();
+    if (name && Number.isFinite(amount) && amount > 0) {
+      return { kind: 'hisab', name, type: direction, amount, description: note, date, logAsExpense: true };
+    }
+  }
+
+  const defaultAmtFirst = raw.match(/^(?:₹|rs\.?|inr\s*)?(\d+(?:[.,]\d+)?)\s+([^0-9₹]+?)(?:\s+(.*))?$/i);
+  if (defaultAmtFirst) {
+    const amount = parseFloat(defaultAmtFirst[1].replace(/,/g, ''));
+    const name = defaultAmtFirst[2].trim();
+    const note = (defaultAmtFirst[3] || '').trim();
+    if (name && Number.isFinite(amount) && amount > 0) {
+      return { kind: 'hisab', name, type: direction, amount, description: note, date, logAsExpense: true };
+    }
+  }
+
+  return { line: `hisab ${raw}`, reason: 'Use name and amount — e.g. hisab Ramesh debit 500' };
 }
 
 /**

@@ -44,14 +44,14 @@ export async function getHisabRecords(options: {
   if (!user) return null;
 
   const db = await getDb();
-  const spaceId = user.space_id;
+  const spaceIds = [user.space_id, user.user_id].filter(Boolean);
 
   const page = options.page || 1;
   const limit = options.limit || 50;
   const skip = (page - 1) * limit;
 
   // Build match stage
-  const matchStage: any = { space_id: spaceId };
+  const matchStage: any = { space_id: { $in: spaceIds } };
   if (options.search) {
     const escapedSearch = escapeRegExp(options.search);
     matchStage.$or = [
@@ -193,7 +193,8 @@ export async function getDashboardStats(): Promise<DashboardStats | null> {
     if (!user) return null;
 
     const db = await getDb();
-    const spaceId = user.space_id;
+    const spaceId = user.space_id || user.user_id;
+    const spaceIds = [user.space_id, user.user_id].filter(Boolean);
 
     const [
         hisabRecords,
@@ -201,13 +202,13 @@ export async function getDashboardStats(): Promise<DashboardStats | null> {
         recentHisab,
         expenseAgg
     ] = await Promise.all([
-        db.collection('hisab').find({ space_id: spaceId }).toArray(),
+        db.collection('hisab').find({ space_id: { $in: spaceIds } }).toArray(),
         db.collection('marriage_hisab').aggregate([
-            { $match: { space_id: spaceId } },
+            { $match: { space_id: { $in: spaceIds } } },
             { $group: { _id: null, total: { $sum: "$amount" } } }
         ]).toArray(),
         db.collection('hisab')
-            .find({ space_id: spaceId, ignored: { $ne: true } }, { projection: { _id: 0 } })
+            .find({ space_id: { $in: spaceIds }, ignored: { $ne: true } }, { projection: { _id: 0 } })
             .sort({ date: -1, created_at: -1 }) // Tie-break with created_at if needed
             .limit(5)
             .toArray(),

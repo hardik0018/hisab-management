@@ -19,6 +19,7 @@ export async function POST(request: NextRequest) {
 
     const db = await getDb();
     const spaceId = user.space_id || user.user_id;
+    const spaceIds = [user.space_id, user.user_id].filter(Boolean);
     const isIgnored = !!ignored;
 
     const m = mobile ? String(mobile).trim() : '';
@@ -37,7 +38,7 @@ export async function POST(request: NextRequest) {
     // Update all matching hisab records to the new ignore state
     await db.collection('hisab').updateMany(
       {
-        space_id: spaceId,
+        space_id: { $in: spaceIds },
         name: name,
         mobile: mobileQuery,
       },
@@ -50,7 +51,7 @@ export async function POST(request: NextRequest) {
     if (isIgnored) {
       // Find all hisab records for this person
       const records = await db.collection('hisab').find({
-        space_id: spaceId,
+        space_id: { $in: spaceIds },
         name: name,
         mobile: mobileQuery,
       }).toArray();
@@ -59,14 +60,14 @@ export async function POST(request: NextRequest) {
 
       // Delete corresponding daily expenses because they are now ignored
       await db.collection('expenses').deleteMany({
-        space_id: spaceId,
+        space_id: { $in: spaceIds },
         associatedId: { $in: hisabIds },
         associatedType: 'hisab',
       });
     } else {
       // Re-create daily expenses for records that have log_as_expense set to true
       const records = await db.collection('hisab').find({
-        space_id: spaceId,
+        space_id: { $in: spaceIds },
         name: name,
         mobile: mobileQuery,
         log_as_expense: true
@@ -82,7 +83,7 @@ export async function POST(request: NextRequest) {
 
         await db.collection('expenses').updateOne(
           {
-            space_id: spaceId,
+            space_id: { $in: spaceIds },
             associatedId: r.hisab_id,
             associatedType: 'hisab'
           },

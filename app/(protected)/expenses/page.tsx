@@ -9,7 +9,6 @@ import TodayExpensesSection from "@/components/expense/TodayExpensesSection";
 import {
   getSettings,
   getCollaborationData,
-  getDashboardStats,
   getMonthlySummary,
 } from "@/lib/data-fetching";
 
@@ -22,10 +21,9 @@ const EXPENSE_TABS = [
 ];
 
 export default async function ExpensesPage() {
-  const [settings, collabData, stats, summary] = await Promise.all([
+  const [settings, collabData, summary] = await Promise.all([
     getSettings(),
     getCollaborationData(),
-    getDashboardStats(),
     getMonthlySummary(),
   ]);
 
@@ -44,10 +42,10 @@ export default async function ExpensesPage() {
       <AppShell className="pt-3">
         <BackupReminder settings={settings} />
 
-        <LiveStatCards 
-          initialToday={todayTotal} 
-          initialMonthlyIn={monthlyIncome} 
-          initialMonthlyOut={monthlyExpense} 
+        <LiveStatCards
+          initialToday={todayTotal}
+          initialMonthlyIn={monthlyIncome}
+          initialMonthlyOut={monthlyExpense}
         />
 
         {/* Always-visible instant add bar */}

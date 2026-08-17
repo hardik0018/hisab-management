@@ -319,13 +319,13 @@ const LandingPage = () => {
             </Link>
             <Link
               href="/privacy"
-              className="hover:text-blue-600 transition-colors text-blue-600 font-extrabold"
+              className="hover:text-blue-600 transition-colors"
             >
               Privacy Policy
             </Link>
             <Link
               href="/terms"
-              className="hover:text-blue-600 transition-colors text-blue-600 font-extrabold"
+              className="hover:text-blue-600 transition-colors"
             >
               Terms of Service
             </Link>

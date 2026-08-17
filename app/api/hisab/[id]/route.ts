@@ -18,10 +18,11 @@ export async function PUT(
     const body = await request.json();
     const db = await getDb();
     const spaceId = user.space_id || user.user_id;
+    const spaceIds = [user.space_id, user.user_id].filter(Boolean);
 
     const existingRecord = await db.collection('hisab').findOne({
       hisab_id: recordId,
-      space_id: spaceId
+      space_id: { $in: spaceIds }
     });
 
     if (!existingRecord) {
@@ -39,7 +40,7 @@ export async function PUT(
     if (body.ignored !== undefined) updateData.ignored = !!body.ignored;
 
     const result = await db.collection('hisab').updateOne(
-      { hisab_id: recordId, space_id: spaceId },
+      { hisab_id: recordId, space_id: { $in: spaceIds } },
       { $set: updateData }
     );
 
@@ -135,17 +136,18 @@ export async function DELETE(
     const { id: recordId } = await params;
     const db = await getDb();
     const spaceId = user.space_id || user.user_id;
+    const spaceIds = [user.space_id, user.user_id].filter(Boolean);
     
     // Delete linked expense first
     await db.collection('expenses').deleteOne({
       associatedId: recordId,
       associatedType: 'hisab',
-      space_id: spaceId
+      space_id: { $in: spaceIds }
     });
 
     const result = await db.collection('hisab').deleteOne({
       hisab_id: recordId,
-      space_id: spaceId,
+      space_id: { $in: spaceIds },
     });
 
     if (result.deletedCount === 0) {
