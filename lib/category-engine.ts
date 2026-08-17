@@ -68,7 +68,7 @@ export function categorizeExpense(
   }
 
   // 4. Bills, Rent & Housing (બિલ, ભાડું અને ઘર)
-  if (/recharge|mobile|wifi|broadband|light\s*bill|electricity|gas\s*bill|gas|bhadu|rent|room|makan|home|house|repair|blender|regulalater|regulator|fevicik|lock|chipiya|makoda|pest|chowk|plastic|khapad|kapda|katko|duster|cleaning/i.test(text)) {
+  if (/recharge|mobile|wifi|broadband|light\s*bill|electricity|gas\s*bill|gas|bhadu|rent|room|makan|home|house|repair|blender|regulalater|regulator|fevicik|lock|chipiya|makoda|pest|chowk|plastic|khapad|kapda|katko|duster|cleaning|atm|charge|tax|gst/i.test(text)) {
     return 'Bills, Rent & Housing';
   }
 
@@ -78,22 +78,22 @@ export function categorizeExpense(
   }
 
   // 6. Groceries & Kitchen (કરિયાણું અને રસોડું)
-  if (/dudh|milk|dhana|jisoda|jeeshoda|pawa|pava|samo|sabu|sabudani|sing|methi|sugar|khand|solt|salt|mithu|rava|kathor|mag|hing|mamra|mamara|astar|bakas|shree\s*fal|shreefal|nariyel|powder|khapda\s*dhovano|liquid|vasan|rooh|durvana|sori|chhash|chhaash|navratra|orsolum|oil|agarbatti|ghau|ઘઉં|kirana|kariyanu|grocery|masala|sev|chavanu|papad/i.test(text)) {
+  if (/dudh|milk|dhana|jisoda|jeeshoda|pawa|pava|samo|sabu|sabudani|sing|methi|sugar|khand|solt|salt|mithu|rava|kathor|mag|hing|mamra|mamara|astar|bakas|shree\s*fal|shreefal|nariyel|powder|khapda\s*dhovano|liquid|vasan|rooh|durvana|sori|chhash|chhaash|navratra|orsolum|oil|agarbatti|ghau|ઘઉં|kirana|kariyanu|grocery|masala|sev|chavanu|papad|lot|aato|flour|chana/i.test(text)) {
     return 'Groceries & Kitchen';
   }
 
   // 7. Snacks, Food & Dining (નાસ્તો અને જમવાનું)
-  if (/nasto|snack|gathiya|bhungra|bungra|vefar|wafer|biscuit|puf|paf|gulfi|kulfi|panipuri|pani\s*puri|pavbhaji|pav\s*bhaji|megi|maggi|puri\s*shak|chocolate|cha|tea|coffee|chips|hotel|restaurant|food|pizza|burger|chevdo/i.test(text)) {
+  if (/nasto|snack|gathiya|bhungra|bungra|vefar|wafer|biscuit|puf|paf|gulfi|kulfi|panipuri|pani\s*puri|pavbhaji|pav\s*bhaji|megi|maggi|puri\s*shak|chocolate|\bcha\b|chai|tea|coffee|chips|hotel|restaurant|food|pizza|burger|chevdo|soda/i.test(text)) {
     return 'Snacks, Food & Dining';
   }
 
   // 8. Personal Care, Health & Medical (આરોગ્ય અને પર્સનલ કેર)
-  if (/hair|cut|salon|doctor|hospital|medicine|medical|pharma|pill|clinic|test|blood|watch|whatch|colgate|sampoo|sempu|soap|ped|shampoo|dental|eye|jilaid|guard|shave|razor|blade/i.test(text)) {
+  if (/hair|cut|salon|doctor|hospital|medicine|medical|pharma|pill|clinic|test|blood|watch|whatch|colgate|sampoo|sempu|soap|ped|shampoo|dental|eye|jilaid|guard|shave|razor|blade|chasma|glasses|specs|spectacles|goggle|dava|dawa/i.test(text)) {
     return 'Personal Care & Medical';
   }
 
   // 9. Shopping & Stores (શોપિંગ અને ખરીદી)
-  if (/dress|cloth|saree|shirt|pant|shoes|chappal|laptop|electronics|d\s*mart|dmart|shopping|bag|rotary|museum|mall|store/i.test(text)) {
+  if (/dress|cloth|saree|saadi|shirt|pant|shoes|chappal|champal|mojadi|laptop|electronics|d\s*mart|dmart|shopping|bag|rotary|museum|mall|store|underwear|butti|butii/i.test(text)) {
     return 'Shopping & Stores';
   }
 
