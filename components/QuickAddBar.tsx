@@ -16,12 +16,14 @@ import {
   Wallet,
   Zap,
   ArrowRightLeft,
+  Mic,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import Link from 'next/link';
 import { parseEntries, ParsedDraft, ParsedExpenseDraft, ParsedHisabDraft, ParsedTransferDraft } from '@/lib/parser';
 import { cn } from '@/lib/utils';
 import { Trip } from '@/types/trip';
+import { useSpeechRecognition, VoiceLanguage } from '@/hooks/useSpeechRecognition';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -81,6 +83,41 @@ export default function QuickAddBar({
 
   const [activeTrip, setActiveTrip] = useState<Trip | null>(null);
   const [isTripTaggingActive, setIsTripTaggingActive] = useState<boolean>(true);
+
+  // ── Speech Recognition Hook ────────────────────────────────────────────────
+  const {
+    isListening,
+    transcript: speechTranscript,
+    error: speechError,
+    isSupported: isSpeechSupported,
+    language: voiceLanguage,
+    setLanguage: setVoiceLanguage,
+    startListening,
+    stopListening,
+  } = useSpeechRecognition({
+    onResult: (normalized) => {
+      setValue(normalized);
+    },
+    onEnd: (final) => {
+      if (final) {
+        setValue(final);
+      }
+    },
+  });
+
+  useEffect(() => {
+    if (speechError) {
+      toast.error(speechError);
+    }
+  }, [speechError]);
+
+  const handleToggleVoice = () => {
+    if (isListening) {
+      stopListening();
+    } else {
+      startListening();
+    }
+  };
 
   // ── Fetch active trip (expense mode only) ──────────────────────────────────
 
@@ -379,13 +416,59 @@ export default function QuickAddBar({
         </div>
       )}
 
+      {/* ── Voice Listening & Language Switcher Banner ───────────────── */}
+      {isListening && (
+        <div className="flex items-center justify-between p-2.5 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-xs animate-in fade-in">
+          <div className="flex items-center gap-2">
+            <span className="relative flex h-2.5 w-2.5">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-rose-500"></span>
+            </span>
+            <span className="font-semibold text-rose-600 dark:text-rose-400">
+              Listening... speak now
+            </span>
+          </div>
+
+          {/* Quick Language Toggle (English & Gujarati) */}
+          <div className="flex gap-1">
+            <button
+              type="button"
+              onClick={() => setVoiceLanguage('en-IN')}
+              className={cn(
+                'px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all',
+                voiceLanguage === 'en-IN'
+                  ? 'bg-rose-500 text-white shadow-sm'
+                  : 'bg-secondary text-muted-foreground hover:text-foreground'
+              )}
+            >
+              EN (India)
+            </button>
+            <button
+              type="button"
+              onClick={() => setVoiceLanguage('gu-IN')}
+              className={cn(
+                'px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all',
+                voiceLanguage === 'gu-IN'
+                  ? 'bg-rose-500 text-white shadow-sm'
+                  : 'bg-secondary text-muted-foreground hover:text-foreground'
+              )}
+            >
+              ગુજરાતી
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* ── Input row ─────────────────────────────────────────────────── */}
       <div className="flex items-center gap-2">
         <div
-          className="flex items-center flex-1 gap-2 px-3 rounded-xl h-12"
+          className={cn(
+            'flex items-center flex-1 gap-2 px-3 rounded-xl h-12 transition-all',
+            isListening && 'ring-2 ring-rose-500/50 border-rose-500/50'
+          )}
           style={{
             background: 'var(--secondary)',
-            border: '1px solid var(--border)',
+            border: isListening ? '1px solid rgb(244 63 94 / 0.5)' : '1px solid var(--border)',
           }}
         >
           <Zap className="w-4 h-4 shrink-0" style={{ color: 'var(--primary)' }} />
@@ -397,7 +480,7 @@ export default function QuickAddBar({
             value={value}
             onChange={(e) => setValue(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder={placeholder}
+            placeholder={isListening ? 'Listening...' : placeholder}
             aria-label="Quick add entry"
             className="flex-1 bg-transparent text-base outline-none placeholder:text-sm"
             style={{
@@ -405,6 +488,24 @@ export default function QuickAddBar({
               fontSize: '16px', // prevents iOS zoom
             }}
           />
+
+          {/* Voice Input Mic Button */}
+          {isSpeechSupported && (
+            <button
+              type="button"
+              onClick={handleToggleVoice}
+              aria-label={isListening ? 'Stop recording voice' : 'Speak to record expense'}
+              className={cn(
+                'p-2 rounded-xl transition-all shrink-0 active:scale-90',
+                isListening
+                  ? 'bg-rose-500 text-white shadow-md shadow-rose-500/30'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-card'
+              )}
+              title={isListening ? 'Stop listening' : 'Speak expense (Mic)'}
+            >
+              <Mic className={cn('w-4 h-4', isListening && 'animate-pulse')} />
+            </button>
+          )}
         </div>
 
         {/* + save button */}
