@@ -115,6 +115,7 @@ export default function QuickAddBar({
     if (isListening) {
       stopListening();
     } else {
+      setValue('');
       startListening();
     }
   };

@@ -24,7 +24,7 @@ export function useSpeechRecognition({
 
   const recognitionRef = useRef<any>(null);
   const silenceTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const accumulatedTranscriptRef = useRef<string>('');
+  const latestTranscriptRef = useRef<string>('');
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -72,7 +72,7 @@ export function useSpeechRecognition({
 
     setError(null);
     setTranscript('');
-    accumulatedTranscriptRef.current = '';
+    latestTranscriptRef.current = '';
 
     try {
       const recognition = new SpeechRecognition();
@@ -86,42 +86,36 @@ export function useSpeechRecognition({
       };
 
       recognition.onresult = (event: any) => {
-        let currentInterim = '';
-        let finalChunk = '';
+        let fullTranscript = '';
 
-        for (let i = event.resultIndex; i < event.results.length; i++) {
+        for (let i = 0; i < event.results.length; i++) {
           const item = event.results[i];
-          if (item.isFinal) {
-            finalChunk += item[0].transcript + ' ';
-          } else {
-            currentInterim += item[0].transcript;
+          if (item && item[0] && item[0].transcript) {
+            fullTranscript += item[0].transcript + ' ';
           }
         }
 
-        if (finalChunk) {
-          accumulatedTranscriptRef.current += finalChunk;
+        const normalized = normalizeSpokenExpenseText(fullTranscript.trim());
+
+        if (normalized) {
+          latestTranscriptRef.current = normalized;
+          setTranscript(normalized);
+          if (onResult) {
+            onResult(normalized);
+          }
         }
 
-        const combinedRaw = (accumulatedTranscriptRef.current + currentInterim).trim();
-        const normalized = normalizeSpokenExpenseText(combinedRaw);
-
-        setTranscript(normalized);
-        if (onResult) {
-          onResult(normalized);
-        }
-
-        // Reset silence timer on new speech input
+        // Reset silence timer on speech input (auto-stop after 2s of silence)
         if (silenceTimerRef.current) {
           clearTimeout(silenceTimerRef.current);
         }
         silenceTimerRef.current = setTimeout(() => {
           stopListening();
-        }, 3000); // 3s silence -> auto stop
+        }, 2000);
       };
 
       recognition.onerror = (event: any) => {
         if (event.error === 'no-speech') {
-          // Silent timeout, safe to ignore or close
           setError('No speech detected');
         } else if (event.error === 'not-allowed') {
           setError('Microphone permission denied');
@@ -133,7 +127,11 @@ export function useSpeechRecognition({
 
       recognition.onend = () => {
         setIsListening(false);
-        const finalNormalized = normalizeSpokenExpenseText(accumulatedTranscriptRef.current.trim());
+        if (silenceTimerRef.current) {
+          clearTimeout(silenceTimerRef.current);
+          silenceTimerRef.current = null;
+        }
+        const finalNormalized = latestTranscriptRef.current.trim();
         if (onEnd && finalNormalized) {
           onEnd(finalNormalized);
         }

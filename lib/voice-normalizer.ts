@@ -174,5 +174,40 @@ export function normalizeSpokenExpenseText(rawText: string): string {
     i++;
   }
 
-  return resultWords.join(' ');
+  const combined = resultWords.join(' ').trim();
+  return deduplicateRepeatedPhrases(combined);
+}
+
+/**
+ * Removes duplicate repetitions caused by speech recognition interim/final overlap
+ * e.g. "sabudana 20 sabudana 20" -> "sabudana 20"
+ * e.g. "petrol 500 petrol 500" -> "petrol 500"
+ */
+export function deduplicateRepeatedPhrases(text: string): string {
+  if (!text) return '';
+  const trimmed = text.trim();
+  const tokens = trimmed.split(' ').filter(Boolean);
+
+  if (tokens.length < 2) return trimmed;
+
+  // Check if string consists of two identical halves: e.g. ["sabudana", "20", "sabudana", "20"]
+  if (tokens.length % 2 === 0) {
+    const mid = tokens.length / 2;
+    const firstHalf = tokens.slice(0, mid).join(' ').toLowerCase();
+    const secondHalf = tokens.slice(mid).join(' ').toLowerCase();
+    if (firstHalf === secondHalf) {
+      return tokens.slice(0, mid).join(' ');
+    }
+  }
+
+  // Check if there are consecutive identical phrases of length k
+  for (let k = 1; k <= Math.floor(tokens.length / 2); k++) {
+    const first = tokens.slice(0, k).join(' ').toLowerCase();
+    const second = tokens.slice(k, k * 2).join(' ').toLowerCase();
+    if (first === second && k * 2 === tokens.length) {
+      return tokens.slice(0, k).join(' ');
+    }
+  }
+
+  return trimmed;
 }
