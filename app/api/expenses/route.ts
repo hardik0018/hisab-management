@@ -64,6 +64,9 @@ export async function POST(request: NextRequest) {
         category: categorizeExpense(exp.itemName, exp.note, Number(exp.amount), exp.type, exp.category),
         currency: 'INR',
         type: exp.type, // handled below
+        associatedType: exp.associatedType,
+        associatedId: exp.associatedId,
+        tripMetadata: exp.tripMetadata,
       };
 
       if (exp.type === 'transfer') {

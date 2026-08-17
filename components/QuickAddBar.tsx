@@ -18,8 +18,10 @@ import {
   ArrowRightLeft,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import Link from 'next/link';
 import { parseEntries, ParsedDraft, ParsedExpenseDraft, ParsedHisabDraft, ParsedTransferDraft } from '@/lib/parser';
 import { cn } from '@/lib/utils';
+import { Trip } from '@/types/trip';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -76,6 +78,25 @@ export default function QuickAddBar({
   const [saving, setSaving] = useState(false);
   const [frequent, setFrequent] = useState<FrequentItem[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const [activeTrip, setActiveTrip] = useState<Trip | null>(null);
+  const [isTripTaggingActive, setIsTripTaggingActive] = useState<boolean>(true);
+
+  // ── Fetch active trip (expense mode only) ──────────────────────────────────
+
+  useEffect(() => {
+    if (mode !== 'expense') return;
+    const fetchActiveTrip = () => {
+      fetch('/api/trips/active')
+        .then((r) => r.json())
+        .then((d) => setActiveTrip(d.activeTrip ?? null))
+        .catch(() => {});
+    };
+
+    fetchActiveTrip();
+    window.addEventListener('active_trip_changed', fetchActiveTrip);
+    return () => window.removeEventListener('active_trip_changed', fetchActiveTrip);
+  }, [mode]);
 
   // ── Load frequent items (expense mode only) ────────────────────────────────
 
@@ -172,6 +193,15 @@ export default function QuickAddBar({
                 note: e.note,
                 category: e.category,
                 type: e.type,
+                ...(activeTrip && isTripTaggingActive
+                  ? {
+                      associatedType: 'trip',
+                      associatedId: activeTrip.trip_id,
+                      tripMetadata: {
+                        tripCategory: e.category,
+                      },
+                    }
+                  : {}),
               })),
             }),
           }).then(async (res) => {
@@ -314,6 +344,41 @@ export default function QuickAddBar({
     <div
       className={cn('card-surface p-3 flex flex-col gap-2', className)}
     >
+      {/* ── Active Trip Quick-Tag Banner ────────────────────────────────── */}
+      {activeTrip && mode === 'expense' && (
+        <div className="flex items-center justify-between gap-2 px-3 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-800 dark:text-amber-300 transition-all">
+          <div className="flex items-center gap-1.5 min-w-0">
+            <span className="text-sm shrink-0">{activeTrip.coverEmoji || '🌴'}</span>
+            <span className="font-semibold truncate">Active Trip: {activeTrip.title}</span>
+            <span
+              className={cn(
+                'px-1.5 py-0.5 text-[10px] font-bold rounded-full',
+                isTripTaggingActive
+                  ? 'bg-amber-500/20 text-amber-900 dark:text-amber-200'
+                  : 'bg-muted text-muted-foreground'
+              )}
+            >
+              {isTripTaggingActive ? 'Auto-Tagging ON' : 'Paused'}
+            </span>
+          </div>
+          <div className="flex items-center gap-2.5 shrink-0 text-[11px]">
+            <button
+              type="button"
+              onClick={() => setIsTripTaggingActive((prev) => !prev)}
+              className="font-medium underline hover:text-foreground transition-colors"
+            >
+              {isTripTaggingActive ? 'Pause' : 'Resume'}
+            </button>
+            <Link
+              href={`/expenses/trips/${activeTrip.trip_id}`}
+              className="font-semibold text-primary hover:underline"
+            >
+              View Trip →
+            </Link>
+          </div>
+        </div>
+      )}
+
       {/* ── Input row ─────────────────────────────────────────────────── */}
       <div className="flex items-center gap-2">
         <div

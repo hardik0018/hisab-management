@@ -4,16 +4,7 @@ import { getExpenses, getCollaborationData } from '@/lib/data-fetching';
 import HistoryClient from './HistoryClient';
 import { redirect } from 'next/navigation';
 import { getAuthenticatedUser } from '@/lib/auth';
-import SegmentedTabs from '@/components/SegmentedTabs';
-
-const EXPENSE_TABS = [
-  { label: 'Today', href: '/expenses' },
-  { label: 'History', href: '/expenses/history' },
-  { label: 'Auto', href: '/expenses/recurring' },
-  { label: 'Report', href: '/expenses/summary' },
-  { label: 'Tax', href: '/expenses/tax' },
-  
-];
+import ExpenseNavTabs from '@/components/expense/ExpenseNavTabs';
 
 interface PageProps {
   searchParams: Promise<{
@@ -51,7 +42,7 @@ export default async function HistoryPage({ searchParams }: PageProps) {
 
   return (
     <>
-      <SegmentedTabs tabs={EXPENSE_TABS} />
+      <ExpenseNavTabs />
       <HistoryClient 
         initialExpenses={initialExpenses || []} 
         searchParams={params} 
