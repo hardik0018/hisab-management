@@ -60,8 +60,8 @@ export async function getHisabRecords(options: {
     ];
   }
 
-  // Aggregation pipeline using $facet for pagination and totals
-  const pipeline = [
+  // Base pipeline for grouping
+  const basePipeline = [
     { $match: matchStage },
     // Sort before grouping so $first captures the newest record's values
     { $sort: { date: -1, created_at: -1 } },
@@ -78,49 +78,47 @@ export async function getHisabRecords(options: {
         latest: { $first: "$date" },
         ignored: { $first: { $ifNull: ["$ignored", false] } }
       }
-    },
-    {
-      $facet: {
-        metadata: [
-          {
-            $group: {
-              _id: null,
-              totalDebit: {
-                $sum: {
-                  $cond: [
-                    { $eq: ["$ignored", false] },
-                    { $max: [0, { $subtract: ["$debit", "$credit"] }] },
-                    0
-                  ]
-                }
-              },
-              totalCredit: {
-                $sum: {
-                  $cond: [
-                    { $eq: ["$ignored", false] },
-                    { $max: [0, { $subtract: ["$credit", "$debit"] }] },
-                    0
-                  ]
-                }
-              },
-              totalCount: { $sum: 1 }
-            }
-          }
-        ],
-        data: [
-          { $sort: { latest: -1 } },
-          { $skip: skip },
-          { $limit: limit }
-        ]
-      }
     }
   ];
 
-  const result = await db.collection('hisab').aggregate(pipeline).toArray();
-  const facetResult = result[0];
+  const [dataResult, metadataResult] = await Promise.all([
+    db.collection('hisab').aggregate([
+      ...basePipeline,
+      { $sort: { latest: -1 } },
+      { $skip: skip },
+      { $limit: limit }
+    ]).toArray(),
+    db.collection('hisab').aggregate([
+      ...basePipeline,
+      {
+        $group: {
+          _id: null,
+          totalDebit: {
+            $sum: {
+              $cond: [
+                { $eq: ["$ignored", false] },
+                { $max: [0, { $subtract: ["$debit", "$credit"] }] },
+                0
+              ]
+            }
+          },
+          totalCredit: {
+            $sum: {
+              $cond: [
+                { $eq: ["$ignored", false] },
+                { $max: [0, { $subtract: ["$credit", "$debit"] }] },
+                0
+              ]
+            }
+          },
+          totalCount: { $sum: 1 }
+        }
+      }
+    ]).toArray()
+  ]);
   
-  const metadata = facetResult.metadata[0] || { totalDebit: 0, totalCredit: 0, totalCount: 0 };
-  const people = facetResult.data.map((d: any) => ({
+  const metadata = metadataResult[0] || { totalDebit: 0, totalCredit: 0, totalCount: 0 };
+  const people = dataResult.map((d: any) => ({
     name: d.name,
     mobile: d.mobile,
     debit: d.debit,

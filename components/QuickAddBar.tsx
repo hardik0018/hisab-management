@@ -211,7 +211,7 @@ export default function QuickAddBar({
         inputRef.current?.focus();
 
         if (typeof window !== 'undefined') {
-          window.dispatchEvent(new Event('expense_added'));
+          window.dispatchEvent(new CustomEvent('expense_added', { detail: { items } }));
         }
 
         const label =
