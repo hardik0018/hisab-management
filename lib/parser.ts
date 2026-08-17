@@ -63,7 +63,8 @@ export interface ParseResult {
 
 const INCOME_WORDS = [
   "salary", "income", "received", "credited", "bonus",
-  "refund", "interest", "mila", "aayo", "aavi",
+  "refund", "interest", "mila", "aayo", "aavi", "aavyu",
+  "rent", "bhadu", "makan bhadu", "dividend", "cashback",
 ];
 
 const GAVE_WORDS = [

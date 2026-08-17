@@ -410,6 +410,12 @@ export async function getMonthlySummary(monthStr?: string, search?: string, cate
   todayTotal: number;
   memberBalances: { user_id: string; name: string; income: number; expense: number; transfer_in: number; transfer_out: number; month_balance: number; previous_balance: number; total_balance: number; }[];
   categoryBreakdown: { category: string; total: number; count: number; percentage: number }[];
+  investmentsSummary: {
+    monthlyInvested: number;
+    pureExpenses: number;
+    lifetimeInvested: number;
+    initialBase: number;
+  };
   categoryTransactions: { _id: string; itemName: string; amount: number; date: string; category: string; note: string }[];
   topExpenses: { _id: string; itemName: string; amount: number; date: string; category: string; note: string }[];
 } | null> {
@@ -443,7 +449,17 @@ export async function getMonthlySummary(monthStr?: string, search?: string, cate
   const monthEnd = `${nextYear}-${paddedNextMon}-01`;
 
   // Single aggregation for monthly totals + daily breakdown + member balances
-  const [monthlyAgg, todayAgg, userStatsAgg, spaceUsers, categoryAgg, topExpensesAgg, previousBalancesAgg] = await Promise.all([
+  const [
+    monthlyAgg,
+    todayAgg,
+    userStatsAgg,
+    spaceUsers,
+    categoryAgg,
+    topExpensesAgg,
+    previousBalancesAgg,
+    lifetimeInvestmentAgg,
+    recurringTemplatesRaw
+  ] = await Promise.all([
     db.collection('expenses').aggregate([
       {
         $match: {
@@ -505,7 +521,18 @@ export async function getMonthlySummary(monthStr?: string, search?: string, cate
     db.collection('expenses').aggregate([
       { $match: { space_id: spaceId, date: { $gte: '2026-07-01', $lt: monthStart } } },
       { $group: { _id: { user_id: '$user_id', type: '$type' }, total: { $sum: '$amount' } } }
-    ]).toArray()
+    ]).toArray(),
+    db.collection('expenses').aggregate([
+      {
+        $match: {
+          space_id: spaceId,
+          type: { $nin: ['income', 'transfer_in', 'transfer_out'] },
+          category: 'Investments & Insurance'
+        }
+      },
+      { $group: { _id: null, total: { $sum: '$amount' } } }
+    ]).toArray(),
+    db.collection('recurring_expenses').find({ space_id: spaceId }).toArray()
   ]);
 
   const dailyTotals = monthlyAgg.map((d) => ({ date: d._id as string, total: d.dailyTotal as number }));
@@ -625,6 +652,14 @@ export async function getMonthlySummary(monthStr?: string, search?: string, cate
       .toArray();
   }
 
+  const monthlyInvestedCategory = categoryBreakdown.find((c: any) => c.category === 'Investments & Insurance');
+  const monthlyInvested = monthlyInvestedCategory ? monthlyInvestedCategory.total : 0;
+  const pureExpenses = Math.max(0, monthlyTotal - monthlyInvested);
+
+  const initialBase = (recurringTemplatesRaw || []).reduce((sum: number, t: any) => sum + (Number(t.initialInvestedAmount) || 0), 0);
+  const lifetimeAppInvested = lifetimeInvestmentAgg[0]?.total || 0;
+  const lifetimeInvested = lifetimeAppInvested + initialBase;
+
   return {
     month,
     monthlyTotal,
@@ -634,6 +669,12 @@ export async function getMonthlySummary(monthStr?: string, search?: string, cate
     todayTotal,
     memberBalances,
     categoryBreakdown,
+    investmentsSummary: {
+      monthlyInvested,
+      pureExpenses,
+      lifetimeInvested,
+      initialBase,
+    },
     categoryTransactions: categoryTransactions.map((exp: any) => ({
       _id: exp._id.toString(),
       itemName: exp.itemName || 'Unknown Item',
@@ -656,18 +697,44 @@ export async function getRecurringExpenses(): Promise<RecurringExpense[] | null>
   const db = await getDb();
   const spaceId = user.space_id || user.user_id;
 
-  const templates = await db
-    .collection('recurring_expenses')
-    .find({ space_id: spaceId })
-    .sort({ createdAt: -1 })
-    .toArray();
+  const todayStr = getTodayKolkata();
+  const currentMonthStr = todayStr.substring(0, 7); // e.g. "2026-08"
 
-  return templates.map(t => ({
-    ...t,
-    _id: t._id.toString(),
-    createdAt: t.createdAt instanceof Date ? t.createdAt.toISOString() : t.createdAt,
-    updatedAt: t.updatedAt instanceof Date ? t.updatedAt.toISOString() : t.updatedAt,
-  })) as unknown as RecurringExpense[];
+  const [templates, currentMonthExpenses] = await Promise.all([
+    db.collection('recurring_expenses')
+      .find({ space_id: spaceId })
+      .sort({ createdAt: -1 })
+      .toArray(),
+    db.collection('expenses')
+      .find({
+        space_id: spaceId,
+        date: { $gte: `${currentMonthStr}-01`, $lte: `${currentMonthStr}-31` }
+      })
+      .toArray()
+  ]);
+
+  return templates.map(t => {
+    const templateIdStr = t._id.toString();
+    // Check if an expense was logged this month associated with this template or matching name
+    const match = currentMonthExpenses.find((e: any) => 
+      e.associatedId === templateIdStr ||
+      (e.itemName?.toLowerCase().trim() === t.itemName?.toLowerCase().trim() && (e.type || 'expense') === (t.type || 'expense'))
+    );
+
+    const currentMonthStatus = match ? {
+      received: true,
+      date: match.date,
+      amount: match.amount
+    } : null;
+
+    return {
+      ...t,
+      _id: templateIdStr,
+      currentMonthStatus,
+      createdAt: t.createdAt instanceof Date ? t.createdAt.toISOString() : t.createdAt,
+      updatedAt: t.updatedAt instanceof Date ? t.updatedAt.toISOString() : t.updatedAt,
+    };
+  }) as unknown as RecurringExpense[];
 }
 
 /**

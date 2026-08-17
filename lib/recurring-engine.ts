@@ -16,14 +16,44 @@ function getTodayKolkata(): string {
 }
 
 /**
- * Returns the month string that follows the given month string ("YYYY-MM").
+ * Resolves the interval in months for a given template.
  */
-function getNextMonth(monthStr: string): string {
-  const [year, month] = monthStr.split('-').map(Number);
-  if (month === 12) {
-    return `${year + 1}-01`;
+export function getIntervalMonths(template: { frequency?: string; frequencyIntervalMonths?: number }): number {
+  if (template.frequencyIntervalMonths && template.frequencyIntervalMonths > 0) {
+    return template.frequencyIntervalMonths;
   }
-  return `${year}-${String(month + 1).padStart(2, '0')}`;
+  if (template.frequency === 'quarterly') return 3;
+  if (template.frequency === 'half_yearly') return 6;
+  if (template.frequency === 'yearly') return 12;
+  return 1; // monthly default
+}
+
+/**
+ * Returns the candidate month string according to interval in months.
+ */
+export function getNextCandidateMonth(monthStr: string, intervalMonths: number = 1): string {
+  const [year, month] = monthStr.split('-').map(Number);
+  const inc = Math.max(1, intervalMonths || 1);
+
+  let totalMonths = (month - 1) + inc;
+  let newYear = year + Math.floor(totalMonths / 12);
+  let newMonth = (totalMonths % 12) + 1;
+
+  return `${newYear}-${String(newMonth).padStart(2, '0')}`;
+}
+
+/**
+ * Returns the month before the start month according to interval so the first trigger executes on startDate.
+ */
+export function getInitialLastGenMonth(startDate: string, intervalMonths: number = 1): string {
+  const [year, month] = startDate.split('-').map(Number);
+  const dec = Math.max(1, intervalMonths || 1);
+
+  let totalMonths = (month - 1) - dec;
+  let newYear = year + Math.floor(totalMonths / 12);
+  let newMonth = (((totalMonths % 12) + 12) % 12) + 1;
+
+  return `${newYear}-${String(newMonth).padStart(2, '0')}`;
 }
 
 /**
@@ -43,17 +73,15 @@ export async function checkAndGenerateRecurringExpenses(spaceId: string, userId:
   const currentMonthStr = todayStr.substring(0, 7); // e.g. "2026-06"
   
   for (const template of templates) {
+    const intervalMonths = getIntervalMonths(template as any);
     let lastGeneratedMonth = template.lastGeneratedMonth;
     
-    // Safety fallback: if somehow lastGeneratedMonth is not set, initialize to the month before startDate
+    // Safety fallback: if somehow lastGeneratedMonth is not set, initialize to the interval before startDate
     if (!lastGeneratedMonth) {
-      const [sYear, sMonth] = template.startDate.split('-').map(Number);
-      const prevMonth = sMonth === 1 ? 12 : sMonth - 1;
-      const prevYear = sMonth === 1 ? sYear - 1 : sYear;
-      lastGeneratedMonth = `${prevYear}-${String(prevMonth).padStart(2, '0')}`;
+      lastGeneratedMonth = getInitialLastGenMonth(template.startDate, intervalMonths);
     }
     
-    let candidateMonth = getNextMonth(lastGeneratedMonth);
+    let candidateMonth = getNextCandidateMonth(lastGeneratedMonth, intervalMonths);
     
     while (candidateMonth <= currentMonthStr) {
       const [cYear, cMonth] = candidateMonth.split('-').map(Number);
@@ -102,7 +130,8 @@ export async function checkAndGenerateRecurringExpenses(spaceId: string, userId:
             itemName: template.itemName,
             amount: Number(template.amount),
             note: template.note || 'Generated automatically',
-            category: categorizeExpense(template.itemName, template.note, Number(template.amount), 'expense', template.category),
+            category: categorizeExpense(template.itemName, template.note, Number(template.amount), template.type || 'expense', template.category),
+            type: template.type || 'expense',
             currency: 'INR',
             associatedId: template._id.toString(),
             associatedType: 'recurring',
@@ -127,7 +156,7 @@ export async function checkAndGenerateRecurringExpenses(spaceId: string, userId:
         }
       }
       
-      candidateMonth = getNextMonth(lastGeneratedMonth);
+      candidateMonth = getNextCandidateMonth(lastGeneratedMonth, intervalMonths);
     }
   }
 }

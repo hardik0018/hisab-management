@@ -5,14 +5,7 @@ import { getDb } from '@/lib/db';
 import { ObjectId } from 'mongodb';
 import { getAuthenticatedUser } from '@/lib/auth';
 import { categorizeExpense } from '@/lib/category-engine';
-
-function getPreviousMonth(monthStr: string): string {
-  const [year, month] = monthStr.split('-').map(Number);
-  if (month === 1) {
-    return `${year - 1}-12`;
-  }
-  return `${year}-${String(month - 1).padStart(2, '0')}`;
-}
+import { getInitialLastGenMonth } from '@/lib/recurring-engine';
 
 export async function PATCH(
   request: NextRequest,
@@ -30,7 +23,7 @@ export async function PATCH(
     }
 
     const body = await request.json();
-    const { itemName, amount, dayOfMonth, startDate, note, category, isActive, user_id } = body;
+    const { itemName, amount, dayOfMonth, startDate, note, category, isActive, user_id, type, initialInvestedAmount, frequency, frequencyIntervalMonths } = body;
 
     const db = await getDb();
     const spaceId = user.space_id || user.user_id;
@@ -70,19 +63,33 @@ export async function PATCH(
       updates.dayOfMonth = dom;
     }
 
+    if (frequency !== undefined) {
+      updates.frequency = frequency;
+    }
+
+    if (frequencyIntervalMonths !== undefined) {
+      const interval = Number(frequencyIntervalMonths);
+      updates.frequencyIntervalMonths = (!isNaN(interval) && interval >= 1) ? interval : 1;
+    }
+
     if (startDate !== undefined) {
       if (!/^\d{4}-\d{2}$/.test(startDate)) {
         return Response.json({ error: 'Validation Error', message: 'Start month must be in YYYY-MM format' }, { status: 400 });
       }
       updates.startDate = startDate;
-      // If start date changes, recalculate lastGeneratedMonth to keep logic consistent
-      if (startDate !== existing.startDate) {
-        updates.lastGeneratedMonth = getPreviousMonth(startDate);
-      }
+      const targetInterval = updates.frequencyIntervalMonths || existing.frequencyIntervalMonths || 1;
+      updates.lastGeneratedMonth = getInitialLastGenMonth(startDate, targetInterval);
+    } else if (updates.frequencyIntervalMonths !== undefined && updates.frequencyIntervalMonths !== existing.frequencyIntervalMonths) {
+      updates.lastGeneratedMonth = getInitialLastGenMonth(existing.startDate, updates.frequencyIntervalMonths);
     }
 
     if (note !== undefined) {
       updates.note = note.trim();
+    }
+
+    const templateType = type !== undefined ? type : (existing.type || 'expense');
+    if (type !== undefined) {
+      updates.type = templateType === 'income' ? 'income' : 'expense';
     }
 
     const newCat = category !== undefined ? category.trim() : existing.category;
@@ -90,9 +97,13 @@ export async function PATCH(
       updates.itemName || existing.itemName,
       updates.note !== undefined ? updates.note : existing.note,
       updates.amount || existing.amount,
-      'expense',
+      templateType,
       newCat
     );
+
+    if (initialInvestedAmount !== undefined) {
+      updates.initialInvestedAmount = Number(initialInvestedAmount || 0);
+    }
 
     if (isActive !== undefined) {
       updates.isActive = !!isActive;

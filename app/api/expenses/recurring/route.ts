@@ -5,14 +5,7 @@ import { getDb } from '@/lib/db';
 import { getAuthenticatedUser } from '@/lib/auth';
 import { RecurringExpense } from '@/types';
 import { categorizeExpense } from '@/lib/category-engine';
-
-function getPreviousMonth(monthStr: string): string {
-  const [year, month] = monthStr.split('-').map(Number);
-  if (month === 1) {
-    return `${year - 1}-12`;
-  }
-  return `${year}-${String(month - 1).padStart(2, '0')}`;
-}
+import { getInitialLastGenMonth } from '@/lib/recurring-engine';
 
 export async function GET(request: NextRequest) {
   try {
@@ -54,7 +47,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { itemName, amount, dayOfMonth, startDate, note, category, isActive, user_id } = body;
+    const { itemName, amount, dayOfMonth, startDate, note, category, isActive, user_id, type, initialInvestedAmount, frequency, frequencyIntervalMonths } = body;
 
     // Validation
     if (!itemName || itemName.trim().length < 2) {
@@ -80,7 +73,17 @@ export async function POST(request: NextRequest) {
     const spaceId = user.space_id || user.user_id;
     const userId = user_id || user.user_id;
 
-    const lastGenMonth = getPreviousMonth(startDate);
+    const freq = frequency || 'monthly';
+    let intervalMonths = Number(frequencyIntervalMonths || 1);
+    if (isNaN(intervalMonths) || intervalMonths < 1) {
+      if (freq === 'quarterly') intervalMonths = 3;
+      else if (freq === 'half_yearly') intervalMonths = 6;
+      else if (freq === 'yearly') intervalMonths = 12;
+      else intervalMonths = 1;
+    }
+
+    const lastGenMonth = getInitialLastGenMonth(startDate, intervalMonths);
+    const templateType = type === 'income' ? 'income' : 'expense';
 
     const newTemplate: Omit<RecurringExpense, '_id'> = {
       space_id: spaceId,
@@ -88,11 +91,15 @@ export async function POST(request: NextRequest) {
       itemName: itemName.trim(),
       amount: amt,
       note: note ? note.trim() : '',
-      category: categorizeExpense(itemName, note, amt, 'expense', category),
+      category: categorizeExpense(itemName, note, amt, templateType, category),
+      type: templateType,
+      frequency: freq,
+      frequencyIntervalMonths: intervalMonths,
       dayOfMonth: dom,
       isActive: isActive !== undefined ? !!isActive : true,
       startDate,
       lastGeneratedMonth: lastGenMonth,
+      initialInvestedAmount: Number(initialInvestedAmount || 0),
       createdAt: now,
       updatedAt: now,
     };

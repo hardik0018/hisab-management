@@ -37,11 +37,17 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { expenses } = body;
+    let rawExpensesList: any[] = [];
 
-    if (!expenses || !Array.isArray(expenses)) {
+    if (body.expenses && Array.isArray(body.expenses)) {
+      rawExpensesList = body.expenses;
+    } else if (Array.isArray(body)) {
+      rawExpensesList = body;
+    } else if (body.itemName && body.amount !== undefined) {
+      rawExpensesList = [body];
+    } else {
       return Response.json(
-        { error: 'Bad Request', message: 'Missing fields: expenses array is required' },
+        { error: 'Bad Request', message: 'Missing fields: expense or expenses array is required' },
         { status: 400 }
       );
     }
@@ -53,7 +59,7 @@ export async function POST(request: NextRequest) {
     
     const validExpensesToInsert: Expense[] = [];
 
-    for (const exp of expenses) {
+    for (const exp of rawExpensesList) {
       const expenseDoc: Partial<Expense> = {
         space_id: spaceId,
         user_id: userId,
