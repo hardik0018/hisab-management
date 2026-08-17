@@ -27,10 +27,16 @@ export interface RecurringExpense {
   amount: number;
   note?: string;
   category?: string; // defaults to "Uncategorized"
+  type?: 'expense' | 'income'; // defaults to 'expense'
+  frequency?: 'monthly' | 'quarterly' | 'half_yearly' | 'yearly' | 'custom'; // defaults to 'monthly'
+  frequencyIntervalMonths?: number; // interval in months, e.g. 1 (monthly), 3 (quarterly), 6 (half-yearly), 12 (yearly), or custom (e.g. 2, 4)
   dayOfMonth: number; // 1-31
   isActive: boolean;
   startDate: string; // "YYYY-MM"
   lastGeneratedMonth: string; // "YYYY-MM"
+  initialInvestedAmount?: number; // past investment base (does not create fake historical transactions)
+  isInvestment?: boolean;
+  currentMonthStatus?: { received: boolean; date?: string; amount?: number } | null;
   createdAt: Date | string;
   updatedAt: Date | string;
 }

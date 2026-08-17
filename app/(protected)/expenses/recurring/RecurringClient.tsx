@@ -13,22 +13,27 @@ import {
   Plus,
   Trash2,
   Edit2,
-  Loader2,
-  Calendar,
   Repeat,
-  Play,
-  CheckCircle2,
   AlertCircle,
-  Clock
+  Coins,
+  Check,
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
 import EmptyState from '@/components/EmptyState';
+import { cn } from '@/lib/utils';
 
 interface RecurringClientProps {
   initialTemplates: RecurringExpense[];
   collaborators: User[];
   currentUserId: string;
 }
+
+const FREQUENCY_PRESETS = [
+  { label: 'Every Month', value: 'monthly', interval: 1 },
+  { label: 'Every 3 Months (LIC)', value: 'quarterly', interval: 3 },
+  { label: 'Every 6 Months', value: 'half_yearly', interval: 6 },
+  { label: 'Yearly (12 Mo)', value: 'yearly', interval: 12 },
+  { label: 'Custom Months', value: 'custom', interval: 0 },
+] as const;
 
 export default function RecurringClient({ initialTemplates, collaborators, currentUserId }: RecurringClientProps) {
   const [templates, setTemplates] = useState<RecurringExpense[]>(initialTemplates);
@@ -42,35 +47,41 @@ export default function RecurringClient({ initialTemplates, collaborators, curre
   const [editingId, setEditingId] = useState<string | null>(null);
   const [itemName, setItemName] = useState('');
   const [amount, setAmount] = useState('');
+  const [templateType, setTemplateType] = useState<'expense' | 'income'>('expense');
+  const [frequency, setFrequency] = useState<'monthly' | 'quarterly' | 'half_yearly' | 'yearly' | 'custom'>('monthly');
+  const [frequencyIntervalMonths, setFrequencyIntervalMonths] = useState('1');
   const [dayOfMonth, setDayOfMonth] = useState('5');
   const [startDate, setStartDate] = useState(() => {
     const today = new Date();
     return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
   });
   const [category, setCategory] = useState('Uncategorized');
+  const [initialInvestedAmount, setInitialInvestedAmount] = useState('');
   const [note, setNote] = useState('');
   const [isActive, setIsActive] = useState(true);
   const [paidByUserId, setPaidByUserId] = useState(currentUserId);
 
-  // Helper: format month string (e.g. "2026-06" -> "June 2026")
-  const formatMonth = (monthStr: string) => {
-    if (!monthStr) return 'N/A';
-    const [year, month] = monthStr.split('-');
-    const date = new Date(Number(year), Number(month) - 1, 1);
-    return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-  };
+  // Quick Rent/Income collection dialog
+  const [collectTemplate, setCollectTemplate] = useState<RecurringExpense | null>(null);
+  const [collectDate, setCollectDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [collectAmount, setCollectAmount] = useState('');
+  const [isCollecting, setIsCollecting] = useState(false);
 
   const handleOpenAdd = () => {
     setModalMode('add');
     setEditingId(null);
     setItemName('');
     setAmount('');
+    setTemplateType('expense');
+    setFrequency('monthly');
+    setFrequencyIntervalMonths('1');
     setDayOfMonth('5');
     setStartDate(() => {
       const today = new Date();
       return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
     });
     setCategory('Uncategorized');
+    setInitialInvestedAmount('');
     setNote('');
     setIsActive(true);
     setPaidByUserId(currentUserId);
@@ -82,18 +93,35 @@ export default function RecurringClient({ initialTemplates, collaborators, curre
     setEditingId(t._id || null);
     setItemName(t.itemName);
     setAmount(String(t.amount));
+    setTemplateType(t.type || 'expense');
+    const interval = t.frequencyIntervalMonths || (t.frequency === 'quarterly' ? 3 : t.frequency === 'half_yearly' ? 6 : t.frequency === 'yearly' ? 12 : 1);
+    setFrequencyIntervalMonths(String(interval));
+    if (interval === 1) setFrequency('monthly');
+    else if (interval === 3) setFrequency('quarterly');
+    else if (interval === 6) setFrequency('half_yearly');
+    else if (interval === 12) setFrequency('yearly');
+    else setFrequency('custom');
+
     setDayOfMonth(String(t.dayOfMonth));
     setStartDate(t.startDate);
     setCategory(t.category || 'Uncategorized');
+    setInitialInvestedAmount(t.initialInvestedAmount ? String(t.initialInvestedAmount) : '');
     setNote(t.note || '');
     setIsActive(t.isActive);
     setPaidByUserId(t.user_id || currentUserId);
     setIsModalOpen(true);
   };
 
+  const handleFrequencyPresetChange = (val: 'monthly' | 'quarterly' | 'half_yearly' | 'yearly' | 'custom') => {
+    setFrequency(val);
+    if (val === 'monthly') setFrequencyIntervalMonths('1');
+    else if (val === 'quarterly') setFrequencyIntervalMonths('3');
+    else if (val === 'half_yearly') setFrequencyIntervalMonths('6');
+    else if (val === 'yearly') setFrequencyIntervalMonths('12');
+  };
+
   const handleToggleActive = async (t: RecurringExpense) => {
     const previousState = t.isActive;
-    // Optimistic update
     setTemplates(prev => prev.map(item => item._id === t._id ? { ...item, isActive: !item.isActive } : item));
 
     try {
@@ -103,14 +131,13 @@ export default function RecurringClient({ initialTemplates, collaborators, curre
       });
 
       if (res && res.success) {
-        toast.success(`Auto template is now ${!previousState ? 'Active' : 'Inactive'}`);
+        toast.success(`Template is now ${!previousState ? 'Active' : 'Paused'}`);
       } else {
         throw new Error('Toggle failed');
       }
     } catch (err) {
-      // Revert state
       setTemplates(prev => prev.map(item => item._id === t._id ? { ...item, isActive: previousState } : item));
-      toast.error('Failed to toggle active status');
+      toast.error('Failed to update status');
     }
   };
 
@@ -118,6 +145,7 @@ export default function RecurringClient({ initialTemplates, collaborators, curre
     e.preventDefault();
     const amt = parseFloat(amount);
     const dom = parseInt(dayOfMonth);
+    const intervalMonths = parseInt(frequencyIntervalMonths) || 1;
 
     if (!itemName.trim() || itemName.trim().length < 2) {
       toast.error('Item name must be at least 2 characters');
@@ -135,55 +163,108 @@ export default function RecurringClient({ initialTemplates, collaborators, curre
       toast.error('Start month is required');
       return;
     }
+    if (intervalMonths < 1) {
+      toast.error('Interval must be at least 1 month');
+      return;
+    }
 
     setIsSubmitting(true);
     try {
+      const payload = {
+        itemName: itemName.trim(),
+        amount: amt,
+        type: templateType,
+        frequency,
+        frequencyIntervalMonths: intervalMonths,
+        dayOfMonth: dom,
+        startDate,
+        category: category.trim(),
+        initialInvestedAmount: initialInvestedAmount ? parseFloat(initialInvestedAmount) : 0,
+        note: note.trim(),
+        isActive,
+        user_id: paidByUserId,
+      };
+
       if (modalMode === 'add') {
         const res = await secureFetch('/api/expenses/recurring', {
           method: 'POST',
-          body: JSON.stringify({
-            itemName: itemName.trim(),
-            amount: amt,
-            dayOfMonth: dom,
-            startDate,
-            category: category.trim(),
-            note: note.trim(),
-            isActive,
-            user_id: paidByUserId
-          })
+          body: JSON.stringify(payload)
         });
 
         if (res && res.success) {
-          toast.success('Auto expense template added successfully!');
+          toast.success('Auto template added successfully!');
           setTemplates(prev => [res.template, ...prev]);
           setIsModalOpen(false);
         }
       } else {
         const res = await secureFetch(`/api/expenses/recurring/${editingId}`, {
           method: 'PATCH',
-          body: JSON.stringify({
-            itemName: itemName.trim(),
-            amount: amt,
-            dayOfMonth: dom,
-            startDate,
-            category: category.trim(),
-            note: note.trim(),
-            isActive,
-            user_id: paidByUserId
-          })
+          body: JSON.stringify(payload)
         });
 
         if (res && res.success) {
-          toast.success('Auto expense template updated successfully!');
+          toast.success('Auto template updated successfully!');
           setTemplates(prev => prev.map(item => item._id === editingId ? res.template : item));
           setIsModalOpen(false);
         }
       }
     } catch (err: any) {
-      console.error(err);
       toast.error(err.message || 'Action failed');
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  // Quick Rent/Income Collection Submit
+  const handleCollectSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!collectTemplate) return;
+
+    const amt = parseFloat(collectAmount);
+    if (isNaN(amt) || amt <= 0) {
+      toast.error('Valid amount is required');
+      return;
+    }
+
+    setIsCollecting(true);
+    try {
+      const res = await fetch('/api/expenses', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          expenses: [
+            {
+              itemName: collectTemplate.itemName,
+              amount: amt,
+              date: collectDate,
+              category: collectTemplate.category || 'Salary & Income',
+              type: 'income',
+              note: `Received for ${collectTemplate.itemName}`,
+              associatedId: collectTemplate._id,
+              associatedType: 'recurring',
+            },
+          ],
+        }),
+      });
+
+      if (!res.ok) throw new Error('Failed to record income');
+
+      toast.success(`+₹${amt} recorded as received!`);
+      setTemplates((prev) =>
+        prev.map((item) =>
+          item._id === collectTemplate._id
+            ? { ...item, currentMonthStatus: { received: true, date: collectDate, amount: amt } }
+            : item
+        )
+      );
+      setCollectTemplate(null);
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('expense_added'));
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to record income');
+    } finally {
+      setIsCollecting(false);
     }
   };
 
@@ -202,7 +283,7 @@ export default function RecurringClient({ initialTemplates, collaborators, curre
       });
 
       if (res && res.success) {
-        toast.success('Template deleted successfully');
+        toast.success('Template deleted');
         setTemplates(prev => prev.filter(item => item._id !== templateToDelete._id));
         setIsDeleteConfirmOpen(false);
         setTemplateToDelete(null);
@@ -214,22 +295,33 @@ export default function RecurringClient({ initialTemplates, collaborators, curre
     }
   };
 
+  const isInvestmentItem = (name: string, cat?: string) => {
+    return /sip|invest|mutual|share|stock|gold|ppf|lic|nifty/i.test(`${name} ${cat || ''}`);
+  };
+
+  const getFrequencyLabel = (t: RecurringExpense) => {
+    const interval = t.frequencyIntervalMonths || (t.frequency === 'quarterly' ? 3 : t.frequency === 'half_yearly' ? 6 : t.frequency === 'yearly' ? 12 : 1);
+    if (interval === 1) return `Every month (${t.dayOfMonth}th)`;
+    if (interval === 3) return `Every 3 months (${t.dayOfMonth}th)`;
+    if (interval === 6) return `Every 6 months (${t.dayOfMonth}th)`;
+    if (interval === 12) return `Every year (${t.dayOfMonth}th)`;
+    return `Every ${interval} months (${t.dayOfMonth}th)`;
+  };
+
   return (
     <AppShell>
-      <div className="space-y-5 font-sans">
+      <div className="max-w-xl mx-auto space-y-4 pb-24 font-sans">
         {/* Header Row */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="space-y-1">
-            <h2 className="text-2xl font-black" style={{ color: 'var(--foreground)' }}>Auto Expenses</h2>
-          </div>
-          <Button
+        <div className="flex items-center justify-between pt-1">
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">Auto Schedules</h1>
+          <button
             onClick={handleOpenAdd}
-            className="font-bold rounded-xl cursor-pointer shadow-sm active:scale-95 transition-all border-0"
-            style={{ backgroundImage: 'var(--gradient-hero)', color: 'white' }}
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-white shadow-sm active:scale-95 transition-all cursor-pointer border-0"
+            style={{ backgroundImage: 'var(--gradient-hero)' }}
           >
-            <Plus className="w-4 h-4 mr-2" />
-            Add Auto
-          </Button>
+            <Plus className="w-4 h-4" />
+            <span>Add Auto</span>
+          </button>
         </div>
 
         {/* Templates List */}
@@ -237,8 +329,8 @@ export default function RecurringClient({ initialTemplates, collaborators, curre
           <div className="space-y-4">
             <EmptyState
               icon={Repeat}
-              title="No recurring expenses configured"
-              hint="Set up recurring templates to automate items like Netflix, SIP Mutual Funds, or LIC payments."
+              title="No recurring templates"
+              hint="Set up recurring templates for SIPs, LIC premiums, House Rent, or bills."
               color="--violet"
             />
             <div className="flex justify-center">
@@ -248,156 +340,212 @@ export default function RecurringClient({ initialTemplates, collaborators, curre
             </div>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
-            <AnimatePresence mode="popLayout">
-              {templates.map((t) => (
-                <motion.div
+          <div className="card-surface overflow-hidden divide-y divide-border/60">
+            {templates.map((t) => {
+              const isIncome = t.type === 'income';
+              const isInvest = isInvestmentItem(t.itemName, t.category);
+
+              return (
+                <div
                   key={t._id}
-                  layout
-                  initial={{ opacity: 0, y: 15 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.95 }}
-                  className={`group card-surface p-4 flex justify-between items-center gap-3 transition-all duration-300 ${t.isActive ? '' : 'opacity-70'}`}
-                  style={!t.isActive ? { borderStyle: 'dashed', borderColor: 'var(--border)' } : undefined}
+                  className={cn(
+                    'p-3.5 space-y-2.5 transition-all',
+                    !t.isActive && 'opacity-60'
+                  )}
                 >
-                  <div className="flex flex-col gap-1 min-w-0 pr-2 flex-1">
-                    <div className="flex items-center gap-1.5 flex-wrap mb-1">
-                      <span className="font-bold text-sm truncate" style={{ color: 'var(--foreground)' }}>{t.itemName}</span>
-                      <span className="shrink-0 text-[9px] px-1.5 py-0.5 rounded font-black uppercase tracking-wider" style={{ background: 'var(--violet-soft)', color: 'var(--violet)' }}>
-                        {t.category}
-                      </span>
-                      {/* Active Status Badge Button */}
-                      <button
-                        onClick={() => handleToggleActive(t)}
-                        className="shrink-0 text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded transition-all cursor-pointer border"
-                        style={t.isActive ? { background: 'var(--success-soft)', color: 'var(--success)', borderColor: 'var(--success-soft)' } : { background: 'var(--danger-soft)', color: 'var(--danger)', borderColor: 'var(--danger-soft)' }}
-                        title="Click to toggle status"
-                      >
-                        {t.isActive ? 'Active' : 'Inactive'}
-                      </button>
+                  <div className="flex items-center gap-3">
+                    {/* Icon tile matching ExpenseCard */}
+                    <div
+                      className="tile w-10 h-10 shrink-0 text-base font-bold rounded-xl"
+                      style={{
+                        background: isIncome ? 'var(--success-soft)' : isInvest ? 'var(--primary-soft)' : 'var(--surface-muted)',
+                        color: isIncome ? 'var(--success)' : isInvest ? 'var(--primary)' : 'var(--foreground)',
+                      }}
+                    >
+                      {isIncome ? '🏠' : isInvest ? '💎' : '⚡'}
                     </div>
 
-                    {t.note && (
-                      <span className="text-xs font-medium truncate max-w-[240px]" style={{ color: 'var(--muted-foreground)' }}>
-                        {t.note}
-                      </span>
-                    )}
+                    {/* Title & Subtitle */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="font-bold text-sm text-foreground truncate">
+                          {t.itemName}
+                        </span>
+                        <span
+                          className={cn(
+                            'text-[9px] font-black uppercase tracking-wide px-1.5 py-0.5 rounded-full',
+                            isIncome
+                              ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
+                              : isInvest
+                              ? 'bg-indigo-500/15 text-indigo-600 dark:text-indigo-400'
+                              : 'bg-secondary text-muted-foreground'
+                          )}
+                        >
+                          {isIncome ? 'INCOME' : isInvest ? 'INVESTMENT' : 'AUTO'}
+                        </span>
+                      </div>
 
-                    {/* Schedule Info Horizontal Badges */}
-                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-1.5 text-[10px] font-medium" style={{ color: 'var(--muted-foreground)' }}>
-                      <span className="flex items-center gap-0.5 whitespace-nowrap">
-                        <Calendar className="w-3 h-3 shrink-0" style={{ color: 'var(--primary)' }} />
-                        Day {t.dayOfMonth}
+                      <p className="text-xs text-muted-foreground mt-0.5 truncate">
+                        {getFrequencyLabel(t)} {t.category ? `· ${t.category}` : ''}
+                      </p>
+                    </div>
+
+                    {/* Amount */}
+                    <div className="text-right shrink-0">
+                      <span
+                        className="font-bold text-sm"
+                        style={{ color: isIncome ? 'var(--success)' : 'var(--foreground)' }}
+                      >
+                        {isIncome ? '+' : ''}₹{t.amount.toLocaleString('en-IN')}
                       </span>
-                      <span className="select-none opacity-30">•</span>
-                      <span className="flex items-center gap-0.5 whitespace-nowrap">
-                        <Play className="w-3 h-3 shrink-0" style={{ color: 'var(--teal)' }} />
-                        {formatMonth(t.startDate)}
-                      </span>
-                      {t.lastGeneratedMonth && (
-                        <>
-                          <span className="select-none opacity-30">•</span>
-                          <span className="flex items-center gap-0.5 whitespace-nowrap">
-                            <CheckCircle2 className="w-3 h-3 shrink-0" style={{ color: 'var(--sky)' }} />
-                            Last: {formatMonth(t.lastGeneratedMonth)}
-                          </span>
-                        </>
-                      )}
-                      <span className="select-none opacity-30">•</span>
-                      <span className="text-[9px] opacity-70 whitespace-nowrap font-mono">
-                        {t.createdAt ? new Date(t.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : 'N/A'}
-                      </span>
-                      {t.user_id !== currentUserId && (
-                        <>
-                          <span className="select-none opacity-30">•</span>
-                          <span className="text-[10px] font-medium whitespace-nowrap">
-                            Paid by: <span className="font-bold">{collaborators.find(c => c.user_id === t.user_id)?.name || 'Unknown'}</span>
-                          </span>
-                        </>
-                      )}
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2 shrink-0">
-                    <span className="font-black text-base font-sans amount" style={{ color: 'var(--foreground)' }}>
-                      ₹{t.amount}
-                    </span>
+                  {/* Past investment note (if configured) */}
+                  {Boolean(t.initialInvestedAmount && t.initialInvestedAmount > 0) && (
+                    <div className="flex items-center justify-between text-[11px] px-2.5 py-1.5 rounded-lg bg-surface-muted text-muted-foreground">
+                      <span>Past Invested Base:</span>
+                      <strong className="text-foreground">₹{t.initialInvestedAmount?.toLocaleString('en-IN')}</strong>
+                    </div>
+                  )}
 
-                    <div className="flex items-center">
-                      <Button
-                        size="icon"
-                        variant="ghost"
+                  {/* Footer Actions Row */}
+                  <div className="flex items-center justify-between pt-1 text-xs">
+                    <div>
+                      {isIncome && (
+                        t.currentMonthStatus?.received ? (
+                          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 cursor-default select-none">
+                            <Check className="w-3.5 h-3.5 stroke-[2.5]" />
+                            <span>Received ({new Date(t.currentMonthStatus.date || Date.now()).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })})</span>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setCollectTemplate(t);
+                              setCollectAmount(String(t.amount));
+                              setCollectDate(new Date().toISOString().split('T')[0]);
+                            }}
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 active:scale-95 transition-all cursor-pointer border-0"
+                          >
+                            <Coins className="w-3.5 h-3.5" />
+                            <span>Receive Rent</span>
+                          </button>
+                        )
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleToggleActive(t)}
+                        className={cn(
+                          'text-xs font-medium transition-all px-2 py-0.5 rounded-md hover:bg-surface-muted cursor-pointer',
+                          t.isActive ? 'text-muted-foreground hover:text-foreground' : 'text-primary font-bold'
+                        )}
+                      >
+                        {t.isActive ? 'Pause' : 'Activate'}
+                      </button>
+                      <button
+                        type="button"
                         onClick={() => handleOpenEdit(t)}
-                        className="h-8 w-8 rounded-lg cursor-pointer transition-colors active:scale-95"
-                        style={{ color: 'var(--muted-foreground)' }}
+                        className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-surface-muted transition-all cursor-pointer"
                         title="Edit Template"
                       >
                         <Edit2 className="w-3.5 h-3.5" />
-                      </Button>
-                      <Button
-                        size="icon"
-                        variant="ghost"
+                      </button>
+                      <button
+                        type="button"
                         onClick={() => handleOpenDelete(t)}
-                        className="h-8 w-8 rounded-lg cursor-pointer transition-colors active:scale-95"
-                        style={{ color: 'var(--muted-foreground)' }}
+                        className="p-1 rounded-md text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10 transition-all cursor-pointer"
                         title="Delete Template"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
-                      </Button>
+                      </button>
                     </div>
                   </div>
-                </motion.div>
-              ))}
-            </AnimatePresence>
+                </div>
+              );
+            })}
           </div>
         )}
 
-        {/* Add/Edit Modal */}
-        <Dialog open={isModalOpen} onOpenChange={(open) => !open && setIsModalOpen(false)}>
-          <DialogContent className="max-w-md w-[92%] card-surface p-6 rounded-3xl border-0 shadow-2xl">
+        {/* ── Add/Edit Template Dialog ─────────────────────────────────── */}
+        <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+          <DialogContent className="max-w-md w-[92%] card-surface rounded-3xl p-6 shadow-2xl border-0">
             <DialogHeader className="text-left space-y-1">
-              <DialogTitle className="text-lg font-bold font-sans" style={{ color: 'var(--foreground)' }}>
-                {modalMode === 'add' ? 'Add Auto Expense' : 'Edit Auto Template'}
+              <DialogTitle className="text-base font-bold text-foreground">
+                {modalMode === 'add' ? 'New Auto Template' : 'Edit Auto Template'}
               </DialogTitle>
-              <DialogDescription className="text-xs" style={{ color: 'var(--muted-foreground)' }}>
-                Set up a template to automatically insert a monthly record.
+              <DialogDescription className="text-xs text-muted-foreground">
+                Automate monthly SIPs, LIC premiums, house rent, or custom schedules.
               </DialogDescription>
             </DialogHeader>
 
-            <form onSubmit={handleSubmit} className="space-y-4 mt-3">
+            <form onSubmit={handleSubmit} className="space-y-3 mt-2 text-xs">
+              {/* Type Switcher: Expense vs Income */}
+              <div>
+                <Label className="text-[11px] text-muted-foreground font-semibold mb-1 block">Type</Label>
+                <div className="grid grid-cols-2 gap-2 p-1 bg-secondary rounded-xl">
+                  <button
+                    type="button"
+                    onClick={() => setTemplateType('expense')}
+                    className={cn(
+                      'py-1.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1',
+                      templateType === 'expense'
+                        ? 'bg-background text-foreground shadow-sm'
+                        : 'text-muted-foreground hover:text-foreground'
+                    )}
+                  >
+                    <span>Outflow (SIP / LIC / Bill)</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTemplateType('income')}
+                    className={cn(
+                      'py-1.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1',
+                      templateType === 'income'
+                        ? 'bg-background text-foreground shadow-sm'
+                        : 'text-muted-foreground hover:text-foreground'
+                    )}
+                  >
+                    <span>Income (House Rent)</span>
+                  </button>
+                </div>
+              </div>
+
               {/* Item Name */}
-              <div className="space-y-1.5">
-                <Label htmlFor="item-name" className="text-xs font-semibold" style={{ color: 'var(--muted-foreground)' }}>Item Name</Label>
+              <div className="space-y-1">
+                <Label htmlFor="item-name" className="text-[11px] text-muted-foreground font-semibold">
+                  {templateType === 'income' ? 'Income Title (e.g. House Rent)' : 'Title (e.g. LIC Policy / SIP 7000)'} *
+                </Label>
                 <Input
                   id="item-name"
                   type="text"
-                  placeholder="e.g. LIC Premium, SIP, Gas Bill"
+                  required
+                  placeholder={templateType === 'income' ? 'House Rent' : 'LIC Policy Premium'}
                   value={itemName}
                   onChange={(e) => setItemName(e.target.value)}
-                  className="text-sm rounded-xl h-11 border-0 focus-visible:ring-1"
-                  style={{ background: 'var(--surface-muted)', color: 'var(--foreground)' }}
-                  required
+                  className="rounded-xl h-10 text-xs font-semibold"
                 />
               </div>
 
-              {/* Amount & Day Of Month Row */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <Label htmlFor="amount" className="text-xs font-semibold" style={{ color: 'var(--muted-foreground)' }}>Amount (INR)</Label>
+              {/* Amount & Day of Month */}
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-1">
+                  <Label htmlFor="amount" className="text-[11px] text-muted-foreground font-semibold">Amount (₹) *</Label>
                   <Input
                     id="amount"
                     type="number"
-                    step="any"
-                    placeholder="5000"
+                    required
+                    placeholder="7000"
                     value={amount}
                     onChange={(e) => setAmount(e.target.value)}
-                    className="text-sm rounded-xl h-11 border-0 focus-visible:ring-1"
-                    style={{ background: 'var(--surface-muted)', color: 'var(--foreground)' }}
-                    required
+                    className="rounded-xl h-10 text-xs font-bold"
                   />
                 </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="day" className="text-xs font-semibold" style={{ color: 'var(--muted-foreground)' }}>Day of Month</Label>
+                <div className="space-y-1">
+                  <Label htmlFor="day" className="text-[11px] text-muted-foreground font-semibold">Day of Month</Label>
                   <Input
                     id="day"
                     type="number"
@@ -406,120 +554,165 @@ export default function RecurringClient({ initialTemplates, collaborators, curre
                     placeholder="5"
                     value={dayOfMonth}
                     onChange={(e) => setDayOfMonth(e.target.value)}
-                    className="text-sm rounded-xl h-11 border-0 focus-visible:ring-1"
-                    style={{ background: 'var(--surface-muted)', color: 'var(--foreground)' }}
+                    className="rounded-xl h-10 text-xs"
                     required
                   />
                 </div>
               </div>
 
-              {/* Start Month & Category Row */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <Label htmlFor="start-month" className="text-xs font-semibold" style={{ color: 'var(--muted-foreground)' }}>Start Month</Label>
-                  <Input
-                    id="start-month"
-                    type="month"
-                    value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
-                    className="text-sm rounded-xl h-11 border-0 focus-visible:ring-1"
-                    style={{ background: 'var(--surface-muted)', color: 'var(--foreground)' }}
-                    required
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="category" className="text-xs font-semibold" style={{ color: 'var(--muted-foreground)' }}>Category</Label>
-                  <Input
-                    id="category"
-                    type="text"
-                    placeholder="Investment"
-                    value={category}
-                    onChange={(e) => setCategory(e.target.value)}
-                    className="text-sm rounded-xl h-11 border-0 focus-visible:ring-1"
-                    style={{ background: 'var(--surface-muted)', color: 'var(--foreground)' }}
-                  />
-                </div>
-              </div>
-
-              {/* Note */}
+              {/* Frequency Selector */}
               <div className="space-y-1.5">
-                <Label htmlFor="note" className="text-xs font-semibold" style={{ color: 'var(--muted-foreground)' }}>Note (Optional)</Label>
-                <Input
-                  id="note"
-                  type="text"
-                  placeholder="e.g. direct debit, online payment"
-                  value={note}
-                  onChange={(e) => setNote(e.target.value)}
-                  className="text-sm rounded-xl h-11 border-0 focus-visible:ring-1"
-                  style={{ background: 'var(--surface-muted)', color: 'var(--foreground)' }}
-                />
+                <Label className="text-[11px] text-muted-foreground font-semibold block">
+                  Frequency (ક્યારે ક્યારે)
+                </Label>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+                  {FREQUENCY_PRESETS.map((p) => (
+                    <button
+                      key={p.value}
+                      type="button"
+                      onClick={() => handleFrequencyPresetChange(p.value)}
+                      className={cn(
+                        'py-1.5 px-2 rounded-xl text-[11px] font-semibold border transition-all text-center cursor-pointer',
+                        frequency === p.value
+                          ? 'border-primary bg-primary/10 text-primary font-bold shadow-xs'
+                          : 'border-border bg-secondary/50 text-muted-foreground hover:text-foreground'
+                      )}
+                    >
+                      {p.label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Custom Month Interval Input */}
+                {frequency === 'custom' && (
+                  <div className="flex items-center gap-2 p-2 rounded-xl bg-secondary/80 mt-1.5">
+                    <span className="text-[11px] text-muted-foreground font-medium">Every</span>
+                    <Input
+                      type="number"
+                      min="1"
+                      max="60"
+                      value={frequencyIntervalMonths}
+                      onChange={(e) => setFrequencyIntervalMonths(e.target.value)}
+                      className="w-20 h-8 rounded-lg text-xs font-bold text-center bg-background"
+                    />
+                    <span className="text-[11px] text-muted-foreground font-medium">Months</span>
+                  </div>
+                )}
               </div>
 
-              {/* Paid By */}
-              {collaborators.length > 0 && (
-                <div className="space-y-1.5">
-                  <Label htmlFor="paid-by" className="text-xs font-semibold" style={{ color: 'var(--muted-foreground)' }}>Paid By</Label>
-                  <select
-                    id="paid-by"
-                    value={paidByUserId}
-                    onChange={(e) => setPaidByUserId(e.target.value)}
-                    className="w-full h-11 px-3 rounded-xl border-0 text-sm focus-visible:ring-1 outline-none"
-                    style={{ background: 'var(--surface-muted)', color: 'var(--foreground)' }}
-                  >
-                    {collaborators.map((c) => (
-                      <option key={c.user_id} value={c.user_id}>
-                        {c.name} {c.user_id === currentUserId && '(You)'}
-                      </option>
-                    ))}
-                  </select>
+              {/* Initial / Past Invested Amount (for SIPs and Investments) */}
+              {(templateType === 'expense' && isInvestmentItem(itemName, category)) && (
+                <div className="p-3 rounded-2xl bg-secondary/80 border border-border space-y-1">
+                  <Label htmlFor="past-invest" className="text-[11px] text-foreground font-bold">
+                    Past Invested Base (₹) (Optional)
+                  </Label>
+                  <Input
+                    id="past-invest"
+                    type="number"
+                    placeholder="e.g. 84000 (Invested before using this app)"
+                    value={initialInvestedAmount}
+                    onChange={(e) => setInitialInvestedAmount(e.target.value)}
+                    className="rounded-xl h-10 text-xs font-semibold bg-background"
+                  />
+                  <p className="text-[10px] text-muted-foreground">
+                    Calculates your total lifetime wealth accurately without creating cluttering old transactions.
+                  </p>
                 </div>
               )}
 
-              {/* Active Toggle Switch */}
-              <div className="flex items-center justify-between p-3 rounded-xl mt-2" style={{ background: 'var(--surface-muted)' }}>
-                <div className="flex flex-col gap-0.5">
-                  <Label htmlFor="active-toggle" className="text-xs font-bold cursor-pointer" style={{ color: 'var(--foreground)' }}>Template Active</Label>
-                  <span className="text-[10px]" style={{ color: 'var(--muted-foreground)' }}>Inactive templates do not generate new logs.</span>
-                </div>
-                <input
-                  type="checkbox"
-                  id="active-toggle"
-                  checked={isActive}
-                  onChange={(e) => setIsActive(e.target.checked)}
-                  className="w-4 h-4 cursor-pointer"
-                  style={{ accentColor: 'var(--primary)' }}
+              {/* Note */}
+              <div className="space-y-1">
+                <Label htmlFor="note" className="text-[11px] text-muted-foreground font-semibold">Note (Optional)</Label>
+                <Input
+                  id="note"
+                  type="text"
+                  placeholder="e.g. LIC Policy #123456789"
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                  className="rounded-xl h-10 text-xs"
                 />
               </div>
 
-              <DialogFooter className="flex-row gap-2 mt-6 pt-2">
+              <DialogFooter className="flex-row gap-2 pt-2 border-t border-border">
                 <Button
                   type="button"
                   variant="outline"
                   onClick={() => setIsModalOpen(false)}
-                  className="w-1/2 rounded-xl cursor-pointer bg-transparent"
-                  style={{ border: '1px solid var(--border)', color: 'var(--foreground)' }}
+                  className="w-1/2 rounded-xl text-xs cursor-pointer"
                 >
                   Cancel
                 </Button>
                 <Button
                   type="submit"
                   disabled={isSubmitting}
-                  className="w-1/2 font-bold rounded-xl border-0 cursor-pointer"
-                  style={{ background: 'var(--primary)', color: 'white' }}
+                  className="w-1/2 font-bold rounded-xl text-xs text-white cursor-pointer"
+                  style={{ backgroundImage: 'var(--gradient-hero)' }}
                 >
-                  {isSubmitting ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Saving...
-                    </>
-                  ) : (
-                    'Save Template'
-                  )}
+                  {isSubmitting ? 'Saving...' : 'Save Template'}
                 </Button>
               </DialogFooter>
             </form>
           </DialogContent>
         </Dialog>
+
+        {/* ── Quick Receive Rent Modal ─────────────────────────────────── */}
+        {collectTemplate && (
+          <Dialog open={!!collectTemplate} onOpenChange={(open) => !open && setCollectTemplate(null)}>
+            <DialogContent className="max-w-sm w-[92%] card-surface rounded-3xl p-5 shadow-2xl border-0">
+              <DialogHeader className="text-left space-y-1">
+                <DialogTitle className="text-sm font-bold text-foreground">
+                  Receive {collectTemplate.itemName}
+                </DialogTitle>
+                <DialogDescription className="text-xs text-muted-foreground">
+                  Record rent income on the exact date received.
+                </DialogDescription>
+              </DialogHeader>
+
+              <form onSubmit={handleCollectSubmit} className="space-y-3 mt-2 text-xs">
+                <div>
+                  <Label className="text-[11px] text-muted-foreground font-semibold mb-1 block">Date Received</Label>
+                  <Input
+                    type="date"
+                    required
+                    value={collectDate}
+                    onChange={(e) => setCollectDate(e.target.value)}
+                    className="rounded-xl h-10 text-xs"
+                  />
+                </div>
+
+                <div>
+                  <Label className="text-[11px] text-muted-foreground font-semibold mb-1 block">Amount (₹)</Label>
+                  <Input
+                    type="number"
+                    required
+                    value={collectAmount}
+                    onChange={(e) => setCollectAmount(e.target.value)}
+                    className="rounded-xl h-10 text-xs font-bold"
+                  />
+                </div>
+
+                <DialogFooter className="flex-row gap-2 pt-2 border-t border-border">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setCollectTemplate(null)}
+                    className="w-1/2 rounded-xl text-xs cursor-pointer"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    disabled={isCollecting}
+                    className="w-1/2 font-bold rounded-xl text-xs text-white cursor-pointer"
+                    style={{ backgroundImage: 'var(--gradient-hero)' }}
+                  >
+                    {isCollecting ? 'Saving...' : 'Confirm Received'}
+                  </Button>
+                </DialogFooter>
+              </form>
+            </DialogContent>
+          </Dialog>
+        )}
 
         {/* Delete Confirmation Dialog */}
         <Dialog open={isDeleteConfirmOpen} onOpenChange={(open) => !open && setIsDeleteConfirmOpen(false)}>
@@ -528,20 +721,18 @@ export default function RecurringClient({ initialTemplates, collaborators, curre
               <div className="tile w-10 h-10 mb-3" style={{ background: 'var(--danger-soft)', color: 'var(--danger)' }}>
                 <AlertCircle className="w-5 h-5" />
               </div>
-              <DialogTitle className="text-base font-bold font-sans" style={{ color: 'var(--foreground)' }}>Delete Auto Template</DialogTitle>
-              <DialogDescription className="text-xs leading-relaxed" style={{ color: 'var(--muted-foreground)' }}>
-                Are you sure you want to delete <strong style={{ color: 'var(--foreground)' }}>"{templateToDelete?.itemName}"</strong>?
-                This only stops future auto-generations. Already generated expenses in daily hisab history will not be deleted.
+              <DialogTitle className="text-base font-bold text-foreground">Delete Template</DialogTitle>
+              <DialogDescription className="text-xs text-muted-foreground">
+                Delete "{templateToDelete?.itemName}"? This only stops future automatic schedules.
               </DialogDescription>
             </DialogHeader>
 
-            <DialogFooter className="flex-row gap-2 mt-6 pt-1">
+            <DialogFooter className="flex-row gap-2 mt-4 pt-1">
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => setIsDeleteConfirmOpen(false)}
-                className="w-1/2 rounded-xl cursor-pointer bg-transparent"
-                style={{ border: '1px solid var(--border)', color: 'var(--foreground)' }}
+                className="w-1/2 rounded-xl text-xs cursor-pointer"
               >
                 Cancel
               </Button>
@@ -550,17 +741,9 @@ export default function RecurringClient({ initialTemplates, collaborators, curre
                 variant="destructive"
                 onClick={handleDeleteConfirm}
                 disabled={isSubmitting}
-                className="w-1/2 font-bold rounded-xl border-0 cursor-pointer"
-                style={{ background: 'var(--danger)', color: 'white' }}
+                className="w-1/2 font-bold rounded-xl text-xs cursor-pointer"
               >
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Deleting...
-                  </>
-                ) : (
-                  'Delete'
-                )}
+                {isSubmitting ? 'Deleting...' : 'Delete'}
               </Button>
             </DialogFooter>
           </DialogContent>

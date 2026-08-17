@@ -1265,25 +1265,6 @@ export default function HisabClient({
                       <span>Borrowed (Took)</span>
                     </button>
                   </div>
-                  <p className="text-[10px] text-center mt-1.5 font-semibold">
-                    {formData.type === "debit" ? (
-                      <span
-                        className="flex items-center justify-center gap-1"
-                        style={{ color: "var(--success)" }}
-                      >
-                        <Info className="h-3 w-3" /> They will have to return
-                        this money to you.
-                      </span>
-                    ) : (
-                      <span
-                        className="flex items-center justify-center gap-1"
-                        style={{ color: "var(--danger)" }}
-                      >
-                        <Info className="h-3 w-3" /> You will have to return
-                        this money to them.
-                      </span>
-                    )}
-                  </p>
                 </div>
 
                 {/* Amount & Date */}

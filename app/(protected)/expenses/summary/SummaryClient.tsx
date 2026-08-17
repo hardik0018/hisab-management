@@ -54,6 +54,13 @@ interface MemberBalance {
   total_balance: number;
 }
 
+interface InvestmentsSummary {
+  monthlyInvested: number;
+  pureExpenses: number;
+  lifetimeInvested: number;
+  initialBase: number;
+}
+
 interface SummaryClientProps {
   initialMonth: string;
   initialMonthlyTotal: number;
@@ -65,6 +72,7 @@ interface SummaryClientProps {
   initialCategoryBreakdown?: CategoryBreakdownItem[];
   initialCategoryTransactions?: { _id: string; itemName: string; amount: number; date: string; category: string; note: string }[];
   initialTopExpenses?: { _id: string; itemName: string; amount: number; date: string; category: string; note: string }[];
+  initialInvestmentsSummary?: InvestmentsSummary;
   searchParams: {
     month?: string;
     search?: string;
@@ -83,6 +91,7 @@ export default function SummaryClient({
   initialCategoryBreakdown,
   initialCategoryTransactions,
   initialTopExpenses,
+  initialInvestmentsSummary,
   searchParams
 }: SummaryClientProps) {
   const router = useRouter();
@@ -99,6 +108,12 @@ export default function SummaryClient({
   const [categoryBreakdown, setCategoryBreakdown] = useState<CategoryBreakdownItem[]>(initialCategoryBreakdown || []);
   const [categoryTransactions, setCategoryTransactions] = useState<{ _id: string; itemName: string; amount: number; date: string; category: string; note: string }[]>(initialCategoryTransactions || []);
   const [topExpenses, setTopExpenses] = useState<{ _id: string; itemName: string; amount: number; date: string; category: string; note: string }[]>(initialTopExpenses || []);
+  const [investmentsSummary, setInvestmentsSummary] = useState<InvestmentsSummary>(initialInvestmentsSummary || {
+    monthlyInvested: 0,
+    pureExpenses: initialMonthlyTotal,
+    lifetimeInvested: 0,
+    initialBase: 0,
+  });
 
   const [search, setSearch] = useState<string>(searchParams.search || '');
   const [category, setCategory] = useState<string>(searchParams.category || '');
@@ -121,7 +136,20 @@ export default function SummaryClient({
     if (initialCategoryBreakdown) setCategoryBreakdown(initialCategoryBreakdown);
     if (initialCategoryTransactions) setCategoryTransactions(initialCategoryTransactions);
     if (initialTopExpenses) setTopExpenses(initialTopExpenses);
-  }, [initialMonth, initialMonthlyTotal, initialMonthlyIncome, initialFilteredTotal, initialDailyTotals, initialTodayTotal, initialMemberBalances, initialCategoryBreakdown, initialCategoryTransactions, initialTopExpenses]);
+    if (initialInvestmentsSummary) setInvestmentsSummary(initialInvestmentsSummary);
+  }, [
+    initialMonth,
+    initialMonthlyTotal,
+    initialMonthlyIncome,
+    initialFilteredTotal,
+    initialDailyTotals,
+    initialTodayTotal,
+    initialMemberBalances,
+    initialCategoryBreakdown,
+    initialCategoryTransactions,
+    initialTopExpenses,
+    initialInvestmentsSummary,
+  ]);
 
   useEffect(() => {
     return () => {
@@ -278,6 +306,52 @@ export default function SummaryClient({
             variant={monthlyIncome - monthlyTotal >= 0 ? 'in' : 'out'}
           />
         </div>
+
+        {/* Investment & Wealth Breakdown (Pure Expenses vs Future Wealth) */}
+        {(investmentsSummary.monthlyInvested > 0 || investmentsSummary.lifetimeInvested > 0) && (
+          <div className="card-surface p-4 rounded-2xl border border-border space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="text-base">💎</span>
+                <span className="text-xs font-bold text-foreground">
+                  Wealth & Investments (રોકાણ)
+                </span>
+              </div>
+              <span
+                className="text-[10px] font-bold px-2 py-0.5 rounded-full"
+                style={{ background: 'var(--success-soft)', color: 'var(--success)' }}
+              >
+                Future Wealth
+              </span>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2 pt-1 border-t border-border">
+              <div>
+                <p className="text-[10px] text-muted-foreground font-medium">Pure Living Spend</p>
+                <p className="text-sm font-bold text-foreground">
+                  ₹{formatCurrency(investmentsSummary.pureExpenses)}
+                </p>
+              </div>
+              <div>
+                <p className="text-[10px] text-muted-foreground font-medium">Invested This Month</p>
+                <p className="text-sm font-bold" style={{ color: 'var(--primary)' }}>
+                  ₹{formatCurrency(investmentsSummary.monthlyInvested)}
+                </p>
+              </div>
+            </div>
+
+            {investmentsSummary.lifetimeInvested > 0 && (
+              <div className="flex items-center justify-between text-xs pt-2 border-t border-border">
+                <span className="text-[11px] text-muted-foreground">
+                  Total Accumulated Wealth
+                </span>
+                <span className="font-bold text-xs" style={{ color: 'var(--success)' }}>
+                  ₹{formatCurrency(investmentsSummary.lifetimeInvested)}
+                </span>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Collaborator Balances */}
         {memberBalances.length > 0 && (

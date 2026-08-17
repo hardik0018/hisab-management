@@ -48,6 +48,7 @@ export default async function SummaryPage({ searchParams }: PageProps) {
         initialCategoryBreakdown={summary.categoryBreakdown}
         initialCategoryTransactions={summary.categoryTransactions}
         initialTopExpenses={summary.topExpenses}
+        initialInvestmentsSummary={summary.investmentsSummary}
         searchParams={params}
       />
     </>
