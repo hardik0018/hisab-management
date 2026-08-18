@@ -25,6 +25,8 @@ export function useSpeechRecognition({
   const recognitionRef = useRef<any>(null);
   const silenceTimerRef = useRef<NodeJS.Timeout | null>(null);
   const latestTranscriptRef = useRef<string>('');
+  // Accumulates only the final (non-interim) segments so we never re-process old results
+  const finalTranscriptRef = useRef<string>('');
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -73,6 +75,7 @@ export function useSpeechRecognition({
     setError(null);
     setTranscript('');
     latestTranscriptRef.current = '';
+    finalTranscriptRef.current = '';
 
     try {
       const recognition = new SpeechRecognition();
@@ -86,16 +89,27 @@ export function useSpeechRecognition({
       };
 
       recognition.onresult = (event: any) => {
-        let fullTranscript = '';
+        // Only process results starting from event.resultIndex to avoid
+        // re-concatenating previous results on each callback (which caused
+        // duplicates like "petrol petrol petrol 100 pet" in continuous mode).
+        let newSegment = '';
 
-        for (let i = 0; i < event.results.length; i++) {
+        for (let i = event.resultIndex; i < event.results.length; i++) {
           const item = event.results[i];
           if (item && item[0] && item[0].transcript) {
-            fullTranscript += item[0].transcript + ' ';
+            if (item.isFinal) {
+              // Commit finalized segment to the permanent accumulator
+              finalTranscriptRef.current += item[0].transcript + ' ';
+            } else {
+              // Interim result for the current segment
+              newSegment = item[0].transcript;
+            }
           }
         }
 
-        const normalized = normalizeSpokenExpenseText(fullTranscript.trim());
+        // Full text = all finalized segments + current interim word(s)
+        const fullText = (finalTranscriptRef.current + newSegment).trim();
+        const normalized = normalizeSpokenExpenseText(fullText);
 
         if (normalized) {
           latestTranscriptRef.current = normalized;

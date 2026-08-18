@@ -7,7 +7,7 @@ import { tripSchema } from '@/models/Trip';
 import { getTrips } from '@/lib/trip-fetching';
 import { v4 as uuidv4 } from 'uuid';
 import { revalidatePath } from 'next/cache';
-import { Trip } from '@/types/trip';
+import { Trip, TripMember } from '@/types/trip';
 
 export async function GET(request: NextRequest) {
   try {
@@ -55,8 +55,8 @@ export async function POST(request: NextRequest) {
     const now = new Date();
 
     // Default members if none provided: add current user
-    let members = data.members || [];
-    if (members.length === 0) {
+    let members: TripMember[] = [];
+    if (!data.members || data.members.length === 0) {
       members = [
         {
           id: `mem_${uuidv4().slice(0, 8)}`,
@@ -66,6 +66,13 @@ export async function POST(request: NextRequest) {
         },
       ];
     } else {
+      members = data.members.map((m) => ({
+        id: m.id || `mem_${uuidv4().slice(0, 8)}`,
+        name: m.name || '',
+        mobile: m.mobile,
+        isCurrentUser: !!m.isCurrentUser,
+        userId: m.userId,
+      }));
       // Ensure at least one member is marked as current user
       const hasCurrentUser = members.some((m) => m.isCurrentUser || m.userId === user.user_id);
       if (!hasCurrentUser && members.length > 0) {

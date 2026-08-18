@@ -410,12 +410,7 @@ export async function getMonthlySummary(monthStr?: string, search?: string, cate
   todayTotal: number;
   memberBalances: { user_id: string; name: string; income: number; expense: number; transfer_in: number; transfer_out: number; month_balance: number; previous_balance: number; total_balance: number; }[];
   categoryBreakdown: { category: string; total: number; count: number; percentage: number }[];
-  investmentsSummary: {
-    monthlyInvested: number;
-    pureExpenses: number;
-    lifetimeInvested: number;
-    initialBase: number;
-  };
+
   categoryTransactions: { _id: string; itemName: string; amount: number; date: string; category: string; note: string }[];
   topExpenses: { _id: string; itemName: string; amount: number; date: string; category: string; note: string }[];
 } | null> {
@@ -456,9 +451,7 @@ export async function getMonthlySummary(monthStr?: string, search?: string, cate
     spaceUsers,
     categoryAgg,
     topExpensesAgg,
-    previousBalancesAgg,
-    lifetimeInvestmentAgg,
-    recurringTemplatesRaw
+    previousBalancesAgg
   ] = await Promise.all([
     db.collection('expenses').aggregate([
       {
@@ -485,7 +478,7 @@ export async function getMonthlySummary(monthStr?: string, search?: string, cate
       { $group: { 
           _id: '$user_id', 
           income: { $sum: { $cond: [{ $eq: ['$type', 'income'] }, '$amount', 0] } },
-          expense: { $sum: { $cond: [{ $not: { $in: ['$type', ['income', 'transfer_in', 'transfer_out', null]] } }, '$amount', 0] } },
+          expense: { $sum: { $cond: [{ $not: { $in: ['$type', ['income', 'transfer_in', 'transfer_out']] } }, '$amount', 0] } },
           transfer_in: { $sum: { $cond: [{ $eq: ['$type', 'transfer_in'] }, '$amount', 0] } },
           transfer_out: { $sum: { $cond: [{ $eq: ['$type', 'transfer_out'] }, '$amount', 0] } }
         } 
@@ -521,18 +514,7 @@ export async function getMonthlySummary(monthStr?: string, search?: string, cate
     db.collection('expenses').aggregate([
       { $match: { space_id: spaceId, date: { $gte: '2026-07-01', $lt: monthStart } } },
       { $group: { _id: { user_id: '$user_id', type: '$type' }, total: { $sum: '$amount' } } }
-    ]).toArray(),
-    db.collection('expenses').aggregate([
-      {
-        $match: {
-          space_id: spaceId,
-          type: { $nin: ['income', 'transfer_in', 'transfer_out'] },
-          category: 'Investments & Insurance'
-        }
-      },
-      { $group: { _id: null, total: { $sum: '$amount' } } }
-    ]).toArray(),
-    db.collection('recurring_expenses').find({ space_id: spaceId }).toArray()
+    ]).toArray()
   ]);
 
   const dailyTotals = monthlyAgg.map((d) => ({ date: d._id as string, total: d.dailyTotal as number }));
@@ -652,13 +634,6 @@ export async function getMonthlySummary(monthStr?: string, search?: string, cate
       .toArray();
   }
 
-  const monthlyInvestedCategory = categoryBreakdown.find((c: any) => c.category === 'Investments & Insurance');
-  const monthlyInvested = monthlyInvestedCategory ? monthlyInvestedCategory.total : 0;
-  const pureExpenses = Math.max(0, monthlyTotal - monthlyInvested);
-
-  const initialBase = (recurringTemplatesRaw || []).reduce((sum: number, t: any) => sum + (Number(t.initialInvestedAmount) || 0), 0);
-  const lifetimeAppInvested = lifetimeInvestmentAgg[0]?.total || 0;
-  const lifetimeInvested = lifetimeAppInvested + initialBase;
 
   return {
     month,
@@ -669,12 +644,7 @@ export async function getMonthlySummary(monthStr?: string, search?: string, cate
     todayTotal,
     memberBalances,
     categoryBreakdown,
-    investmentsSummary: {
-      monthlyInvested,
-      pureExpenses,
-      lifetimeInvested,
-      initialBase,
-    },
+
     categoryTransactions: categoryTransactions.map((exp: any) => ({
       _id: exp._id.toString(),
       itemName: exp.itemName || 'Unknown Item',
