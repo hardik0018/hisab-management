@@ -1,5 +1,5 @@
 export type InsuranceCategory =
-  | 'life' | 'health' | 'vehicle' | 'home' | 'travel' | 'term' | 'other';
+  | 'life' | 'health' | 'vehicle' | 'home' | 'travel' | 'term' | 'license' | 'puc' | 'other';
 
 export interface InsurancePolicy {
   _id?: string;
@@ -9,9 +9,9 @@ export interface InsurancePolicy {
   provider: string;            // "LIC of India"
   policyNumber: string;
   category: InsuranceCategory;
-  holderName: string;          // insured person
+  holderName?: string;          // insured person
   nominee?: string;
-  premiumAmount: number;
+  premiumAmount?: number;
   premiumFrequency: 'monthly' | 'quarterly' | 'half_yearly' | 'yearly' | 'one_time';
   sumAssured?: number;
   startDate: string;           // YYYY-MM-DD

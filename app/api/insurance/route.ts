@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
       category: body.category || 'other',
       holderName: body.holderName?.trim(),
       nominee: body.nominee?.trim() || '',
-      premiumAmount: Number(body.premiumAmount),
+      premiumAmount: (body.premiumAmount !== undefined && body.premiumAmount !== null && body.premiumAmount !== '') ? Number(body.premiumAmount) : undefined,
       premiumFrequency: body.premiumFrequency || 'yearly',
       sumAssured: body.sumAssured ? Number(body.sumAssured) : undefined,
       startDate: body.startDate,

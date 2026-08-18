@@ -94,7 +94,7 @@ export function DocumentViewerModal({
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open) handleDismiss(); }}>
       <DialogContent
-        className="w-[95vw] sm:w-full max-w-3xl h-[88dvh] sm:h-[85vh] flex flex-col p-0 overflow-hidden card-surface border-none shadow-2xl rounded-[2rem]"
+        className="w-[100vw] h-[100dvh] sm:w-[95vw] sm:h-[95vh] max-w-6xl flex flex-col p-0 overflow-hidden border-none sm:rounded-[2rem] shadow-2xl"
         style={{ background: 'var(--background)' }}
       >
         {/* Header Bar */}
@@ -138,7 +138,7 @@ export function DocumentViewerModal({
         </div>
 
         {/* Document Content Area */}
-        <div className="flex-1 relative overflow-hidden bg-black/5 flex flex-col items-center justify-center p-2 sm:p-4">
+        <div className="flex-1 relative overflow-hidden bg-black/5 flex flex-col items-center justify-center sm:p-2">
           {isLoading && !isExternalWebPage && (
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-background/60 backdrop-blur-xs z-10 pointer-events-none">
               <Loader2 className="h-7 w-7 animate-spin text-primary" />
@@ -194,6 +194,29 @@ export function DocumentViewerModal({
                 className="max-h-full max-w-full object-contain rounded-xl shadow-md transition-all"
               />
             </div>
+          ) : isPdf ? (
+            <div className="w-full h-full flex flex-col bg-white">
+              <object
+                data={url}
+                type="application/pdf"
+                className="w-full h-full rounded-none sm:rounded-xl border-0 shadow-inner"
+                onLoad={() => setIsLoading(false)}
+                onError={() => {
+                  setIsLoading(false);
+                  setHasError(true);
+                }}
+              >
+                <div className="flex flex-col items-center justify-center h-full p-6 text-center space-y-4">
+                  <AlertCircle className="h-10 w-10 text-amber-500" />
+                  <p className="text-sm font-bold">Browser cannot display PDF directly.</p>
+                  <Button asChild size="sm" className="rounded-xl">
+                    <a href={url} target="_blank" rel="noopener noreferrer">
+                      <ExternalLink className="h-4 w-4 mr-1.5" /> Download / Open PDF
+                    </a>
+                  </Button>
+                </div>
+              </object>
+            </div>
           ) : (
             <div className="w-full h-full flex flex-col">
               <iframe
@@ -204,7 +227,7 @@ export function DocumentViewerModal({
                   setIsLoading(false);
                   setHasError(true);
                 }}
-                className="w-full h-full rounded-xl border-0 bg-white shadow-inner"
+                className="w-full h-full rounded-none sm:rounded-xl border-0 bg-white shadow-inner"
               />
             </div>
           )}

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useRef } from 'react';
 import { toast } from 'sonner';
 import { secureFetch } from '@/lib/api-utils';
 import { Button } from '@/components/ui/button';
@@ -23,11 +23,13 @@ import EmptyState from '@/components/EmptyState';
 import { DocumentViewerModal } from '@/components/DocumentViewerModal';
 import Link from 'next/link';
 
-type Tab = 'insurance' | 'warranty';
+import { VaultQuickAdd } from '@/components/VaultQuickAdd';
 
 export default function VaultClient() {
   const router = useRouter();
-  const [tab, setTab] = useState<Tab>('insurance');
+  const insRef = useRef<HTMLDivElement>(null);
+  const warRef = useRef<HTMLDivElement>(null);
+  
   const [policies, setPolicies] = useState<InsurancePolicy[]>([]);
   const [warranties, setWarranties] = useState<Warranty[]>([]);
   const [reminders, setReminders] = useState<VaultReminder[]>([]);
@@ -58,22 +60,28 @@ export default function VaultClient() {
 
   useEffect(() => { loadAll(); }, []);
 
+  const scrollTo = (ref: React.RefObject<HTMLDivElement | null>) => {
+    if (ref.current) {
+      ref.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+
   const upcomingCount = useMemo(() => reminders.filter(r => r.daysLeft <= 30).length, [reminders]);
 
   return (
-    <AppShell>
+    <AppShell className="pb-24">
       <PageHeader title="Vault" subtitle="Insurance · Warranty · Passwords" />
 
       <div className="grid grid-cols-3 gap-3 mb-8 mt-2">
-        <button onClick={() => setTab('insurance')} className={cn("card-surface p-4 flex flex-col items-center gap-2 active:scale-95 transition-all border-2", tab === 'insurance' ? 'border-[var(--primary)]' : 'border-transparent')}>
+        <button onClick={() => scrollTo(insRef)} className="card-surface p-4 flex flex-col items-center gap-2 active:scale-95 transition-all border-2 border-transparent hover:border-[var(--primary)]">
           <div className="tile w-10 h-10" style={{ background: 'var(--sky-soft)', color: 'var(--sky)' }}>
             <ShieldCheck className="w-5 h-5" />
           </div>
-          <span className="text-xs font-bold" style={{ color: 'var(--foreground)' }}>Insurance</span>
+          <span className="text-xs font-bold" style={{ color: 'var(--foreground)' }}>Documents</span>
           <span className="text-lg font-extrabold amount" style={{ color: 'var(--primary)' }}>{policies.length}</span>
         </button>
         
-        <button onClick={() => setTab('warranty')} className={cn("card-surface p-4 flex flex-col items-center gap-2 active:scale-95 transition-all border-2", tab === 'warranty' ? 'border-[var(--primary)]' : 'border-transparent')}>
+        <button onClick={() => scrollTo(warRef)} className="card-surface p-4 flex flex-col items-center gap-2 active:scale-95 transition-all border-2 border-transparent hover:border-[var(--primary)]">
           <div className="tile w-10 h-10" style={{ background: 'var(--teal-soft)', color: 'var(--teal)' }}>
             <Package className="w-5 h-5" />
           </div>
@@ -126,14 +134,17 @@ export default function VaultClient() {
         </div>
       )}
 
-      {!loading && tab === 'insurance' && (
-        <div className="space-y-4 animate-in fade-in duration-500">
-          <div className="flex items-center justify-between mb-4">
-            <SectionTitle>Insurance Policies</SectionTitle>
-            <Button onClick={() => setInsDialog({ open: true })} variant="outline" size="sm" className="h-8 rounded-full border-dashed" style={{ borderColor: 'var(--primary)', color: 'var(--primary)' }}>
-              <Plus className="w-4 h-4 mr-1" /> Add Policy
-            </Button>
-          </div>
+      {!loading && (
+        <>
+          <VaultQuickAdd onSaved={loadAll} />
+
+          <div ref={insRef} className="space-y-4 animate-in fade-in duration-500 scroll-mt-24 mb-12">
+            <div className="flex items-center justify-between mb-4">
+              <SectionTitle>Documents & Insurance</SectionTitle>
+              <Button onClick={() => setInsDialog({ open: true })} variant="outline" size="sm" className="h-8 rounded-full border-dashed" style={{ borderColor: 'var(--primary)', color: 'var(--primary)' }}>
+                <Plus className="w-4 h-4 mr-1" /> Add Manual
+              </Button>
+            </div>
           
           {policies.length === 0 ? (
             <div className="py-6">
@@ -170,8 +181,10 @@ export default function VaultClient() {
                   </div>
                   
                   <div className="rounded-xl p-3 grid grid-cols-2 gap-y-3 text-sm" style={{ background: 'var(--surface-muted)' }}>
-                    <Meta label="Premium" value={`₹${p.premiumAmount.toLocaleString('en-IN')}`} sub={`/${p.premiumFrequency.replace('_', ' ')}`} />
-                    <Meta label="Next Due" value={<DueDateBadge date={p.nextDueDate} />} />
+                    {p.premiumAmount ? (
+                      <Meta label="Premium" value={`₹${p.premiumAmount.toLocaleString('en-IN')}`} sub={`/${p.premiumFrequency.replace('_', ' ')}`} />
+                    ) : null}
+                    <Meta label="Next Due / Expiry" value={<DueDateBadge date={p.nextDueDate} />} />
                     {p.sumAssured ? <Meta label="Sum Assured" value={`₹${p.sumAssured.toLocaleString('en-IN')}`} /> : null}
                     {p.nominee ? <Meta label="Nominee" value={p.nominee} /> : null}
                   </div>
@@ -191,14 +204,12 @@ export default function VaultClient() {
             </div>
           )}
         </div>
-      )}
 
-      {!loading && tab === 'warranty' && (
-        <div className="space-y-4 animate-in fade-in duration-500">
+        <div ref={warRef} className="space-y-4 animate-in fade-in duration-500 scroll-mt-24 mb-12">
           <div className="flex items-center justify-between mb-4">
             <SectionTitle>Warranties</SectionTitle>
             <Button onClick={() => setWarDialog({ open: true })} variant="outline" size="sm" className="h-8 rounded-full border-dashed" style={{ borderColor: 'var(--primary)', color: 'var(--primary)' }}>
-              <Plus className="w-4 h-4 mr-1" /> Add Warranty
+              <Plus className="w-4 h-4 mr-1" /> Add Manual
             </Button>
           </div>
           
@@ -272,6 +283,7 @@ export default function VaultClient() {
             </div>
           )}
         </div>
+        </>
       )}
 
       <InsuranceDialog state={insDialog} onClose={() => setInsDialog({ open: false })} onSaved={loadAll} />
