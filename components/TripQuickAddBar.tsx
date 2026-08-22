@@ -221,10 +221,10 @@ export default function TripQuickAddBar({
       )}
 
       {/* Input row */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 min-w-0">
         <div
           className={cn(
-            'flex items-center flex-1 gap-2 px-3 rounded-xl h-12 transition-all',
+            'flex items-center flex-1 min-w-0 gap-2 px-3 rounded-xl h-12 transition-all',
             isListening && 'ring-2 ring-rose-500/50'
           )}
           style={{
@@ -242,7 +242,7 @@ export default function TripQuickAddBar({
             onKeyDown={handleKeyDown}
             placeholder={isListening ? 'Listening...' : 'petrol 500  or  chai 20, toll 80'}
             aria-label="Quick add trip expense"
-            className="flex-1 bg-transparent outline-none placeholder:text-sm"
+            className="flex-1 min-w-0 w-full bg-transparent outline-none placeholder:text-sm truncate"
             style={{ color: 'var(--foreground)', fontSize: '16px' }}
           />
           {isSpeechSupported && (
