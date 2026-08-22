@@ -31,6 +31,7 @@ import { cn } from '@/lib/utils';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import StatCard from '@/components/StatCard';
 import EmptyState from '@/components/EmptyState';
+import TripQuickAddBar from '@/components/TripQuickAddBar';
 
 interface TripDetailClientProps {
   initialData: TripDetailData;
@@ -61,12 +62,11 @@ export default function TripDetailClient({
   const [data, setData] = useState<TripDetailData>(initialData);
   const { trip } = data;
 
-  const [activeTab, setActiveTab] = useState<'timeline' | 'split' | 'share'>('timeline');
+  const [activeTab, setActiveTab] = useState<'timeline' | 'share'>('timeline');
   const [selectedDay, setSelectedDay] = useState<string>('all');
   const [isAddExpenseOpen, setIsAddExpenseOpen] = useState(false);
   const [isEditTripOpen, setIsEditTripOpen] = useState(false);
   const [deleteExpenseId, setDeleteExpenseId] = useState<string | null>(null);
-  const [isSyncingHisab, setIsSyncingHisab] = useState(false);
   const [isSubmittingExpense, setIsSubmittingExpense] = useState(false);
 
   // Add Expense Form State
@@ -77,7 +77,6 @@ export default function TripDetailClient({
   );
   const [tripCategory, setTripCategory] = useState('Fuel, Vehicle & Travel');
   const [paidByMemberId, setPaidByMemberId] = useState(trip.members?.[0]?.id || '');
-  const [splitType, setSplitType] = useState<'equal' | 'personal'>('equal');
   const [expenseNote, setExpenseNote] = useState('');
 
   // Edit Trip Form State
@@ -96,6 +95,18 @@ export default function TripDetailClient({
     if (selectedDay === 'all') return data.expenses;
     return data.expenses.filter((e) => e.date === selectedDay);
   }, [data.expenses, selectedDay]);
+
+  // Reload trip detail after a change
+  const refreshTripData = async () => {
+    try {
+      const detailRes = await fetch(`/api/trips/${trip.trip_id}`);
+      const detailData = await detailRes.json();
+      if (detailData.success) setData(detailData.data);
+      router.refresh();
+    } catch {
+      /* ignore */
+    }
+  };
 
   // Toggle Active Trip
   const handleToggleActive = async () => {
@@ -137,16 +148,6 @@ export default function TripDetailClient({
       const numAmount = parseFloat(amount);
       const members = trip.members || [];
 
-      let splits: { memberId: string; amount: number; isSettled: boolean }[] | undefined = undefined;
-      if (splitType === 'equal' && members.length > 0) {
-        const perPerson = Math.round((numAmount / members.length) * 100) / 100;
-        splits = members.map((m) => ({
-          memberId: m.id,
-          amount: perPerson,
-          isSettled: false,
-        }));
-      }
-
       const res = await fetch(`/api/trips/${trip.trip_id}/expenses`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -156,8 +157,7 @@ export default function TripDetailClient({
           date: expenseDate,
           tripCategory,
           paidByMemberId: paidByMemberId || members[0]?.id,
-          splitType,
-          splits,
+          splitType: 'personal',
           note: expenseNote.trim(),
         }),
       });
@@ -254,25 +254,6 @@ export default function TripDetailClient({
     }
   };
 
-  // Sync to Hisab
-  const handleSyncToHisab = async () => {
-    setIsSyncingHisab(true);
-    try {
-      const res = await fetch(`/api/trips/${trip.trip_id}/settle`, {
-        method: 'POST',
-      });
-      const resData = await res.json();
-      if (!res.ok) throw new Error(resData.message || 'Failed to sync to Hisab');
-
-      toast.success(resData.message);
-      router.refresh();
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to sync balances to Hisab');
-    } finally {
-      setIsSyncingHisab(false);
-    }
-  };
-
   // Generate WhatsApp Message
   const whatsappSummaryText = useMemo(() => {
     const lines = [
@@ -294,14 +275,6 @@ export default function TripDetailClient({
     data.categorySummaries.forEach((c) => {
       lines.push(`• ${c.category}: ${fmtMoney(c.total)} (${c.percentage}%)`);
     });
-
-    if (data.settlements.length > 0) {
-      lines.push(``);
-      lines.push(`👥 *Group Split & Settlements:*`);
-      data.settlements.forEach((s) => {
-        lines.push(`• ${s.fromMemberName} owes ${s.toMemberName}: ${fmtMoney(s.amount)}`);
-      });
-    }
 
     lines.push(``);
     lines.push(`Generated via Hisab Tracker`);
@@ -469,18 +442,6 @@ export default function TripDetailClient({
         </button>
 
         <button
-          onClick={() => setActiveTab('split')}
-          className={cn(
-            'flex-1 py-2 text-xs font-bold rounded-xl transition-all',
-            activeTab === 'split'
-              ? 'bg-background text-foreground shadow-sm'
-              : 'text-muted-foreground hover:text-foreground'
-          )}
-        >
-          Balances ({data.settlements.length})
-        </button>
-
-        <button
           onClick={() => setActiveTab('share')}
           className={cn(
             'flex-1 py-2 text-xs font-bold rounded-xl transition-all',
@@ -529,6 +490,16 @@ export default function TripDetailClient({
             </div>
           )}
 
+          {/* Smart Input */}
+          <TripQuickAddBar
+            tripId={trip.trip_id}
+            members={trip.members || []}
+            date={selectedDay !== 'all' ? selectedDay : expenseDate}
+            paidByMemberId={paidByMemberId || trip.members?.[0]?.id || ''}
+            onPaidByChange={setPaidByMemberId}
+            onSaved={refreshTripData}
+          />
+
           {/* Action Row */}
           <div className="flex items-center justify-between gap-2">
             <div className="overflow-x-auto no-scrollbar -mx-1 px-1 flex-1">
@@ -570,7 +541,7 @@ export default function TripDetailClient({
               style={{ backgroundImage: 'var(--gradient-hero)', color: 'white' }}
             >
               <Plus className="w-4 h-4" />
-              <span>Add</span>
+              <span>Details</span>
             </button>
           </div>
 
@@ -580,7 +551,7 @@ export default function TripDetailClient({
               <EmptyState
                 icon={Receipt}
                 title="No expenses logged"
-                hint="Tap Add or use the QuickAddBar on the Kharcha home screen."
+                hint="Type above like 'petrol 500' to add instantly."
                 color="--violet"
               />
             ) : (
@@ -641,88 +612,6 @@ export default function TripDetailClient({
                   </div>
                 );
               })
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* ── Tab 2: Balances ─────────────────────────────────────────────── */}
-      {activeTab === 'split' && (
-        <div className="space-y-3.5">
-          <div className="space-y-2">
-            <h3 className="text-xs font-bold text-foreground">Member Balances</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              {data.memberBalances.map((m) => (
-                <div
-                  key={m.memberId}
-                  className="card-surface p-3 rounded-2xl border border-border space-y-1.5"
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-xs text-foreground">
-                      {m.memberName} {m.isCurrentUser && '(You)'}
-                    </span>
-
-                    <div>
-                      {m.netBalance > 0 ? (
-                        <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">
-                          Gets +{fmtMoney(m.netBalance)}
-                        </span>
-                      ) : m.netBalance < 0 ? (
-                        <span className="text-xs font-bold text-rose-600 dark:text-rose-400">
-                          Owes {fmtMoney(Math.abs(m.netBalance))}
-                        </span>
-                      ) : (
-                        <span className="text-xs font-semibold text-muted-foreground">Settled</span>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between text-[11px] text-muted-foreground pt-1 border-t border-border">
-                    <span>Paid: {fmtMoney(m.totalPaid)}</span>
-                    <span>Share: {fmtMoney(m.totalShare)}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="card-surface p-4 rounded-2xl border border-border space-y-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-xs font-bold text-foreground">Settlement Summary</h3>
-              </div>
-              {data.settlements.length > 0 && (
-                <button
-                  onClick={handleSyncToHisab}
-                  disabled={isSyncingHisab}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-primary text-primary-foreground shadow-sm active:scale-95 transition-all disabled:opacity-50"
-                >
-                  <Coins className="w-3.5 h-3.5" />
-                  <span>{isSyncingHisab ? 'Syncing...' : 'Sync to Hisab'}</span>
-                </button>
-              )}
-            </div>
-
-            {data.settlements.length === 0 ? (
-              <div className="py-3 text-center text-xs text-muted-foreground">
-                All balances are settled.
-              </div>
-            ) : (
-              <div className="space-y-1.5">
-                {data.settlements.map((s, idx) => (
-                  <div
-                    key={idx}
-                    className="flex items-center justify-between p-2.5 rounded-xl bg-secondary text-xs"
-                  >
-                    <div className="flex items-center gap-1.5">
-                      <span className="font-semibold text-foreground">{s.fromMemberName}</span>
-                      <span className="text-muted-foreground">owes</span>
-                      <span className="font-semibold text-foreground">{s.toMemberName}</span>
-                    </div>
-                    <span className="font-bold text-xs text-primary">{fmtMoney(s.amount)}</span>
-                  </div>
-                ))}
-              </div>
             )}
           </div>
         </div>
@@ -852,7 +741,7 @@ export default function TripDetailClient({
               </div>
 
               {trip.members && trip.members.length > 0 && (
-                <div className="grid grid-cols-2 gap-2">
+                <div>
                   <div>
                     <label className="block text-[11px] font-medium text-muted-foreground mb-1">
                       Who Paid?
@@ -867,20 +756,6 @@ export default function TripDetailClient({
                           {m.name} {m.isCurrentUser && '(You)'}
                         </option>
                       ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-[11px] font-medium text-muted-foreground mb-1">
-                      Split Type
-                    </label>
-                    <select
-                      value={splitType}
-                      onChange={(e) => setSplitType(e.target.value as any)}
-                      className="w-full p-2.5 rounded-xl bg-secondary border border-border outline-none focus:border-primary text-xs cursor-pointer"
-                    >
-                      <option value="equal">Split Equally ({trip.members.length})</option>
-                      <option value="personal">Personal (No split)</option>
                     </select>
                   </div>
                 </div>
