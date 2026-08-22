@@ -384,13 +384,13 @@ export default function QuickAddBar({
     >
       {/* ── Active Trip Quick-Tag Banner ────────────────────────────────── */}
       {activeTrip && mode === 'expense' && (
-        <div className="flex items-center justify-between gap-2 px-3 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-800 dark:text-amber-300 transition-all">
-          <div className="flex items-center gap-1.5 min-w-0">
+        <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 px-3 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-800 dark:text-amber-300 transition-all">
+          <div className="flex items-center gap-1.5 min-w-0 flex-1">
             <span className="text-sm shrink-0">{activeTrip.coverEmoji || '🌴'}</span>
             <span className="font-semibold truncate">Active Trip: {activeTrip.title}</span>
             <span
               className={cn(
-                'px-1.5 py-0.5 text-[10px] font-bold rounded-full',
+                'px-1.5 py-0.5 text-[10px] font-bold rounded-full shrink-0 whitespace-nowrap',
                 isTripTaggingActive
                   ? 'bg-amber-500/20 text-amber-900 dark:text-amber-200'
                   : 'bg-muted text-muted-foreground'
@@ -464,7 +464,7 @@ export default function QuickAddBar({
       <div className="flex items-center gap-2">
         <div
           className={cn(
-            'flex items-center flex-1 gap-2 px-3 rounded-xl h-12 transition-all',
+            'flex items-center flex-1 min-w-0 gap-2 px-3 rounded-xl h-12 transition-all',
             isListening && 'ring-2 ring-rose-500/50 border-rose-500/50'
           )}
           style={{
@@ -483,7 +483,7 @@ export default function QuickAddBar({
             onKeyDown={handleKeyDown}
             placeholder={isListening ? 'Listening...' : placeholder}
             aria-label="Quick add entry"
-            className="flex-1 bg-transparent text-base outline-none placeholder:text-sm"
+            className="flex-1 min-w-0 w-full bg-transparent text-base outline-none placeholder:text-sm truncate"
             style={{
               color: 'var(--foreground)',
               fontSize: '16px', // prevents iOS zoom
