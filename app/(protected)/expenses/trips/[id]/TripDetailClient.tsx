@@ -338,24 +338,16 @@ export default function TripDetailClient({
 
       {/* ── Hero Card ───────────────────────────────────────────────────── */}
       <div className="card-surface p-4 rounded-3xl border border-border space-y-3">
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex items-center gap-3">
+        <div className="flex items-start justify-between gap-3 min-w-0">
+          <div className="flex items-center gap-3 min-w-0">
             <div className="tile w-12 h-12 rounded-2xl text-2xl shrink-0">
               {trip.coverEmoji || '🌴'}
             </div>
-            <div>
+            <div className="min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
-                <h1 className="text-lg font-bold text-foreground tracking-tight">
+                <h1 className="text-lg font-bold text-foreground tracking-tight truncate max-w-full">
                   {trip.title}
                 </h1>
-                {trip.isCurrentActive && (
-                  <span
-                    className="text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-full"
-                    style={{ background: 'var(--amber-soft)', color: 'var(--amber)' }}
-                  >
-                    Active
-                  </span>
-                )}
                 <span
                   className={cn(
                     'text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-full',
