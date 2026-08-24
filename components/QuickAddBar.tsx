@@ -17,6 +17,7 @@ import {
   Zap,
   ArrowRightLeft,
   Mic,
+  Square,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import Link from 'next/link';
@@ -82,7 +83,7 @@ export default function QuickAddBar({
   const inputRef = useRef<HTMLInputElement>(null);
 
   const [activeTrip, setActiveTrip] = useState<Trip | null>(null);
-  const [isTripTaggingActive, setIsTripTaggingActive] = useState<boolean>(true);
+  const [stoppingTrip, setStoppingTrip] = useState(false);
 
   // ── Speech Recognition Hook ────────────────────────────────────────────────
   const {
@@ -120,10 +121,9 @@ export default function QuickAddBar({
     }
   };
 
-  // ── Fetch active trip (expense mode only) ──────────────────────────────────
+  // ── Fetch active trip (all modes) ─────────────────────────────────────────
 
   useEffect(() => {
-    if (mode !== 'expense') return;
     const fetchActiveTrip = () => {
       fetch('/api/trips/active')
         .then((r) => r.json())
@@ -134,10 +134,31 @@ export default function QuickAddBar({
     fetchActiveTrip();
     window.addEventListener('active_trip_changed', fetchActiveTrip);
     return () => window.removeEventListener('active_trip_changed', fetchActiveTrip);
-  }, [mode]);
+  }, []);
+
+  const handleStopTrip = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (!activeTrip) return;
+    setStoppingTrip(true);
+    try {
+      const res = await fetch(`/api/trips/${activeTrip.trip_id}/activate`, {
+        method: 'POST',
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Failed to stop trip');
+      toast.success(data.message || 'Trip stopped');
+      setActiveTrip(null);
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('active_trip_changed'));
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to stop trip');
+    } finally {
+      setStoppingTrip(false);
+    }
+  };
 
   // ── Load frequent items (expense mode only) ────────────────────────────────
-
   useEffect(() => {
     if (mode !== 'expense') return;
     fetch('/api/expenses/frequent')
@@ -231,7 +252,7 @@ export default function QuickAddBar({
                 note: e.note,
                 category: e.category,
                 type: e.type,
-                ...(activeTrip && isTripTaggingActive
+                ...(activeTrip
                   ? {
                       associatedType: 'trip',
                       associatedId: activeTrip.trip_id,
@@ -264,6 +285,12 @@ export default function QuickAddBar({
               description: h.description,
               date: today(),
               logAsExpense: true,
+              ...(activeTrip
+                ? {
+                    associatedType: 'trip',
+                    associatedId: activeTrip.trip_id,
+                  }
+                : {}),
             }),
           }).then(async (res) => {
             if (!res.ok) throw new Error('Failed to save hisab');
@@ -383,35 +410,37 @@ export default function QuickAddBar({
       className={cn('card-surface p-3 flex flex-col gap-2', className)}
     >
       {/* ── Active Trip Quick-Tag Banner ────────────────────────────────── */}
-      {activeTrip && mode === 'expense' && (
-        <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 px-3 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-800 dark:text-amber-300 transition-all">
-          <div className="flex items-center gap-1.5 min-w-0 flex-1">
-            <span className="text-sm shrink-0">{activeTrip.coverEmoji || '🌴'}</span>
-            <span className="font-semibold truncate">Active Trip: {activeTrip.title}</span>
-            <span
-              className={cn(
-                'px-1.5 py-0.5 text-[10px] font-bold rounded-full shrink-0 whitespace-nowrap',
-                isTripTaggingActive
-                  ? 'bg-amber-500/20 text-amber-900 dark:text-amber-200'
-                  : 'bg-muted text-muted-foreground'
-              )}
-            >
-              {isTripTaggingActive ? 'Auto-Tagging ON' : 'Paused'}
-            </span>
+      {activeTrip && (
+        <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1.5 px-3.5 py-2 rounded-xl bg-amber-500/10 border border-amber-500/25 text-xs text-amber-900 dark:text-amber-200 transition-all shadow-sm">
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            <span className="text-base shrink-0">{activeTrip.coverEmoji || '🌴'}</span>
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5">
+                <span className="font-bold truncate text-foreground">{activeTrip.title}</span>
+                <span className="px-1.5 py-0.2 text-[9px] font-bold rounded-full bg-amber-500/20 text-amber-900 dark:text-amber-200 shrink-0">
+                  Trip Active
+                </span>
+              </div>
+              <p className="text-[10px] text-muted-foreground truncate">
+                Entries auto-tagged to this trip & counted in daily spend
+              </p>
+            </div>
           </div>
-          <div className="flex items-center gap-2.5 shrink-0 text-[11px]">
+          <div className="flex items-center gap-2 shrink-0">
             <button
               type="button"
-              onClick={() => setIsTripTaggingActive((prev) => !prev)}
-              className="font-medium underline hover:text-foreground transition-colors"
+              disabled={stoppingTrip}
+              onClick={handleStopTrip}
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-rose-500/15 text-rose-700 dark:text-rose-300 border border-rose-500/30 hover:bg-rose-500/25 active:scale-95 transition-all"
             >
-              {isTripTaggingActive ? 'Pause' : 'Resume'}
+              <Square className="w-2.5 h-2.5 fill-current" />
+              <span>{stoppingTrip ? 'Stopping...' : 'Stop Trip'}</span>
             </button>
             <Link
               href={`/expenses/trips/${activeTrip.trip_id}`}
-              className="font-semibold text-primary hover:underline"
+              className="font-bold text-[11px] text-primary hover:underline"
             >
-              View Trip →
+              View →
             </Link>
           </div>
         </div>

@@ -20,9 +20,9 @@ export async function getTrips(filter?: { status?: string }): Promise<TripCardIt
     if (!user) return [];
 
     const db = await getDb();
-    const spaceId = user.space_id || user.user_id;
+    const spaceIds = [user.space_id, user.user_id].filter(Boolean);
 
-    const query: Record<string, any> = { space_id: spaceId };
+    const query: Record<string, any> = { space_id: { $in: spaceIds } };
     if (filter?.status && filter.status !== 'all') {
       query.status = filter.status;
     }
@@ -43,7 +43,7 @@ export async function getTrips(filter?: { status?: string }): Promise<TripCardIt
       .aggregate([
         {
           $match: {
-            space_id: spaceId,
+            space_id: { $in: spaceIds },
             associatedType: 'trip',
             associatedId: { $in: tripIds },
             type: { $ne: 'income' },
@@ -106,10 +106,10 @@ export async function getActiveTrip(): Promise<Trip | null> {
     if (!user) return null;
 
     const db = await getDb();
-    const spaceId = user.space_id || user.user_id;
+    const spaceIds = [user.space_id, user.user_id].filter(Boolean);
 
     const trip = (await db.collection('trips').findOne({
-      space_id: spaceId,
+      space_id: { $in: spaceIds },
       isCurrentActive: true,
     })) as unknown as Trip | null;
 
@@ -192,11 +192,11 @@ export async function getTripDetail(tripId: string): Promise<TripDetailData | nu
     if (!user) return null;
 
     const db = await getDb();
-    const spaceId = user.space_id || user.user_id;
+    const spaceIds = [user.space_id, user.user_id].filter(Boolean);
 
     const tripDoc = (await db.collection('trips').findOne({
       trip_id: tripId,
-      space_id: spaceId,
+      space_id: { $in: spaceIds },
     })) as unknown as Trip | null;
 
     if (!tripDoc) return null;
@@ -210,7 +210,7 @@ export async function getTripDetail(tripId: string): Promise<TripDetailData | nu
     const rawExpenses = (await db
       .collection('expenses')
       .find({
-        space_id: spaceId,
+        space_id: { $in: spaceIds },
         associatedType: 'trip',
         associatedId: tripId,
       })

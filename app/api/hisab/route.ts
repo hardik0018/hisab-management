@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { name, mobile, type, amount, description, date, logAsExpense } = body;
+    const { name, mobile, type, amount, description, date, logAsExpense, associatedType, associatedId } = body;
 
     if (!name || !type || !amount) {
       return Response.json({ error: 'Missing required fields' }, { status: 400 });
@@ -102,7 +102,7 @@ export async function POST(request: NextRequest) {
           const dayStr = String(dateObj.getDate()).padStart(2, '0');
           const dateStr = `${year}-${monthStr}-${dayStr}`;
 
-          const expenseDoc = {
+          const expenseDoc: any = {
             space_id: spaceId,
             user_id: user.user_id,
             date: dateStr,
@@ -111,11 +111,18 @@ export async function POST(request: NextRequest) {
             note: description || '',
             category: 'Debt/Credit',
             currency: 'INR',
-            associatedId: hisabId,
-            associatedType: 'hisab',
+            associatedId: associatedType === 'trip' && associatedId ? associatedId : hisabId,
+            associatedType: associatedType === 'trip' && associatedId ? 'trip' : 'hisab',
             createdAt: new Date(),
             updatedAt: new Date(),
           };
+
+          if (associatedType === 'trip' && associatedId) {
+            expenseDoc.tripMetadata = {
+              tripCategory: 'General & Other',
+              hisabId,
+            };
+          }
 
           await db.collection('expenses').insertOne(expenseDoc, { session });
         }
