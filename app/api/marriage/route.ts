@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { name, city, amount, date, logAsExpense } = body;
+    const { name, city, amount, date, logAsExpense, user_id } = body;
 
     if (!name || !amount) {
       return Response.json({ error: 'Missing required fields' }, { status: 400 });
@@ -49,10 +49,11 @@ export async function POST(request: NextRequest) {
     const db = await getDb();
     const marriageId = `mar_${uuidv4().split('-')[0]}`;
     const spaceId = user.space_id || user.user_id;
+    const recordUserId = user_id || user.user_id;
 
     const record: MarriageRecord = {
       marriage_id: marriageId,
-      user_id: user.user_id,
+      user_id: recordUserId,
       space_id: spaceId,
       name,
       city: city || '',
@@ -80,7 +81,7 @@ export async function POST(request: NextRequest) {
 
           const expenseDoc = {
             space_id: spaceId,
-            user_id: user.user_id,
+            user_id: recordUserId,
             date: dateStr,
             itemName: `Vyahar: ${name}${locationStr}`,
             amount: parseFloat(amount),

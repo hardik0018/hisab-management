@@ -2,11 +2,11 @@
 
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { Search, Heart, Trash2, Edit } from 'lucide-react';
+import { Search, Heart, Trash2, Edit, Users } from 'lucide-react';
 import { secureFetch } from '@/lib/api-utils';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { toast } from 'sonner';
-import { MarriageRecord } from '@/types';
+import { MarriageRecord, User } from '@/types';
 import PageHeader from '@/components/PageHeader';
 import AppShell from '@/components/AppShell';
 import StatCard from '@/components/StatCard';
@@ -19,6 +19,8 @@ interface MarriageClientProps {
   initialTotalReceived: number;
   initialNetBalance: number;
   initialHasMore: boolean;
+  collaborators?: User[];
+  currentUserId?: string;
 }
 
 interface FormData {
@@ -27,9 +29,18 @@ interface FormData {
   amount: string;
   date: string;
   logAsExpense: boolean;
+  paidByUserId: string;
 }
 
-export default function MarriageClient({ initialRecords, initialTotalGiven, initialTotalReceived, initialNetBalance, initialHasMore }: MarriageClientProps) {
+export default function MarriageClient({
+  initialRecords,
+  initialTotalGiven,
+  initialTotalReceived,
+  initialNetBalance,
+  initialHasMore,
+  collaborators = [],
+  currentUserId = '',
+}: MarriageClientProps) {
   const router = useRouter();
   const [records, setRecords] = useState<MarriageRecord[]>(initialRecords);
   const [totalGiven, setTotalGiven] = useState(initialTotalGiven);
@@ -95,7 +106,14 @@ export default function MarriageClient({ initialRecords, initialTotalGiven, init
     amount: '',
     date: new Date().toISOString().split('T')[0],
     logAsExpense: true,
+    paidByUserId: currentUserId || collaborators[0]?.user_id || '',
   });
+
+  useEffect(() => {
+    if (currentUserId && !formData.paidByUserId) {
+      setFormData(prev => ({ ...prev, paidByUserId: currentUserId }));
+    }
+  }, [currentUserId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -112,8 +130,12 @@ export default function MarriageClient({ initialRecords, initialTotalGiven, init
       const finalAmount = recordType === 'given' ? amountValue : -amountValue;
 
       const payload = {
-        ...formData,
-        amount: finalAmount.toString()
+        name: formData.name,
+        city: formData.city,
+        amount: finalAmount.toString(),
+        date: formData.date,
+        logAsExpense: formData.logAsExpense,
+        user_id: formData.paidByUserId || currentUserId,
       };
       
       const response = await secureFetch<{ record: MarriageRecord }>(url, {
@@ -154,6 +176,7 @@ export default function MarriageClient({ initialRecords, initialTotalGiven, init
       amount: Math.abs(record.amount).toString(),
       date: new Date(record.date).toISOString().split('T')[0],
       logAsExpense: record.log_as_expense !== undefined ? !!record.log_as_expense : true,
+      paidByUserId: record.user_id || currentUserId || '',
     });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -167,6 +190,7 @@ export default function MarriageClient({ initialRecords, initialTotalGiven, init
       amount: '',
       date: new Date().toISOString().split('T')[0],
       logAsExpense: true,
+      paidByUserId: currentUserId || collaborators[0]?.user_id || '',
     });
   };
 
@@ -209,6 +233,35 @@ export default function MarriageClient({ initialRecords, initialTotalGiven, init
                className={`flex-1 h-8 rounded-lg text-xs font-bold transition-all ${recordType === 'received' ? 'bg-[var(--success-soft)] text-[var(--success)]' : 'text-[var(--muted-foreground)]'}`}
              >Received</button>
           </div>
+
+          {/* Collaborator Paid By Selector */}
+          {collaborators.length > 1 && (
+            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-0.5 text-xs">
+              <span className="text-[11px] font-medium text-muted-foreground flex items-center gap-1 shrink-0">
+                <Users className="w-3.5 h-3.5" /> Paid / Handled by:
+              </span>
+              <div className="flex items-center gap-1.5">
+                {collaborators.map((c) => {
+                  const isSelected = (formData.paidByUserId || currentUserId) === c.user_id;
+                  return (
+                    <button
+                      key={c.user_id}
+                      type="button"
+                      onClick={() => setFormData({ ...formData, paidByUserId: c.user_id })}
+                      className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap transition-all active:scale-95 ${
+                        isSelected
+                          ? "bg-primary text-primary-foreground shadow-sm ring-1 ring-primary/30"
+                          : "bg-secondary text-muted-foreground hover:text-foreground border border-border/50"
+                      }`}
+                    >
+                      {c.name} {c.user_id === currentUserId && "(You)"}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           <div className="flex flex-col sm:flex-row gap-3">
              <input 
                 placeholder="Name (e.g. Mehta Family)"
@@ -285,34 +338,40 @@ export default function MarriageClient({ initialRecords, initialTotalGiven, init
         ) : (
            <div className="card-surface overflow-hidden">
              <div className="divide-y" style={{ borderColor: 'var(--border)' }}>
-               {filteredRecords.map(record => (
-                  <div key={record.marriage_id} className="p-4 flex items-center justify-between gap-3">
-                     <div className="flex items-center gap-3 min-w-0">
-                        <div className="tile w-10 h-10 flex-shrink-0" style={{ background: 'var(--pink-soft)', color: 'var(--pink)' }}>
-                           {record.name.charAt(0).toUpperCase()}
-                        </div>
-                        <div className="min-w-0 flex flex-col">
-                           <span className="font-bold text-sm truncate" style={{ color: 'var(--foreground)' }}>{record.name}</span>
-                           <span className="text-xs truncate" style={{ color: 'var(--muted-foreground)' }}>
-                              {record.city ? `${record.city} • ` : ''}{new Date(record.date).toLocaleDateString()}
-                           </span>
-                        </div>
-                     </div>
-                     <div className="flex items-center gap-3">
-                        <span className="font-bold whitespace-nowrap" style={{ color: record.amount >= 0 ? 'var(--danger)' : 'var(--success)' }}>
-                           {record.amount >= 0 ? '-' : '+'}₹{Math.abs(record.amount).toLocaleString()}
-                        </span>
-                        <div className="flex gap-1">
-                           <button onClick={() => handleEdit(record)} className="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 active:scale-95 transition-all" style={{ color: 'var(--muted-foreground)' }}>
-                              <Edit className="w-4 h-4" />
-                           </button>
-                           <button onClick={() => setRecordToDelete(record.marriage_id)} className="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 active:scale-95 transition-all" style={{ color: 'var(--muted-foreground)' }}>
-                              <Trash2 className="w-4 h-4" />
-                           </button>
-                        </div>
-                     </div>
-                  </div>
-               ))}
+               {filteredRecords.map(record => {
+                  const paidUser = collaborators.find(c => c.user_id === record.user_id);
+                  return (
+                    <div key={record.marriage_id} className="p-4 flex items-center justify-between gap-3">
+                       <div className="flex items-center gap-3 min-w-0">
+                          <div className="tile w-10 h-10 flex-shrink-0" style={{ background: 'var(--pink-soft)', color: 'var(--pink)' }}>
+                             {record.name.charAt(0).toUpperCase()}
+                          </div>
+                          <div className="min-w-0 flex flex-col">
+                             <span className="font-bold text-sm truncate" style={{ color: 'var(--foreground)' }}>{record.name}</span>
+                             <span className="text-xs truncate" style={{ color: 'var(--muted-foreground)' }}>
+                                {record.city ? `${record.city} • ` : ''}{new Date(record.date).toLocaleDateString()}
+                                {record.user_id && record.user_id !== currentUserId && paidUser && (
+                                   <span> · {paidUser.name}</span>
+                                )}
+                             </span>
+                          </div>
+                       </div>
+                       <div className="flex items-center gap-3">
+                          <span className="font-bold whitespace-nowrap" style={{ color: record.amount >= 0 ? 'var(--danger)' : 'var(--success)' }}>
+                             {record.amount >= 0 ? '-' : '+'}₹{Math.abs(record.amount).toLocaleString()}
+                          </span>
+                          <div className="flex gap-1">
+                             <button onClick={() => handleEdit(record)} className="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 active:scale-95 transition-all" style={{ color: 'var(--muted-foreground)' }}>
+                                <Edit className="w-4 h-4" />
+                             </button>
+                             <button onClick={() => setRecordToDelete(record.marriage_id)} className="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 active:scale-95 transition-all" style={{ color: 'var(--muted-foreground)' }}>
+                                <Trash2 className="w-4 h-4" />
+                             </button>
+                          </div>
+                       </div>
+                    </div>
+                  );
+               })}
                {hasMore && (
                  <div ref={observerRef} className="p-4 flex justify-center items-center gap-2 text-xs font-medium text-[var(--muted-foreground)]">
                    <div className="w-4 h-4 rounded-full border-2 border-t-transparent border-[var(--primary)] animate-spin" />

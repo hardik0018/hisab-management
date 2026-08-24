@@ -1,5 +1,5 @@
 export const dynamic = 'force-dynamic';
-import { getMarriageRecords } from '@/lib/data-fetching';
+import { getMarriageRecords, getCollaborationData } from '@/lib/data-fetching';
 import MarriageClient from './MarriageClient';
 import { redirect } from 'next/navigation';
 import { getAuthenticatedUser } from '@/lib/auth';
@@ -17,7 +17,10 @@ export default async function MarriagePage() {
     redirect('/login');
   }
 
-  const data = await getMarriageRecords();
+  const [data, collabData] = await Promise.all([
+    getMarriageRecords(),
+    getCollaborationData(),
+  ]);
 
   return <MarriageClient 
     initialRecords={data?.records || []} 
@@ -25,5 +28,7 @@ export default async function MarriagePage() {
     initialTotalReceived={data?.totalReceived || 0}
     initialNetBalance={data?.netBalance || 0}
     initialHasMore={data?.hasMore || false}
+    collaborators={collabData?.collaborators || []}
+    currentUserId={collabData?.currentUserId || user.user_id}
   />;
 }

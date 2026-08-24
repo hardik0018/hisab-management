@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
     for (const exp of rawExpensesList) {
       const expenseDoc: Partial<Expense> = {
         space_id: spaceId,
-        user_id: userId,
+        user_id: exp.user_id || userId,
         date: exp.date,
         itemName: exp.itemName,
         amount: Number(exp.amount),
@@ -72,7 +72,6 @@ export async function POST(request: NextRequest) {
         type: exp.type, // handled below
         associatedType: exp.associatedType,
         associatedId: exp.associatedId,
-        tripMetadata: exp.tripMetadata,
       };
 
       if (exp.type === 'transfer') {

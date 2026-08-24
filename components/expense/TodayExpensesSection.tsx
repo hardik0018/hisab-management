@@ -5,6 +5,7 @@ import { Expense, User } from '@/types';
 import SectionTitle from '@/components/SectionTitle';
 import EmptyState from '@/components/EmptyState';
 import ExpenseCard from './ExpenseCard';
+import ExpenseEditModal from './ExpenseEditModal';
 import { ShoppingBag, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -19,6 +20,8 @@ export default function TodayExpensesSection({
 }: TodayExpensesSectionProps) {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(true);
+  const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
+  const [isEditOpen, setIsEditOpen] = useState<boolean>(false);
 
   const todayStr = new Date().toISOString().split('T')[0];
 
@@ -37,7 +40,6 @@ export default function TodayExpensesSection({
 
   useEffect(() => {
     load();
-    // Re-load on window focus (after the user has navigated away and come back)
     // Re-load on window focus (after the user has navigated away and come back)
     const handler = () => load();
     window.addEventListener('focus', handler);
@@ -64,9 +66,14 @@ export default function TodayExpensesSection({
   };
 
   const handleEdit = (exp: Expense) => {
-    // Trigger edit by dispatching a custom event that HistoryClient / parent can listen to
-    // For now, this is a no-op placeholder since edit modal is in HistoryClient
-    toast.info('Edit: go to History tab to edit past entries.');
+    setEditingExpense(exp);
+    setIsEditOpen(true);
+  };
+
+  const handleUpdate = (updated: Expense) => {
+    setExpenses((prev) =>
+      prev.map((e) => (String(e._id) === String(updated._id) ? updated : e))
+    );
   };
 
   if (loading) {
@@ -112,6 +119,18 @@ export default function TodayExpensesSection({
           ))}
         </div>
       </div>
+
+      <ExpenseEditModal
+        isOpen={isEditOpen}
+        onClose={() => {
+          setIsEditOpen(false);
+          setEditingExpense(null);
+        }}
+        expense={editingExpense}
+        onUpdate={handleUpdate}
+        collaborators={collaborators}
+        currentUserId={currentUserId}
+      />
     </div>
   );
 }

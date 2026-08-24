@@ -17,6 +17,7 @@ import {
   Zap,
   ArrowRightLeft,
   Mic,
+  Users,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { parseEntries, ParsedDraft, ParsedExpenseDraft, ParsedHisabDraft, ParsedTransferDraft } from '@/lib/parser';
@@ -38,6 +39,8 @@ interface QuickAddBarProps {
   largeLimit?: number;
   /** Collaborators available for internal transfers */
   collaborators?: { user_id: string; name: string }[];
+  /** Current logged in user ID */
+  currentUserId?: string;
   /** Called after a successful save so the parent can refresh its list */
   onSaved?: () => void;
   className?: string;
@@ -71,6 +74,7 @@ export default function QuickAddBar({
   mode = 'expense',
   largeLimit = 10000,
   collaborators,
+  currentUserId,
   onSaved,
   className,
 }: QuickAddBarProps) {
@@ -78,6 +82,16 @@ export default function QuickAddBar({
   const [saving, setSaving] = useState(false);
   const [frequent, setFrequent] = useState<FrequentItem[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const [selectedPaidByUserId, setSelectedPaidByUserId] = useState<string>(() => {
+    return currentUserId || collaborators?.[0]?.user_id || '';
+  });
+
+  useEffect(() => {
+    if (currentUserId && !selectedPaidByUserId) {
+      setSelectedPaidByUserId(currentUserId);
+    }
+  }, [currentUserId, selectedPaidByUserId]);
 
 
 
@@ -211,6 +225,7 @@ export default function QuickAddBar({
                 note: e.note,
                 category: e.category,
                 type: e.type,
+                user_id: selectedPaidByUserId || undefined,
               })),
             }),
           }).then(async (res) => {
@@ -392,6 +407,35 @@ export default function QuickAddBar({
             >
               ગુજરાતી
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Paid By Collaborator Selector ─────────────────────────────── */}
+      {collaborators && collaborators.length > 1 && (
+        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-0.5 text-xs">
+          <span className="text-[11px] font-medium text-muted-foreground flex items-center gap-1 shrink-0">
+            <Users className="w-3.5 h-3.5" /> Paid by:
+          </span>
+          <div className="flex items-center gap-1.5">
+            {collaborators.map((c) => {
+              const isSelected = (selectedPaidByUserId || currentUserId) === c.user_id;
+              return (
+                <button
+                  key={c.user_id}
+                  type="button"
+                  onClick={() => setSelectedPaidByUserId(c.user_id)}
+                  className={cn(
+                    "px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap transition-all active:scale-95",
+                    isSelected
+                      ? "bg-primary text-primary-foreground shadow-sm ring-1 ring-primary/30"
+                      : "bg-secondary text-muted-foreground hover:text-foreground border border-border/50"
+                  )}
+                >
+                  {c.name} {c.user_id === currentUserId && "(You)"}
+                </button>
+              );
+            })}
           </div>
         </div>
       )}

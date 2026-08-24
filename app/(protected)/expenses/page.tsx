@@ -45,6 +45,7 @@ export default async function ExpensesPage() {
           mode="expense"
           largeLimit={settings.largeAmountLimit}
           collaborators={collaborators}
+          currentUserId={currentUserId || ""}
         />
 
         {/* Today's expense list (client component for live refresh) */}

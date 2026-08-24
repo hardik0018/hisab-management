@@ -33,6 +33,7 @@ export async function PUT(
     if (body.amount) updateData.amount = parseFloat(body.amount);
     if (body.date) updateData.date = new Date(body.date);
     if (body.logAsExpense !== undefined) updateData.log_as_expense = !!body.logAsExpense;
+    if (body.user_id) updateData.user_id = body.user_id;
 
     const result = await db.collection('marriage_hisab').updateOne(
       { marriage_id: recordId, space_id: spaceId },
@@ -55,6 +56,7 @@ export async function PUT(
       const cityToUse = body.city !== undefined ? body.city : existingRecord.city;
       const amountToUse = body.amount ? parseFloat(body.amount) : existingRecord.amount;
       const dateToUse = body.date ? new Date(body.date) : new Date(existingRecord.date);
+      const userIdToUse = body.user_id || existingRecord.user_id || user.user_id;
       
       const year = dateToUse.getFullYear();
       const monthStr = String(dateToUse.getMonth() + 1).padStart(2, '0');
@@ -72,6 +74,7 @@ export async function PUT(
               amount: amountToUse,
               note: `Vyahar gift to ${nameToUse}${cityToUse ? ` from ${cityToUse}` : ''}`,
               date: dateStr,
+              user_id: userIdToUse,
               updatedAt: new Date()
             }
           }
@@ -79,7 +82,7 @@ export async function PUT(
       } else {
         const expenseDoc = {
           space_id: spaceId,
-          user_id: user.user_id,
+          user_id: userIdToUse,
           date: dateStr,
           itemName: `Vyahar: ${nameToUse}${locationStr}`,
           amount: amountToUse,
