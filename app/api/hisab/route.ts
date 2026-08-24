@@ -111,18 +111,11 @@ export async function POST(request: NextRequest) {
             note: description || '',
             category: 'Debt/Credit',
             currency: 'INR',
-            associatedId: associatedType === 'trip' && associatedId ? associatedId : hisabId,
-            associatedType: associatedType === 'trip' && associatedId ? 'trip' : 'hisab',
+            associatedId: hisabId,
+            associatedType: 'hisab',
             createdAt: new Date(),
             updatedAt: new Date(),
           };
-
-          if (associatedType === 'trip' && associatedId) {
-            expenseDoc.tripMetadata = {
-              tripCategory: 'General & Other',
-              hisabId,
-            };
-          }
 
           await db.collection('expenses').insertOne(expenseDoc, { session });
         }

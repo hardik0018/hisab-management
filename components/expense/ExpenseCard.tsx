@@ -96,12 +96,6 @@ export default function ExpenseCard({
               <LinkIcon className="w-2 h-2" />Hisab
             </span>
           )}
-          {expense.associatedType === 'trip' && (
-            <span className="inline-flex items-center gap-0.5 text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-full"
-              style={{ background: 'var(--amber-soft)', color: 'var(--amber)' }}>
-              <LinkIcon className="w-2 h-2" />Trip
-            </span>
-          )}
           {expense.associatedType === 'recurring' && (
             <span className="inline-flex items-center gap-0.5 text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-full"
               style={{ background: 'var(--teal-soft)', color: 'var(--teal)' }}>

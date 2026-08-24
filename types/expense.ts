@@ -1,6 +1,5 @@
 import { ObjectId } from 'mongodb';
-import { TripExpenseMetadata } from './trip';
-
+ 
 export interface Expense {
   _id?: string | ObjectId;
   space_id: string;
@@ -15,8 +14,7 @@ export interface Expense {
   createdAt: Date | string;
   updatedAt: Date | string;
   associatedId?: string;
-  associatedType?: 'hisab' | 'marriage' | 'recurring' | 'transfer' | 'trip';
-  tripMetadata?: TripExpenseMetadata;
+  associatedType?: 'hisab' | 'marriage' | 'recurring' | 'transfer';
 }
 
 export interface RecurringExpense {

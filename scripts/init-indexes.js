@@ -65,10 +65,6 @@ async function initIndexes() {
     await db.collection('password_entries').createIndex({ space_id: 1 });
     await db.collection('password_entries').createIndex({ user_id: 1, password_hash: 1 });
 
-    console.log('Creating indexes for `trips` collection...');
-    await db.collection('trips').createIndex({ space_id: 1, isCurrentActive: 1 });
-    await db.collection('trips').createIndex({ space_id: 1, status: 1, startDate: -1 });
-    await db.collection('trips').createIndex({ trip_id: 1, space_id: 1 });
     await db.collection('expenses').createIndex({ space_id: 1, associatedType: 1, associatedId: 1 });
 
     console.log('Successfully created all required indexes!');
