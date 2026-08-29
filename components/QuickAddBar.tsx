@@ -301,7 +301,7 @@ export default function QuickAddBar({
         setSaving(false);
       }
     },
-    [mode, onSaved]
+    [mode, onSaved, selectedPaidByUserId]
   );
 
   // ── Handle submit (Enter key or + button) ─────────────────────────────────
