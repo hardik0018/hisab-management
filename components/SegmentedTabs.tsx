@@ -34,7 +34,7 @@ export default function SegmentedTabs({ tabs, className }: SegmentedTabsProps) {
       }}
     >
       <div
-        className="flex w-full max-w-xl p-1.5 rounded-2xl gap-1 overflow-x-auto no-scrollbar"
+        className="flex w-full max-w-xl lg:max-w-5xl p-1.5 rounded-2xl gap-1 overflow-x-auto no-scrollbar"
         style={{ background: 'var(--secondary)' }}
       >
         {tabs.map((tab) => {

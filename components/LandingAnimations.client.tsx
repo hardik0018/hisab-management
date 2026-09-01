@@ -50,27 +50,27 @@ export const LandingNav = () => {
 
   return (
     <nav
-      className={`fixed top-0 w-full z-[100] transition-all duration-500 ${scrolled ? "py-4" : "py-6"}`}
+      className={`fixed top-0 w-full z-[100] transition-all duration-500 ${scrolled ? "py-3" : "py-5"}`}
     >
       <div className="max-w-7xl mx-auto px-6">
         <div
-          className={`flex items-center justify-between px-6 py-3 rounded-[1.5rem] transition-all duration-500 ${scrolled ? "bg-white/70 backdrop-blur-xl border border-white/40 shadow-2xl shadow-slate-200/50" : "bg-transparent"}`}
+          className={`flex items-center justify-between px-6 py-3 rounded-[1.5rem] transition-all duration-500 ${scrolled ? "bg-card/85 backdrop-blur-xl border border-border shadow-card" : "bg-transparent"}`}
         >
           <div className="flex items-center gap-2 group cursor-pointer font-black text-2xl tracking-tighter italic">
-            <div className="w-10 h-10 bg-black rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform shadow-xl">
-              <Wallet className="w-6 h-6 text-white" />
+            <div className="w-10 h-10 bg-primary text-primary-foreground rounded-xl flex items-center justify-center group-hover:scale-105 transition-transform shadow-md">
+              <Wallet className="w-5 h-5 text-white" />
             </div>
-            <span className="text-black tracking-tight font-black text-xl md:text-2xl not-italic">
-              Hisab Management System
+            <span className="text-foreground tracking-tight font-black text-xl md:text-2xl not-italic">
+              Hisab <span className="gradient-text">Management</span>
             </span>
           </div>
 
           <div className="hidden md:flex items-center gap-8">
-            {["Features", "Ledger", "Demo"].map((item) => (
+            {["Features", "Ledger"].map((item) => (
               <Link
                 key={item}
                 href={`#${item.toLowerCase()}`}
-                className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400 hover:text-blue-600 transition-colors"
+                className="text-xs font-bold uppercase tracking-wider text-muted-foreground hover:text-primary transition-colors"
               >
                 {item}
               </Link>
@@ -80,7 +80,7 @@ export const LandingNav = () => {
           <div className="flex items-center gap-4">
             <Link
               href="/login"
-              className="px-6 py-2.5 bg-black text-white rounded-xl font-black text-xs uppercase tracking-widest hover:bg-blue-600 transition-all active:scale-95 shadow-lg shadow-black/10"
+              className="px-6 py-2.5 bg-primary text-primary-foreground rounded-xl font-bold text-xs uppercase tracking-wider hover:opacity-90 transition-all active:scale-95 shadow-glow"
             >
               Sign In
             </Link>

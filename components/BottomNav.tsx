@@ -35,10 +35,10 @@ export default function BottomNav() {
               prefetch={true}
               aria-label={label}
               className={cn(
-                'relative flex flex-col items-center justify-center gap-0.5 flex-1 py-2 px-1 rounded-2xl transition-all duration-200 active:scale-95 min-h-[56px]',
+                'relative flex flex-col items-center justify-center gap-1 flex-1 py-2 px-1 rounded-2xl transition-all duration-200 active:scale-95 min-h-[56px] focus-visible:ring-2 focus-visible:ring-primary',
                 isActive
-                  ? 'text-primary-foreground'
-                  : 'text-muted-foreground hover:text-foreground'
+                  ? 'text-primary-foreground font-bold'
+                  : 'text-foreground/70 hover:text-foreground hover:bg-secondary/60 font-medium'
               )}
               style={
                 isActive
@@ -49,8 +49,8 @@ export default function BottomNav() {
                   : {}
               }
             >
-              <Icon className="w-5 h-5" />
-              <span className="text-[10px] font-bold tracking-wide leading-none">
+              <Icon className={cn('w-5 h-5 transition-transform duration-200', isActive && 'scale-110')} />
+              <span className="text-[11px] tracking-tight leading-none">
                 {label}
               </span>
             </Link>

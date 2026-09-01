@@ -100,8 +100,8 @@ export default function TodayExpensesSection({
   }
 
   return (
-    <div className="flex flex-col gap-3">
-      <SectionTitle>Today's entries</SectionTitle>
+    <div className="flex flex-col gap-2">
+      <SectionTitle count={expenses.length}>Today&apos;s entries</SectionTitle>
       <div
         className="card-surface overflow-hidden"
         style={{ padding: '0' }}

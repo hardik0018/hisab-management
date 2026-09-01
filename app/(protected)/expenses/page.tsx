@@ -31,28 +31,38 @@ export default async function ExpensesPage() {
     <>
       <ExpenseNavTabs />
 
-      <AppShell className="pt-3">
-        <BackupReminder settings={settings} />
+      <AppShell variant="wide" className="pt-3">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+          {/* Main Action & Feed Column (Mobile: top; Desktop: left 7 cols) */}
+          <div className="lg:col-span-7 space-y-4">
+            {/* Always-visible instant add bar */}
+            <QuickAddBar
+              mode="expense"
+              largeLimit={settings.largeAmountLimit}
+              collaborators={collaborators}
+              currentUserId={currentUserId || ""}
+            />
 
-        <LiveStatCards
-          initialToday={todayTotal}
-          initialMonthlyIn={monthlyIncome}
-          initialMonthlyOut={monthlyExpense}
-        />
+            {/* Today's expense list (client component for live refresh) */}
+            <TodayExpensesSection
+              collaborators={collaborators}
+              currentUserId={currentUserId || ""}
+            />
+          </div>
 
-        {/* Always-visible instant add bar */}
-        <QuickAddBar
-          mode="expense"
-          largeLimit={settings.largeAmountLimit}
-          collaborators={collaborators}
-          currentUserId={currentUserId || ""}
-        />
+          {/* Overview & Stats Column (Mobile: stacked below on small screens or above; Desktop: right 5 cols sticky) */}
+          <div className="lg:col-span-5 space-y-4 lg:sticky lg:top-14 order-first lg:order-last">
+            <BackupReminder settings={settings} />
 
-        {/* Today's expense list (client component for live refresh) */}
-        <TodayExpensesSection
-          collaborators={collaborators}
-          currentUserId={currentUserId || ""}
-        />
+            <div className="space-y-3">
+              <LiveStatCards
+                initialToday={todayTotal}
+                initialMonthlyIn={monthlyIncome}
+                initialMonthlyOut={monthlyExpense}
+              />
+            </div>
+          </div>
+        </div>
       </AppShell>
     </>
   );
