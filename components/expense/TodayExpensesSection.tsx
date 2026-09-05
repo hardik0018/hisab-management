@@ -23,7 +23,20 @@ export default function TodayExpensesSection({
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [isEditOpen, setIsEditOpen] = useState<boolean>(false);
 
-  const todayStr = new Date().toISOString().split('T')[0];
+  // Always use Indian Standard Time (IST, UTC+5:30) for "today" so it matches the server-side date logic.
+  // new Date().toISOString() returns UTC, which before 05:30 AM IST gives yesterday's date.
+  const todayStr = (() => {
+    const parts = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Asia/Kolkata',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).formatToParts(new Date());
+    const y = parts.find(p => p.type === 'year')?.value;
+    const m = parts.find(p => p.type === 'month')?.value;
+    const d = parts.find(p => p.type === 'day')?.value;
+    return `${y}-${m}-${d}`;
+  })();
 
   const load = useCallback(async () => {
     try {

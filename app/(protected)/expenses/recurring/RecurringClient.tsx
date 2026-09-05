@@ -63,9 +63,24 @@ export default function RecurringClient({ initialTemplates, collaborators, curre
 
   // Quick Rent/Income collection dialog
   const [collectTemplate, setCollectTemplate] = useState<RecurringExpense | null>(null);
-  const [collectDate, setCollectDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [collectDate, setCollectDate] = useState('');
   const [collectAmount, setCollectAmount] = useState('');
   const [isCollecting, setIsCollecting] = useState(false);
+
+  // Always get today in IST so the default date in dialogs is never wrong
+  // (new Date().toISOString() gives UTC which is 5:30 hrs behind IST)
+  const getTodayIST = (): string => {
+    const parts = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Asia/Kolkata',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).formatToParts(new Date());
+    const y = parts.find(p => p.type === 'year')?.value;
+    const m = parts.find(p => p.type === 'month')?.value;
+    const d = parts.find(p => p.type === 'day')?.value;
+    return `${y}-${m}-${d}`;
+  };
 
   const handleOpenAdd = () => {
     setModalMode('add');
@@ -416,7 +431,15 @@ export default function RecurringClient({ initialTemplates, collaborators, curre
                         t.currentMonthStatus?.received ? (
                           <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 cursor-default select-none">
                             <Check className="w-3.5 h-3.5 stroke-[2.5]" />
-                            <span>Received ({new Date(t.currentMonthStatus.date || Date.now()).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })})</span>
+                            <span>Received ({(() => {
+                              // Parse YYYY-MM-DD string directly to avoid UTC-to-IST offset shifting the date
+                              const rawDate = t.currentMonthStatus?.date;
+                              if (!rawDate) return new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+                              const [, , dd] = rawDate.split('-').map(Number);
+                              const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+                              const monthIdx = parseInt(rawDate.split('-')[1], 10) - 1;
+                              return `${dd} ${monthNames[monthIdx]}`;
+                            })()})</span>
                           </div>
                         ) : (
                           <button
@@ -424,7 +447,7 @@ export default function RecurringClient({ initialTemplates, collaborators, curre
                             onClick={() => {
                               setCollectTemplate(t);
                               setCollectAmount(String(t.amount));
-                              setCollectDate(new Date().toISOString().split('T')[0]);
+                              setCollectDate(getTodayIST());
                             }}
                             className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 active:scale-95 transition-all cursor-pointer border-0"
                           >

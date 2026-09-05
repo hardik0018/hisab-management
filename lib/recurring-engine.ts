@@ -112,16 +112,20 @@ export async function checkAndGenerateRecurringExpenses(spaceId: string, userId:
       );
       
       if (updateResult.modifiedCount > 0) {
-        // Safeguard double-check: ensure we haven't already generated an expense for this template on this date.
-        // This handles cases where template start dates or generation history are reset/edited.
-        const alreadyGenerated = await db.collection('expenses').findOne({
+        // Safeguard: check if we've already generated OR if user manually recorded an entry
+        // this month for this template on ANY date. This prevents creating a duplicate
+        // auto-entry on the scheduled day (e.g. 5th) when the user already received rent on the 3rd.
+        const monthStart = `${cYear}-${String(cMonth).padStart(2, '0')}-01`;
+        const monthEnd   = `${cYear}-${String(cMonth).padStart(2, '0')}-31`;
+
+        const alreadyExists = await db.collection('expenses').findOne({
           space_id: template.space_id,
           associatedId: template._id.toString(),
           associatedType: 'recurring',
-          date: targetDateStr
+          date: { $gte: monthStart, $lte: monthEnd }
         });
 
-        if (!alreadyGenerated) {
+        if (!alreadyExists) {
           // We secured the lock for this candidateMonth. Now insert the daily expense log.
           const expenseDoc = {
             space_id: template.space_id,
