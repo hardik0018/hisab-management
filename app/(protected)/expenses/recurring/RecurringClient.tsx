@@ -67,6 +67,19 @@ export default function RecurringClient({ initialTemplates, collaborators, curre
   const [collectAmount, setCollectAmount] = useState('');
   const [isCollecting, setIsCollecting] = useState(false);
 
+  // Returns a human-readable income type label ("Rent" | "Salary" | "Income")
+  // so the "Receive ___" button / modal is never hardcoded to "Rent".
+  const getIncomeLabel = (itemName: string, category?: string): string => {
+    const haystack = `${itemName} ${category ?? ''}`.toLowerCase();
+    if (haystack.includes('rent')) return 'Rent';
+    if (haystack.includes('salary') || haystack.includes('wage') || haystack.includes('stipend')) return 'Salary';
+    if (haystack.includes('dividend') || haystack.includes('interest') || haystack.includes('return')) return 'Returns';
+    if (haystack.includes('pension')) return 'Pension';
+    if (haystack.includes('bonus')) return 'Bonus';
+    if (haystack.includes('freelance') || haystack.includes('consulting')) return 'Payment';
+    return 'Income';
+  };
+
   // Always get today in IST so the default date in dialogs is never wrong
   // (new Date().toISOString() gives UTC which is 5:30 hrs behind IST)
   const getTodayIST = (): string => {
@@ -452,7 +465,7 @@ export default function RecurringClient({ initialTemplates, collaborators, curre
                             className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 active:scale-95 transition-all cursor-pointer border-0"
                           >
                             <Coins className="w-3.5 h-3.5" />
-                            <span>Receive Rent</span>
+                            <span>Receive {getIncomeLabel(t.itemName, t.category)}</span>
                           </button>
                         )
                       )}
@@ -501,7 +514,7 @@ export default function RecurringClient({ initialTemplates, collaborators, curre
                 {modalMode === 'add' ? 'New Auto Template' : 'Edit Auto Template'}
               </DialogTitle>
               <DialogDescription className="text-xs text-muted-foreground">
-                Automate monthly SIPs, LIC premiums, house rent, or custom schedules.
+                Automate monthly SIPs, LIC premiums, salary, house rent, or custom schedules.
               </DialogDescription>
             </DialogHeader>
 
@@ -532,7 +545,7 @@ export default function RecurringClient({ initialTemplates, collaborators, curre
                         : 'text-muted-foreground hover:text-foreground'
                     )}
                   >
-                    <span>Income (House Rent)</span>
+                    <span>Income (Salary / Rent)</span>
                   </button>
                 </div>
               </div>
@@ -540,13 +553,13 @@ export default function RecurringClient({ initialTemplates, collaborators, curre
               {/* Item Name */}
               <div className="space-y-1">
                 <Label htmlFor="item-name" className="text-[11px] text-muted-foreground font-semibold">
-                  {templateType === 'income' ? 'Income Title (e.g. House Rent)' : 'Title (e.g. LIC Policy / SIP 7000)'} *
+                  {templateType === 'income' ? 'Income Title (e.g. Salary, House Rent)' : 'Title (e.g. LIC Policy / SIP 7000)'} *
                 </Label>
                 <Input
                   id="item-name"
                   type="text"
                   required
-                  placeholder={templateType === 'income' ? 'House Rent' : 'LIC Policy Premium'}
+                  placeholder={templateType === 'income' ? 'e.g. Salary, House Rent, Freelance' : 'LIC Policy Premium'}
                   value={itemName}
                   onChange={(e) => setItemName(e.target.value)}
                   className="rounded-xl h-10 text-xs font-semibold"
@@ -687,7 +700,7 @@ export default function RecurringClient({ initialTemplates, collaborators, curre
                   Receive {collectTemplate.itemName}
                 </DialogTitle>
                 <DialogDescription className="text-xs text-muted-foreground">
-                  Record rent income on the exact date received.
+                  Record {getIncomeLabel(collectTemplate.itemName, collectTemplate.category).toLowerCase()} income on the exact date received.
                 </DialogDescription>
               </DialogHeader>
 
